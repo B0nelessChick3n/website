@@ -1826,10 +1826,10 @@ function showLevelUpPanel(p){
   document.getElementById('levelup-info').innerHTML=
     `You are now <span style="color:#ffffaa">Level ${lvl}</span>! Choose an upgrade:`;
   const opts=[
-    {label:'Max HP +12',desc:'Grow heartier',apply:()=>{p.maxHp+=12;p.hp=Math.min(p.hp+12,p.maxHp);}},
-    {label:'Strength +3',desc:'Deal more damage',apply:()=>{p.weapon={...p.weapon,dmg:p.weapon.dmg+3};updateWeapHUD();}},
-    {label:'Defense +3',desc:'Take less damage',apply:()=>{p.def+=3;}},
-    {label:'Evasion +10%',desc:'Chance to dodge attacks',apply:()=>{p.evasion=Math.min(p.evasion+10,60);}},
+    {label:'Max HP +6',desc:'Grow heartier',apply:()=>{p.maxHp+=6;p.hp=Math.min(p.hp+6,p.maxHp);}},
+    {label:'Strength +1',desc:'Deal more damage',apply:()=>{p.weapon={...p.weapon,dmg:p.weapon.dmg+1};updateWeapHUD();}},
+    {label:'Defense +1',desc:'Take less damage',apply:()=>{p.def+=1;}},
+    {label:'Evasion +5%',desc:'Chance to dodge attacks',apply:()=>{p.evasion=Math.min(p.evasion+5,60);}},
     {label:'Restore full HP',desc:'Heal to max right now',apply:()=>{p.hp=p.maxHp;}},
   ];
   // Shuffle and pick 3
