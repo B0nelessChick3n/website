@@ -845,7 +845,7 @@ const ARMOR_DB=[
 
 function buildShopCatalog(){
   const f=G.floor,items=[];
-  items.push({type:'potion',potId:'health',  name:'Health Potion',   cost:15,col:'#ff6688',desc:'Restore ~15 HP'});
+  items.push({type:'potion',potId:'health',  name:'Health Potion',   cost:25,col:'#ff6688',desc:'Restore ~15 HP'});
   items.push({type:'potion',potId:'strength',name:'Strength Brew',   cost:30,col:'#ff8800',desc:'+3 ATK 10 turns'});
   items.push({type:'potion',potId:'ironhide',name:'Ironhide Draught',cost:25,col:'#aaaaff',desc:'+4 DEF 8 turns'});
   if(f>=2)items.push({type:'potion',potId:'swiftness',name:'Swiftness Elixir',cost:40,col:'#44ffff',desc:'Dodge next 3 hits'});
@@ -1051,14 +1051,14 @@ const WEAPON_ART={
   \\_/
 [DAGGER]`,
   shortsword:
-`    |
+`   |
    /+\\
     |
     |
    ===
 [S.SWORD]`,
   spear:
-`   /\\
+`  /\\
   /||\\
    ||
    ||
@@ -1066,7 +1066,7 @@ const WEAPON_ART={
   [||]
 [SPEAR]`,
   longsword:
-`    |
+`   |
   --+--
     |
     |
@@ -1074,7 +1074,7 @@ const WEAPON_ART={
    ===
 [L.SWORD]`,
   halberd:
-`  /|\\
+` /|\\
  /_|_\\
    |
    |
@@ -1083,22 +1083,22 @@ const WEAPON_ART={
 [HALBIRD]`,
   waraxe:
 `   __
-  /  \\
- | () |
+   /  \\
+  | () |
   \\__/|
     | |
    [|_|]
 [W.AXE]`,
   voidblade:
 `  |X|
- /XXX\\
-<XXXXX>
+  /XXX\\
+ <XXXXX>
  \\XXX/
-  |X|
+   |X|
  [===]
 [VBLADE]`,
   magestaff:
-`  (*)
+` (*)
   |||
    |
    |
@@ -1106,7 +1106,7 @@ const WEAPON_ART={
   _|_
 [STAFF]`,
   greatsword:
-`    |
+`   |
   --+--
   |   |
     |
@@ -1119,15 +1119,26 @@ const WEAPON_ART={
 // ══════════════════════════════════════════
 //  MERCHANT PORTRAIT ASCII
 // ══════════════════════════════════════════
-const MERCHANT_PORTRAIT=
-`     ,-----.
-    /  o  o \\
-   |    ~    |
-   |  \\___/  |
-    \\_______/
-    |  | |  |
-   /|  | |  |\\
-  (_|__|_|__|_)`;
+const MERCHANT_PORTRAIT =
+`            _.--.
+         .-"  _   "-.
+        /    (_)     \\
+       |  .-""""-.    |
+       | /  o  o  \\   |
+       | |   --   |   |
+       | |  \\__/  |   |
+       |  \\      /    |
+        \\  '----'    /
+     _.-'\\  ____  /'-._
+   /`     '-.__.-'     `\\
+  /  _      ||||      _  \\
+ |  (_)     ||||     (_)  |
+ |          ||||          |
+ |     _____||||_____     |
+  \\   /____/  \\____\\   /
+   '._              _.'
+       '----------'
+`;
 
 // ══════════════════════════════════════════
 //  STATE
