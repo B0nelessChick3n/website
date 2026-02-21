@@ -298,42 +298,42 @@ body::after{content:'';position:fixed;inset:0;z-index:901;pointer-events:none;ba
 //  MAX_FLOORS: total floors in the dungeon
 // ══════════════════════════════════════════
 const CONFIG = {
-  MAX_FLOORS: 5,           // Total floors in dungeon (easy to change!)
+  MAX_FLOORS: 7,           // Total floors in dungeon (easy to change!)
   MONSTERS_BASE: 5,        // Min monsters per floor
   MONSTERS_PER_FLOOR: 2,   // Extra monsters added per floor
 
   // Item spawn weights (relative, sum doesn't need to equal 100)
   SPAWN_WEIGHTS: {
-    gold:    2,   // Gold piles
-    potion:  3,   // Potions (common)
-    armor:   1,   // Armor pieces
-    shrine:  1,   // Void shrines
-    weapon:  2,   // Weapons
+    gold:    1,   // Gold piles
+    potion:  1,   // Potions (common)
+    armor:   0.5,   // Armor pieces
+    shrine:  0.5,   // Void shrines
+    weapon:  1,   // Weapons
   },
 
   // Items per floor range: [base_min, base_max, per_floor_bonus]
-  ITEMS_RANGE: [4, 7, 1],  // min=4, max=7+floor
+  ITEMS_RANGE: [1, 3, 1],  // min=4, max=7+floor
 
   // Weapons spawned per floor: [min, max]
-  WEAPONS_RANGE: [1, 3],
+  WEAPONS_RANGE: [0, 2],
 
   // Water tile cluster size range [min_radius, max_radius]
   WATER_SPREAD_MIN: 1,
-  WATER_SPREAD_MAX: 5,
+  WATER_SPREAD_MAX: 4,
 
   // Grass trample water drop chance (0.0 = never, 1.0 = always)
-  GRASS_WATER_DROP_CHANCE: 0.35,
+  GRASS_WATER_DROP_CHANCE: 0.1,
 
   // Water drop HP restore range
-  WATER_DROP_HP_MIN: 2,
-  WATER_DROP_HP_MAX: 4,
+  WATER_DROP_HP_MIN: 1,
+  WATER_DROP_HP_MAX: 3,
 
   // Number of water clusters per floor [min, max relative to floor]
-  WATER_CLUSTERS_BASE: 1,
-  WATER_CLUSTERS_MAX: 3,   // +floor added
+  WATER_CLUSTERS_BASE: 0,
+  WATER_CLUSTERS_MAX: 2,   // +floor added
 
   // Gold value range multiplier
-  GOLD_MIN: 3,
+  GOLD_MIN: 2,
   GOLD_MAX_PER_FLOOR: 8,
 };
 
