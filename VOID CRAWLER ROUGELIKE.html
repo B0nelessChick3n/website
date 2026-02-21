@@ -734,24 +734,45 @@ const MERCHANT_GREETINGS=[
 //  WEAPONS
 // ══════════════════════════════════════════
 const WEAPONS=[
-  {id:'fists',      name:'Fists',      sym:'-',col:'#888888',dmg:4, range:1,sweep:false},
-  {id:'dagger',     name:'Dagger',     sym:'/',col:'#aaaaff',dmg:5, range:1,sweep:false},
-  {id:'shortsword', name:'Shortsword', sym:'/',col:'#88aaff',dmg:7, range:1,sweep:false},
-  {id:'spear',      name:'Spear',      sym:'|',col:'#ffdd88',dmg:6, range:3,sweep:true},
-  {id:'longsword',  name:'Longsword',  sym:'/',col:'#ccccff',dmg:10,range:1,sweep:false},
-  {id:'halberd',    name:'Halberd',    sym:'T',col:'#ffaa44',dmg:9, range:2,sweep:true},
-  {id:'waraxe',     name:'War Axe',    sym:'Y',col:'#ff8844',dmg:12,range:1,sweep:false},
-  {id:'voidblade',  name:'Void Blade', sym:'X',col:'#ff44ff',dmg:14,range:2,sweep:true},
-  {id:'magestaff',  name:'Mage Staff', sym:'!',col:'#aa88ff',dmg:8, range:4,sweep:false},
-  {id:'greatsword', name:'Greatsword', sym:'I',col:'#ffffff',dmg:16,range:1,sweep:false},
+  {id:'fists',        name:'Fists',           sym:'·', col:'#777777', dmg:4,  range:1, sweep:false},
+  {id:'dagger',       name:'Dagger',          sym:'\\', col:'#aab0ff', dmg:6,  range:1, sweep:false},
+  {id:'shortsword',   name:'Shortsword',      sym:'/',  col:'#88aaff', dmg:8,  range:1, sweep:false},
+  {id:'spear',        name:'Spear',           sym:'|',  col:'#ffdd88', dmg:7,  range:3, sweep:false},
+  {id:'rapier',       name:'Rapier',          sym:'r',  col:'#99ccff', dmg:9,  range:2, sweep:false}, // precise reach
+  {id:'whip',         name:'Chain Whip',      sym:'~',  col:'#cc99ff', dmg:8,  range:3, sweep:true},  // wide control
+  {id:'longsword',    name:'Longsword',       sym:'†',  col:'#ccccff', dmg:11, range:1, sweep:true},
+  {id:'warhammer',    name:'Warhammer',       sym:'H',  col:'#ffaa88', dmg:13, range:1, sweep:false}, // heavy single hit
+  {id:'waraxe',       name:'War Axe',         sym:'Y',  col:'#ff8844', dmg:14, range:1, sweep:true},
+  {id:'halberd',      name:'Halberd',         sym:'T',  col:'#ffaa44', dmg:12, range:2, sweep:true},
+  {id:'glaive',       name:'Glaive',          sym:'/',  col:'#ffcc66', dmg:13, range:2, sweep:true},  // pole sweeper
+  {id:'magestaff',    name:'Mage Staff',      sym:'!',  col:'#aa88ff', dmg:10, range:4, sweep:false},
+  {id:'runestaff',    name:'Runed Staff',     sym:'‡',  col:'#bb66ff', dmg:13, range:5, sweep:false}, // late caster
+  {id:'voidblade',    name:'Void Blade',      sym:'X',  col:'#ff44ff', dmg:17, range:2, sweep:true},
+  {id:'greatsword',   name:'Greatsword',      sym:'I',  col:'#ffffff', dmg:20, range:1, sweep:true},
+  {id:'doomcleaver',  name:'Doom Cleaver',    sym:'Ω',  col:'#ff2222', dmg:24, range:2, sweep:true},  // apex weapon
 ];
-function weapById(id){return WEAPONS.find(w=>w.id===id)||WEAPONS[0];}
+function weapById(id){
+  return WEAPONS.find(w=>w.id===id) || WEAPONS[0];
+}
+
 const WEAPON_TIERS=[
+  // Tier 1 — early survival (simple, low power)
   ['dagger','dagger','shortsword'],
-  ['shortsword','spear','dagger'],
-  ['spear','halberd','longsword'],
-  ['longsword','halberd','waraxe','magestaff'],
-  ['waraxe','voidblade','greatsword','magestaff'],
+
+  // Tier 2 — early variety
+  ['shortsword','rapier','spear','dagger'],
+
+  // Tier 3 — battlefield control begins
+  ['spear','longsword','warhammer','whip'],
+
+  // Tier 4 — strong midgame
+  ['longsword','halberd','waraxe','magestaff','glaive'],
+
+  // Tier 5 — late game threats
+  ['waraxe','voidblade','greatsword','runestaff','halberd'],
+
+  // Tier 6 — apex drops (rare)
+  ['voidblade','greatsword','doomcleaver','runestaff'],
 ];
 
 const MON_DB=[
