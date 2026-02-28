@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Pool</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a1408; overflow:hidden; height:100vh; font-family:'Courier New',monospace; }
+canvas { display:block; width:100vw; height:100vh; cursor:crosshair; }
+
+#hud {
+  position:fixed; top:16px; left:16px;
+  background:rgba(4,18,4,0.94); border:1px solid rgba(50,140,50,0.45);
+  border-radius:10px; padding:14px 18px; font-size:12px; line-height:2;
+  color:#70b870; min-width:200px; backdrop-filter:blur(10px); pointer-events:none;
+  box-shadow:0 4px 24px rgba(0,0,0,0.5);
+}
+#hud .title { color:#40d040; font-size:16px; font-weight:bold; letter-spacing:3px; margin-bottom:6px; }
+#hud .lbl { color:#508050; }
+#hud .val { color:#a0ffa0; font-weight:bold; }
+#hud .turn-p1 { color:#50c8ff; }
+#hud .turn-p2 { color:#ffaa40; }
+#hud .foul { color:#ff3030; font-weight:bold; animation:blink .55s infinite; }
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.1}}
+
+#aim-panel {
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  background:rgba(4,18,4,0.94); border:1px solid rgba(50,140,50,0.4);
+  border-radius:10px; padding:12px 22px; backdrop-filter:blur(10px);
+  display:flex; align-items:center; gap:18px; font-size:11px; color:#507050;
+  box-shadow:0 4px 24px rgba(0,0,0,0.5);
+}
+#power-bg { width:160px; height:9px; background:rgba(20,50,20,.8); border-radius:5px; border:1px solid rgba(50,140,50,.3); overflow:hidden; }
+#power-fill { height:100%; width:0%; background:linear-gradient(90deg,#28b028,#e8c820,#d82020); border-radius:5px; }
+#power-lbl { color:#90ee90; font-weight:bold; min-width:36px; text-align:right; }
+.kh { color:#3a603a; } .kh b { color:#60a060; }
+
+#msg {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  background:rgba(4,22,4,.97); border:2px solid rgba(70,180,70,.6);
+  border-radius:14px; padding:30px 44px; text-align:center; color:#70d870;
+  display:none; z-index:100; backdrop-filter:blur(16px); min-width:300px;
+}
+#msg .mt { font-size:26px; color:#44ff44; font-weight:bold; margin-bottom:10px; letter-spacing:2px; }
+#msg .ms { color:#507050; font-size:13px; margin-bottom:18px; }
+#msg button {
+  background:rgba(30,100,30,.8); border:1px solid rgba(70,180,70,.6);
+  color:#70ff70; font-family:'Courier New',monospace; font-size:13px;
+  letter-spacing:2px; padding:9px 26px; border-radius:6px; cursor:pointer;
+}
+#msg button:hover { background:rgba(50,140,50,.9); }
+
+#camhint {
+  position:fixed; top:16px; right:16px;
+  background:rgba(4,18,4,.88); border:1px solid rgba(50,140,50,.3);
+  border-radius:8px; padding:10px 14px; font-size:10px; color:#3a5a3a; line-height:2;
+}
+#camhint b { color:#60a060; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="title">🎱 POOL</div>
+  <div><span class="lbl">PLAYER 1 </span><span class="val" id="s1">0</span><span class="lbl"> balls</span></div>
+  <div><span class="lbl">PLAYER 2 </span><span class="val" id="s2">0</span><span class="lbl"> balls</span></div>
+  <div><span class="lbl">TURN: </span><span class="val turn-p1" id="turn-txt">PLAYER 1</span></div>
+  <div><span class="lbl">TYPE: </span><span class="val" id="type-txt">—</span></div>
+  <div id="foul-line" style="display:none"><span class="foul">⚠ FOUL — PLACE CUE BALL</span></div>
+  <div><span class="lbl">FPS: </span><span class="val" id="fps">60</span></div>
+</div>
+
+<div id="aim-panel">
+  <span class="kh"><b>MOUSE</b> aim</span>
+  <span class="kh"><b>HOLD+RELEASE</b> shoot</span>
+  <div id="power-bg"><div id="power-fill"></div></div>
+  <span id="power-lbl">0%</span>
+  <span class="kh"><b>QE</b> orbit &nbsp;<b>RF</b> tilt &nbsp;<b>Scroll</b> zoom</span>
+</div>
+
+<div id="camhint"><b>Q/E</b> orbit &nbsp; <b>R/F</b> tilt &nbsp; <b>Scroll</b> zoom</div>
+
+<div id="msg">
+  <div class="mt" id="mt">🎱 POOL</div>
+  <div class="ms" id="ms">Hold & release left mouse button to shoot.<br>Mouse controls aim direction.</div>
+  <button onclick="dismissMsg()">BREAK!</button>
+</div>
+
+<script>
+// ── WebGL ──────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl',{antialias:true}) || canvas.getContext('experimental-webgl');
+if(!gl){document.body.innerHTML='<p style="color:#fff;padding:40px">WebGL not supported</p>';throw 0;}
+
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;gl.viewport(0,0,canvas.width,canvas.height);}
+window.addEventListener('resize',resize);resize();
+
+// ── Shader compiler ────────────────────────────────────────────────────────
+function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(s);return s;}
+function prog(vs,fs){const p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,vs));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);return p;}
+
+// ── Shaders ────────────────────────────────────────────────────────────────
+const BALL_VS=`
+attribute vec3 aPos,aNorm;
+uniform mat4 uMVP,uModel;
+varying vec3 vN,vP,vL;
+void main(){
+  vL=aPos; // local space for stripe
+  vec4 wp=uModel*vec4(aPos,1);
+  vP=wp.xyz;
+  vN=normalize(mat3(uModel)*aNorm);
+  gl_Position=uMVP*vec4(aPos,1);
+}`;
+const BALL_FS=`
+precision highp float;
+varying vec3 vN,vP,vL;
+uniform vec3 uCol,uCol2,uLit,uEye;
+uniform int uStripe;
+void main(){
+  float t=1.0;
+  if(uStripe==1){
+    // stripe band around equator
+    float band=abs(vL.y);
+    t=band>0.42?1.0:0.0;
+  }
+  vec3 col=mix(uCol2,uCol,t);
+  vec3 L=normalize(uLit-vP);
+  vec3 N=normalize(vN);
+  vec3 V=normalize(uEye-vP);
+  vec3 H=normalize(L+V);
+  float d=max(dot(N,L),0.0)*0.72+0.28;
+  float s=pow(max(dot(N,H),0.0),90.0)*0.75;
+  float r=pow(1.0-max(dot(N,V),0.0),3.0)*0.18;
+  gl_FragColor=vec4(col*(d+r)+s,1);
+}`;
+
+const FLAT_VS=`attribute vec3 aPos;uniform mat4 uMVP;void main(){gl_Position=uMVP*vec4(aPos,1);}`;
+const FLAT_FS=`precision mediump float;uniform vec4 uCol;void main(){gl_FragColor=uCol;}`;
+
+const PHONG_VS=`
+attribute vec3 aPos,aNorm;
+uniform mat4 uMVP;
+varying vec3 vN,vP;
+void main(){vN=aNorm;vP=aPos;gl_Position=uMVP*vec4(aPos,1);}`;
+const PHONG_FS=`
+precision mediump float;
+varying vec3 vN,vP;
+uniform vec3 uCol,uLit,uEye;
+uniform float uRough;
+void main(){
+  vec3 L=normalize(uLit-vP);
+  vec3 N=normalize(vN);
+  vec3 V=normalize(uEye-vP);
+  vec3 H=normalize(L+V);
+  float d=max(dot(N,L),0.0)*0.65+0.35;
+  float s=pow(max(dot(N,H),0.0),18.0)*uRough;
+  gl_FragColor=vec4(uCol*d+s*0.2,1);
+}`;
+
+const pBall  = prog(BALL_VS,BALL_FS);
+const pFlat  = prog(FLAT_VS,FLAT_FS);
+const pPhong = prog(PHONG_VS,PHONG_FS);
+
+// ── Math ───────────────────────────────────────────────────────────────────
+const v3={
+  sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],
+  add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],
+  sc: (a,s)=>[a[0]*s,a[1]*s,a[2]*s],
+  dot:(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],
+  cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
+  len:a=>Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]),
+  norm:a=>{const l=Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);return l<1e-12?[0,1,0]:[a[0]/l,a[1]/l,a[2]/l];}
+};
+const m4={
+  id:()=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
+  mul(a,b){const o=new Float32Array(16);for(let r=0;r<4;r++)for(let c=0;c<4;c++)for(let k=0;k<4;k++)o[r+c*4]+=a[r+k*4]*b[k+c*4];return o;},
+  tr(x,y,z){const o=m4.id();o[12]=x;o[13]=y;o[14]=z;return o;},
+  sc(s){const o=m4.id();o[0]=s;o[5]=s;o[10]=s;return o;},
+  pers(fov,asp,n,f){const t=1/Math.tan(fov/2),o=new Float32Array(16);o[0]=t/asp;o[5]=t;o[10]=(f+n)/(n-f);o[11]=-1;o[14]=2*f*n/(n-f);return o;},
+  look(eye,tgt,up){
+    const f=v3.norm(v3.sub(tgt,eye)),r=v3.norm(v3.cross(f,up)),u=v3.cross(r,f),o=new Float32Array(16);
+    o[0]=r[0];o[1]=u[0];o[2]=-f[0];o[4]=r[1];o[5]=u[1];o[6]=-f[1];
+    o[8]=r[2];o[9]=u[2];o[10]=-f[2];
+    o[12]=-v3.dot(r,eye);o[13]=-v3.dot(u,eye);o[14]=v3.dot(f,eye);o[15]=1;return o;
+  }
+};
+
+// ── Geometry ───────────────────────────────────────────────────────────────
+function uploadVN(verts,norms,idx){
+  const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(verts),gl.STATIC_DRAW);
+  const nb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,nb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(norms),gl.STATIC_DRAW);
+  const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(idx),gl.STATIC_DRAW);
+  return{vb,nb,ib,cnt:idx.length};
+}
+function uploadV(verts,idx,dynamic){
+  const mode=dynamic?gl.DYNAMIC_DRAW:gl.STATIC_DRAW;
+  const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(verts),mode);
+  const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(idx),gl.STATIC_DRAW);
+  return{vb,ib,cnt:idx.length};
+}
+
+function sphere(stk,slc){
+  const v=[],n=[],i=[];
+  for(let a=0;a<=stk;a++){const p=Math.PI*a/stk;for(let b=0;b<=slc;b++){const t=2*Math.PI*b/slc,x=Math.sin(p)*Math.cos(t),y=Math.cos(p),z=Math.sin(p)*Math.sin(t);v.push(x,y,z);n.push(x,y,z);}}
+  for(let a=0;a<stk;a++)for(let b=0;b<slc;b++){const q=a*(slc+1)+b,r=q+slc+1;i.push(q,r,q+1,r,r+1,q+1);}
+  return uploadVN(v,n,i);
+}
+
+function cylinder(r1,r2,h,seg){
+  const v=[],n=[],i=[];
+  for(let s=0;s<=seg;s++){const a=2*Math.PI*s/seg,cx=Math.cos(a),cz=Math.sin(a);const l=Math.sqrt(1+(r2-r1)*(r2-r1)/(h*h)),nx=cx/l,nz=cz/l;v.push(cx*r1,0,cz*r1);n.push(nx,0,nz);v.push(cx*r2,h,cz*r2);n.push(nx,0,nz);}
+  for(let s=0;s<seg;s++){const b=s*2;i.push(b,b+1,b+2,b+1,b+3,b+2);}
+  return uploadVN(v,n,i);
+}
+
+// Disc (filled circle) for pocket openings
+function disc(cx,cy,cz,r,seg,ny){
+  const v=[cx,cy,cz],n=[0,ny,0],idx=[];
+  for(let i=0;i<=seg;i++){const a=2*Math.PI*i/seg;v.push(cx+Math.cos(a)*r,cy,cz+Math.sin(a)*r);n.push(0,ny,0);}
+  for(let i=1;i<=seg;i++)idx.push(0,i,i<seg?i+1:1);
+  return uploadVN(v,n,idx);
+}
+
+// Annulus (ring) for pocket rim cutout area in felt
+function annulus(cx,cz,rInner,rOuter,seg){
+  const v=[],n=[],idx=[];
+  for(let i=0;i<=seg;i++){
+    const a=2*Math.PI*i/seg,ca=Math.cos(a),sa=Math.sin(a);
+    v.push(cx+ca*rInner,0.001,cz+sa*rInner); n.push(0,1,0);
+    v.push(cx+ca*rOuter,0.001,cz+sa*rOuter); n.push(0,1,0);
+  }
+  for(let i=0;i<seg;i++){const b=i*2;idx.push(b,b+1,b+2,b+1,b+3,b+2);}
+  return uploadVN(v,n,idx);
+}
+
+const GEO = {
+  ball: sphere(20,20),
+  legCyl: cylinder(0.12,0.09,2.2,10),
+};
+
+// ── Table constants ────────────────────────────────────────────────────────
+const TX=5.0,TZ=2.5;   // half extents of playing surface
+const RAIL_H=0.30, RAIL_W=0.42;
+const FY=0.0;           // felt Y
+const BALL_R=0.145;
+
+// Pocket positions & radius
+const PR=0.30;  // pocket mouth radius
+// 6 pockets: 4 corners, 2 side midpoints
+const POCKETS=[
+  [-TX,FY,-TZ],[0,FY,-TZ],[TX,FY,-TZ],
+  [-TX,FY, TZ],[0,FY, TZ],[TX,FY, TZ],
+];
+
+// ── Build table mesh ───────────────────────────────────────────────────────
+// Felt: two triangles per section between pocket arcs — we approximate by
+// drawing felt as full quad then drawing pocket cutouts (dark discs) on top
+// Rails: wood boxes around the perimeter, with rounded pocket openings modeled
+// by simply cutting the corner/side visually using dark discs + cylinder tunnels
+
+// Felt quad (drawn behind everything pocket-related)
+function makeFelt(){
+  const v=[-TX,FY,TZ, TX,FY,TZ, TX,FY,-TZ, -TX,FY,-TZ];
+  const n=[0,1,0, 0,1,0, 0,1,0, 0,1,0];
+  return uploadVN(v,n,[0,1,2,0,2,3]);
+}
+
+// Build rail quads as solid wood blocks with pocket notches cut by omitting
+// geometry at pocket locations and filling with a dark curved inner wall
+function makeRailSegments(){
+  // We'll build 8 rail segments (2 per side, split by pockets)
+  // Each segment is a box: top + inner + outer face quads
+  const verts=[], norms=[], idx=[];
+  let vi=0;
+  function quad(pts,n){
+    for(const p of pts){verts.push(...p);norms.push(...n);}
+    idx.push(vi,vi+1,vi+2,vi,vi+2,vi+3);vi+=4;
+  }
+  const Y0=FY, Y1=RAIL_H, RW=RAIL_W;
+
+  // -- LEFT side (x=-TX), two segments split by no pocket (corners only)
+  // Segment from z=-TZ to z=+TZ (no side pocket on long rail)
+  // inner face
+  quad([[-TX,Y0,-TZ],[-TX,Y1,-TZ],[-TX,Y1,TZ],[-TX,Y0,TZ]],[1,0,0]);
+  // top face
+  quad([[-TX-RW,Y1,-TZ],[-TX,Y1,-TZ],[-TX,Y1,TZ],[-TX-RW,Y1,TZ]],[0,1,0]);
+  // outer face
+  quad([[-TX-RW,Y0,-TZ-RW],[-TX-RW,Y1,-TZ-RW],[-TX-RW,Y1,TZ+RW],[-TX-RW,Y0,TZ+RW]],[-1,0,0]);
+
+  // -- RIGHT side (x=+TX)
+  quad([[TX,Y0,TZ],[TX,Y1,TZ],[TX,Y1,-TZ],[TX,Y0,-TZ]],[-1,0,0]);
+  quad([[TX,Y1,TZ],[TX+RW,Y1,TZ],[TX+RW,Y1,-TZ],[TX,Y1,-TZ]],[0,1,0]);
+  quad([[TX+RW,Y0,TZ+RW],[TX+RW,Y1,TZ+RW],[TX+RW,Y1,-TZ-RW],[TX+RW,Y0,-TZ-RW]],[1,0,0]);
+
+  // -- FAR side (z=-TZ), two segments: left half and right half split by center pocket
+  const pGap=PR*1.6;
+  // Left half: from x=-TX to x=-pGap
+  quad([[-TX,Y0,-TZ],[-pGap,Y0,-TZ],[-pGap,Y1,-TZ],[-TX,Y1,-TZ]],[0,0,-1]);
+  quad([[-TX,Y1,-TZ],[-pGap,Y1,-TZ],[-pGap,Y1,-TZ-RW],[-TX-RW,Y1,-TZ-RW]],[0,1,0]);
+  quad([[-TX-RW,Y0,-TZ-RW],[-TX-RW,Y1,-TZ-RW],[-pGap,Y1,-TZ-RW],[-pGap,Y0,-TZ-RW]],[0,0,-1]);
+  // Right half: from x=+pGap to x=+TX
+  quad([[pGap,Y0,-TZ],[TX,Y0,-TZ],[TX,Y1,-TZ],[pGap,Y1,-TZ]],[0,0,-1]);
+  quad([[pGap,Y1,-TZ],[TX,Y1,-TZ],[TX+RW,Y1,-TZ-RW],[pGap,Y1,-TZ-RW]],[0,1,0]);
+  quad([[pGap,Y0,-TZ-RW],[pGap,Y1,-TZ-RW],[TX+RW,Y1,-TZ-RW],[TX+RW,Y0,-TZ-RW]],[0,0,-1]);
+
+  // -- NEAR side (z=+TZ)
+  quad([[-TX,Y0,TZ],[-TX,Y1,TZ],[-pGap,Y1,TZ],[-pGap,Y0,TZ]],[0,0,1]);
+  quad([[-TX-RW,Y1,TZ+RW],[-pGap,Y1,TZ+RW],[-pGap,Y1,TZ],[-TX,Y1,TZ]],[0,1,0]);
+  quad([[-TX-RW,Y0,TZ+RW],[-pGap,Y0,TZ+RW],[-pGap,Y1,TZ+RW],[-TX-RW,Y1,TZ+RW]],[0,0,1]);
+  quad([[pGap,Y0,TZ],[TX,Y0,TZ],[TX,Y1,TZ],[pGap,Y1,TZ]],[0,0,1]);
+  quad([[pGap,Y1,TZ],[TX+RW,Y1,TZ+RW],[TX+RW,Y1,TZ+RW],[pGap,Y1,TZ+RW]],[0,1,0]);
+  quad([[pGap,Y1,TZ+RW],[TX+RW,Y1,TZ+RW],[TX+RW,Y0,TZ+RW],[pGap,Y0,TZ+RW]],[0,0,1]);
+
+  // Corner connector blocks (diagonal faces at 45°)
+  function corner(x,z,sx,sz){
+    const px=x+sx*RAIL_W, pz=z+sz*RAIL_W;
+    // small diagonal top face
+    quad([[x,Y1,z],[px,Y1,z],[px,Y1,pz],[x,Y1,pz]],[0,1,0]);
+  }
+  corner(-TX,-TZ,-1,-1);corner(TX,-TZ,1,-1);corner(-TX,TZ,-1,1);corner(TX,TZ,1,1);
+
+  return uploadVN(verts,norms,idx);
+}
+
+// Pocket inner cylinder (the hole going down)
+function makePocketCylinder(cx,cz){return cylinder(PR,PR*0.8,0.5,16);}
+
+const feltGeo  = makeFelt();
+const railGeo  = makeRailSegments();
+const legGeo   = GEO.legCyl;
+
+// Pre-build pocket discs and annuli
+const pocketDiscs = POCKETS.map(p=>disc(p[0],FY-0.01,p[2],PR,24,-1));    // dark bottom cap
+const pocketRims  = POCKETS.map(p=>annulus(p[0],p[2],PR*0.82,PR*1.05,24)); // dark ring on felt
+
+// ── Uniform helpers ────────────────────────────────────────────────────────
+function u1(p,n,v){gl.uniform1f(gl.getUniformLocation(p,n),v);}
+function u3(p,n,x,y,z){gl.uniform3f(gl.getUniformLocation(p,n),x,y,z);}
+function u4(p,n,x,y,z,w){gl.uniform4f(gl.getUniformLocation(p,n),x,y,z,w);}
+function ui(p,n,v){gl.uniform1i(gl.getUniformLocation(p,n),v);}
+function um(p,n,m){gl.uniformMatrix4fv(gl.getUniformLocation(p,n),false,m);}
+
+function drawVN(geo,prog_,mvp,col,rough,lit,eye){
+  gl.useProgram(prog_);
+  um(prog_,'uMVP',mvp);
+  u3(prog_,'uCol',...col); u3(prog_,'uLit',...lit); u3(prog_,'uEye',...eye); u1(prog_,'uRough',rough);
+  const aP=gl.getAttribLocation(prog_,'aPos'),aN=gl.getAttribLocation(prog_,'aNorm');
+  gl.bindBuffer(gl.ARRAY_BUFFER,geo.vb);gl.enableVertexAttribArray(aP);gl.vertexAttribPointer(aP,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ARRAY_BUFFER,geo.nb);gl.enableVertexAttribArray(aN);gl.vertexAttribPointer(aN,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,geo.ib);gl.drawElements(gl.TRIANGLES,geo.cnt,gl.UNSIGNED_SHORT,0);
+}
+function drawFlat(geo,prog_,mvp,col){
+  gl.useProgram(prog_);
+  um(prog_,'uMVP',mvp); u4(prog_,'uCol',...col);
+  const aP=gl.getAttribLocation(prog_,'aPos');
+  gl.bindBuffer(gl.ARRAY_BUFFER,geo.vb);gl.enableVertexAttribArray(aP);gl.vertexAttribPointer(aP,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,geo.ib);gl.drawElements(gl.TRIANGLES,geo.cnt,gl.UNSIGNED_SHORT,0);
+}
+
+// Lines helper
+function drawLines(pts,prog_,mvp,col,lw){
+  gl.useProgram(prog_);
+  um(prog_,'uMVP',mvp); u4(prog_,'uCol',...col);
+  const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(pts),gl.STREAM_DRAW);
+  const aP=gl.getAttribLocation(prog_,'aPos');
+  gl.enableVertexAttribArray(aP);gl.vertexAttribPointer(aP,3,gl.FLOAT,false,0,0);
+  gl.lineWidth(lw||1);
+  gl.drawArrays(gl.LINES,0,pts.length/3);
+}
+
+// ── Ball definitions ───────────────────────────────────────────────────────
+const BDEFS=[
+  {num:1, c:[.95,.83,.08],c2:[.9,.9,.9],s:false},// yellow solid
+  {num:2, c:[.1,.18,.9],  c2:[.9,.9,.9],s:false},// blue
+  {num:3, c:[.88,.1,.1],  c2:[.9,.9,.9],s:false},// red
+  {num:4, c:[.52,.1,.7],  c2:[.9,.9,.9],s:false},// purple
+  {num:5, c:[.95,.45,.05],c2:[.9,.9,.9],s:false},// orange
+  {num:6, c:[.1,.62,.1],  c2:[.9,.9,.9],s:false},// green
+  {num:7, c:[.62,.08,.08],c2:[.9,.9,.9],s:false},// maroon
+  {num:8, c:[.06,.06,.06],c2:[.9,.9,.9],s:false},// black
+  {num:9, c:[.95,.83,.08],c2:[.9,.9,.9],s:true},
+  {num:10,c:[.1,.18,.9],  c2:[.9,.9,.9],s:true},
+  {num:11,c:[.88,.1,.1],  c2:[.9,.9,.9],s:true},
+  {num:12,c:[.52,.1,.7],  c2:[.9,.9,.9],s:true},
+  {num:13,c:[.95,.45,.05],c2:[.9,.9,.9],s:true},
+  {num:14,c:[.1,.62,.1],  c2:[.9,.9,.9],s:true},
+  {num:15,c:[.62,.08,.08],c2:[.9,.9,.9],s:true},
+];
+
+function mkBall(x,z,def){
+  return{num:def.num,pos:[x,FY+BALL_R,z],vel:[0,0,0],col:def.c,col2:def.c2,stripe:def.s,dead:false,r:BALL_R};
+}
+function cueBallDef(){
+  return{num:0,pos:[-TX*.5,FY+BALL_R,0],vel:[0,0,0],col:[.97,.97,.97],col2:[.97,.97,.97],stripe:false,dead:false,r:BALL_R};
+}
+
+function rackBalls(){
+  const balls=[cueBallDef()];
+  const rx=TX*.42, rz=0;
+  const S=BALL_R*2.04;
+  const order=[1,2,9,3,8,10,4,14,11,7,12,6,15,13,5];
+  let bi=0;
+  for(let row=0;row<5;row++)
+    for(let col=0;col<=row;col++){
+      const x=rx+row*S;
+      const z=rz+(col-row/2)*S;
+      balls.push(mkBall(x,z,BDEFS[order[bi++]-1]));
+    }
+  return balls;
+}
+
+// ── Game state ─────────────────────────────────────────────────────────────
+let balls=rackBalls();
+let cueBall=balls[0];
+let turn=1,p1type=null,p2type=null,p1sc=0,p2sc=0;
+let shooting=false,foul=false,firstHit=null,pocketedThisShot=[];
+let over=false,placeMode=false;
+let aimAng=0,power=0,mouseDown=false,pressT=0;
+const MAX_PWR=24;
+
+// ── Camera ─────────────────────────────────────────────────────────────────
+let camYaw=-Math.PI/2, camPitch=0.52, camDist=11;
+const camTgt=[0,0,0];
+let camPos=[0,5,10];
+function updCam(){
+  const x=Math.sin(camYaw)*Math.cos(camPitch)*camDist;
+  const y=Math.sin(camPitch)*camDist;
+  const z=Math.cos(camYaw)*Math.cos(camPitch)*camDist;
+  camPos=[camTgt[0]+x,camTgt[1]+y,camTgt[2]+z];
+}
+updCam();
+function getVP(){return m4.mul(m4.pers(Math.PI/3,canvas.width/canvas.height,.05,200),m4.look(camPos,camTgt,[0,1,0]));}
+
+// ── Input ──────────────────────────────────────────────────────────────────
+const keys={};
+window.addEventListener('keydown',e=>keys[e.code]=true);
+window.addEventListener('keyup',e=>keys[e.code]=false);
+
+canvas.addEventListener('mousemove',e=>{
+  if(!shooting&&!over){
+    const sc=w2s(cueBall.pos);
+    aimAng=Math.atan2(e.clientY-sc[1],e.clientX-sc[0]);
+  }
+  if(placeMode){
+    const wp=s2t(e.clientX,e.clientY);
+    if(wp){cueBall.pos[0]=Math.max(-TX+BALL_R,Math.min(TX-BALL_R,wp[0]));cueBall.pos[2]=Math.max(-TZ+BALL_R,Math.min(TZ-BALL_R,wp[2]));}
+  }
+});
+canvas.addEventListener('mousedown',e=>{
+  if(e.button!==0)return;
+  if(placeMode){placeMode=false;document.getElementById('foul-line').style.display='none';document.body.style.cursor='crosshair';return;}
+  if(!shooting&&!over){mouseDown=true;pressT=performance.now();}
+});
+canvas.addEventListener('mouseup',e=>{
+  if(e.button!==0||!mouseDown)return;
+  mouseDown=false;
+  if(!shooting&&!over&&!placeMode)doShoot();
+});
+canvas.addEventListener('wheel',e=>{
+  camDist=Math.max(4,Math.min(20,camDist+e.deltaY*.018));
+});
+
+function doShoot(){
+  if(power<0.01)return;
+  const dx=-Math.cos(aimAng),dz=-Math.sin(aimAng);
+  cueBall.vel=[dx*power*MAX_PWR,0,dz*power*MAX_PWR];
+  power=0;setPwr(0);
+  shooting=true;foul=false;firstHit=null;pocketedThisShot=[];
+}
+
+function setPwr(v){
+  document.getElementById('power-fill').style.width=(v*100)+'%';
+  document.getElementById('power-lbl').textContent=Math.round(v*100)+'%';
+}
+
+// world-to-screen
+function w2s(p){
+  const vp=getVP();
+  const c=[vp[0]*p[0]+vp[4]*p[1]+vp[8]*p[2]+vp[12],vp[1]*p[0]+vp[5]*p[1]+vp[9]*p[2]+vp[13],vp[2]*p[0]+vp[6]*p[1]+vp[10]*p[2]+vp[14],vp[3]*p[0]+vp[7]*p[1]+vp[11]*p[2]+vp[15]];
+  if(Math.abs(c[3])<.001)return[canvas.width/2,canvas.height/2];
+  return[(c[0]/c[3]+1)/2*canvas.width,(1-c[1]/c[3])/2*canvas.height];
+}
+// screen-to-table
+function s2t(sx,sy){
+  const nx=(sx/canvas.width)*2-1, ny=1-(sy/canvas.height)*2;
+  const f=Math.tan(Math.PI/6),asp=canvas.width/canvas.height;
+  const rv=[nx*f*asp,ny*f,-1];
+  const fwd=v3.norm(v3.sub(camTgt,camPos));
+  const rt=v3.norm(v3.cross(fwd,[0,1,0]));
+  const up=v3.cross(rt,fwd);
+  const rd=[rv[0]*rt[0]+rv[1]*up[0]+rv[2]*fwd[0],rv[0]*rt[1]+rv[1]*up[1]+rv[2]*fwd[1],rv[0]*rt[2]+rv[1]*up[2]+rv[2]*fwd[2]];
+  if(Math.abs(rd[1])<.001)return null;
+  const t=(FY+BALL_R-camPos[1])/rd[1];
+  if(t<0)return null;
+  return[camPos[0]+rd[0]*t,FY+BALL_R,camPos[2]+rd[2]*t];
+}
+
+// ── Physics ────────────────────────────────────────────────────────────────
+// Key physics params — tuned for authentic pool feel
+const DECEL=2.4;        // m/s^2 linear deceleration (felt rolling friction force)
+const E_BALL=0.96;      // ball-ball elasticity (near-perfect elastic)
+const E_RAIL=0.75;      // rail elasticity
+const STOP_V=0.04;      // velocity below which ball stops
+
+function physStep(dt){
+  const live=balls.filter(b=>!b.dead);
+
+  // ── Move + felt friction (physics-based: constant deceleration) ──
+  for(const b of live){
+    const spd=Math.sqrt(b.vel[0]*b.vel[0]+b.vel[2]*b.vel[2]);
+    if(spd>STOP_V){
+      const decel=Math.min(DECEL*dt, spd); // don't overshoot zero
+      const nx=b.vel[0]/spd, nz=b.vel[2]/spd;
+      b.vel[0]-=nx*decel; b.vel[2]-=nz*decel;
+    } else {
+      b.vel[0]=0; b.vel[2]=0;
+    }
+    b.pos[0]+=b.vel[0]*dt;
+    b.pos[2]+=b.vel[2]*dt;
+    b.pos[1]=FY+BALL_R; // stay on table
+  }
+
+  // ── Ball-ball collisions — multiple passes to resolve clusters ──
+  // Sort by kinetic energy (fastest first) for more stable resolution
+  for(let pass=0;pass<3;pass++){
+    for(let i=0;i<live.length;i++){
+      for(let j=i+1;j<live.length;j++){
+        const a=live[i],b=live[j];
+        const dx=a.pos[0]-b.pos[0], dz=a.pos[2]-b.pos[2];
+        const dist2=dx*dx+dz*dz;
+        const minD=a.r+b.r;
+        if(dist2<minD*minD&&dist2>1e-8){
+          const dist=Math.sqrt(dist2);
+          const nx=dx/dist, nz=dz/dist;
+          // Push apart fully (positional correction)
+          const pen=(minD-dist)*0.5+0.0001;
+          a.pos[0]+=nx*pen; a.pos[2]+=nz*pen;
+          b.pos[0]-=nx*pen; b.pos[2]-=nz*pen;
+          // Velocity impulse along normal (1D elastic, equal mass)
+          const relV=(a.vel[0]-b.vel[0])*nx+(a.vel[2]-b.vel[2])*nz;
+          if(relV>0){ // only if approaching
+            const imp=relV*(1+E_BALL)*0.5;
+            a.vel[0]-=imp*nx; a.vel[2]-=imp*nz;
+            b.vel[0]+=imp*nx; b.vel[2]+=imp*nz;
+            // Log first contact with cue ball
+            if(!firstHit){
+              if(a===cueBall)firstHit=b;
+              else if(b===cueBall)firstHit=a;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // ── Rail collisions ──
+  for(const b of live){
+    railHit(b);
+    pocketCheck(b);
+  }
+}
+
+function railHit(b){
+  const pGap=PR*1.5;
+  // Check each rail; skip collision if ball is near a pocket mouth
+  const atCorner=(bx,bz)=>POCKETS.some(p=>{
+    const dx=bx-p[0],dz=bz-p[2];
+    return Math.sqrt(dx*dx+dz*dz)<PR*1.6;
+  });
+
+  if(b.pos[0]>TX-b.r && !atCorner(TX,b.pos[2])){
+    b.pos[0]=TX-b.r; b.vel[0]*=-E_RAIL;
+  }
+  if(b.pos[0]<-TX+b.r && !atCorner(-TX,b.pos[2])){
+    b.pos[0]=-TX+b.r; b.vel[0]*=-E_RAIL;
+  }
+  // Side rails split by center pocket
+  const nearSide=(b.pos[0]>-pGap&&b.pos[0]<pGap);
+  if(b.pos[2]>TZ-b.r && !nearSide && !atCorner(b.pos[0],TZ)){
+    b.pos[2]=TZ-b.r; b.vel[2]*=-E_RAIL;
+  }
+  if(b.pos[2]<-TZ+b.r && !nearSide && !atCorner(b.pos[0],-TZ)){
+    b.pos[2]=-TZ+b.r; b.vel[2]*=-E_RAIL;
+  }
+}
+
+function pocketCheck(b){
+  for(const p of POCKETS){
+    const dx=b.pos[0]-p[0],dz=b.pos[2]-p[2];
+    if(dx*dx+dz*dz<PR*PR*0.9){
+      doPocket(b);return;
+    }
+  }
+}
+
+function doPocket(b){
+  b.dead=true;
+  b.pos=[0,-8,0];b.vel=[0,0,0];
+  if(b.num===0){foul=true;}
+  else pocketedThisShot.push(b);
+}
+
+function allStop(){return balls.filter(b=>!b.dead).every(b=>b.vel[0]===0&&b.vel[2]===0);}
+
+// ── Turn resolution ────────────────────────────────────────────────────────
+function resolveTurn(){
+  let keep=false;
+  let isFoul=foul;
+  if(!firstHit&&!isFoul)isFoul=true; // miss = foul
+
+  const poc=pocketedThisShot;
+  const eight=poc.some(b=>b.num===8);
+
+  if(eight){
+    const mytype=turn===1?p1type:p2type;
+    const myLeft=balls.filter(b=>!b.dead&&b.num!==0&&b.num!==8&&(mytype==='solid'?b.num<8:b.num>8));
+    endGame(myLeft.length===0&&!isFoul?turn:turn===1?2:1);
+    return;
+  }
+
+  if(poc.length>0){
+    if(p1type===null&&!isFoul){
+      const s=poc[0];
+      if(turn===1){p1type=s.num<8?'solid':'stripe';p2type=s.num<8?'stripe':'solid';}
+      else{p2type=s.num<8?'solid':'stripe';p1type=s.num<8?'stripe':'solid';}
+    }
+    const mytype=turn===1?p1type:p2type;
+    const valid=poc.every(b=>(mytype==='solid'?b.num<8:b.num>8));
+    if(valid&&!isFoul){keep=true;if(turn===1)p1sc+=poc.length;else p2sc+=poc.length;}
+  }
+
+  if(foul){
+    cueBall.dead=false;
+    cueBall.pos=[-(TX*.5),FY+BALL_R,0];
+    cueBall.vel=[0,0,0];
+    placeMode=true;
+    document.getElementById('foul-line').style.display='block';
+    document.body.style.cursor='none';
+    keep=false;
+  }
+
+  if(!keep)turn=turn===1?2:1;
+  updHUD();
+}
+
+function endGame(w){over=true;showMsg(`PLAYER ${w} WINS! 🎱`,'8-ball pocketed. New game?');}
+
+function newGame(){
+  balls=rackBalls();cueBall=balls[0];
+  turn=1;p1type=null;p2type=null;p1sc=0;p2sc=0;
+  shooting=false;foul=false;firstHit=null;pocketedThisShot=[];over=false;placeMode=false;power=0;setPwr(0);
+  document.getElementById('foul-line').style.display='none';
+  document.body.style.cursor='crosshair';
+  updHUD();
+}
+window.newGame=newGame;
+
+function updHUD(){
+  document.getElementById('s1').textContent=p1sc;
+  document.getElementById('s2').textContent=p2sc;
+  const el=document.getElementById('turn-txt');
+  el.textContent=`PLAYER ${turn}`;el.className=`val turn-p${turn}`;
+  const tm={solid:'SOLIDS (1-7)',stripe:'STRIPES (9-15)'};
+  const myT=turn===1?p1type:p2type;
+  document.getElementById('type-txt').textContent=myT?tm[myT]:'—';
+}
+
+let _msgCb=null;
+function showMsg(title,sub){
+  document.getElementById('mt').textContent=title;
+  document.getElementById('ms').innerHTML=sub;
+  document.getElementById('msg').style.display='block';
+  _msgCb=over?newGame:null;
+}
+function dismissMsg(){
+  document.getElementById('msg').style.display='none';
+  if(_msgCb){_msgCb();_msgCb=null;}
+}
+window.dismissMsg=dismissMsg;
+
+// ── Render ─────────────────────────────────────────────────────────────────
+const LIT=[5,12,3];
+
+function drawBall(b,vp){
+  const model=m4.mul(m4.tr(b.pos[0],b.pos[1],b.pos[2]),m4.sc(b.r));
+  const mvp=m4.mul(vp,model);
+  gl.useProgram(pBall);
+  um(pBall,'uMVP',mvp);um(pBall,'uModel',model);
+  u3(pBall,'uCol',...b.col);u3(pBall,'uCol2',...b.col2);
+  u3(pBall,'uLit',...LIT);u3(pBall,'uEye',...camPos);
+  ui(pBall,'uStripe',b.stripe?1:0);
+  const aP=gl.getAttribLocation(pBall,'aPos'),aN=gl.getAttribLocation(pBall,'aNorm');
+  gl.bindBuffer(gl.ARRAY_BUFFER,GEO.ball.vb);gl.enableVertexAttribArray(aP);gl.vertexAttribPointer(aP,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ARRAY_BUFFER,GEO.ball.nb);gl.enableVertexAttribArray(aN);gl.vertexAttribPointer(aN,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,GEO.ball.ib);
+  gl.drawElements(gl.TRIANGLES,GEO.ball.cnt,gl.UNSIGNED_SHORT,0);
+}
+
+function drawTable(vp){
+  const I=m4.id(),mvp=m4.mul(vp,I);
+
+  // Felt green
+  drawVN(feltGeo,pPhong,mvp,[.07,.38,.12],0.08,LIT,camPos);
+
+  // Rails wood
+  drawVN(railGeo,pPhong,mvp,[.42,.20,.05],0.55,LIT,camPos);
+
+  // Pockets: dark rim rings on felt, then dark hole disc
+  for(let i=0;i<POCKETS.length;i++){
+    drawVN(pocketRims[i],pPhong,mvp,[.02,.02,.02],0,LIT,camPos);
+    drawVN(pocketDiscs[i],pPhong,mvp,[.01,.01,.01],0,LIT,camPos);
+  }
+
+  // Pocket inner tunnels — small dark cylinders at each pocket, going down
+  for(const pk of POCKETS){
+    const tunnelMVP=m4.mul(vp,m4.tr(pk[0],FY,pk[2]));
+    drawVN(GEO.legCyl, pPhong, m4.mul(vp,m4.mul(m4.tr(pk[0],FY-0.4,pk[2]),m4.sc(PR/0.12))), [.02,.02,.02], 0, LIT, camPos);
+  }
+
+  // Legs
+  const legPos=[[-TX-RAIL_W+0.1,-TZ-RAIL_W+0.1],[TX+RAIL_W-0.1,-TZ-RAIL_W+0.1],[-TX-RAIL_W+0.1,TZ+RAIL_W-0.1],[TX+RAIL_W-0.1,TZ+RAIL_W-0.1]];
+  for(const[lx,lz]of legPos){
+    drawVN(legGeo,pPhong,m4.mul(vp,m4.tr(lx,-2.2,lz)),[.30,.14,.04],0.4,LIT,camPos);
+  }
+}
+
+function drawCueAndAim(vp){
+  if(shooting||placeMode||over)return;
+  const cb=cueBall.pos;
+  const dx=Math.cos(aimAng),dz=Math.sin(aimAng);
+  const pull=0.25+power*0.7;
+  // Cue stick (thick line from tip behind cue ball to butt)
+  const tx=cb[0]+dx*(BALL_R+pull), tz=cb[2]+dz*(BALL_R+pull);
+  const bx=cb[0]+dx*(BALL_R+pull+3.2), bz=cb[2]+dz*(BALL_R+pull+3.2);
+  const mvp=m4.mul(vp,m4.id());
+
+  // Cue stick — two lines side by side for thickness illusion
+  drawLines([tx,cb[1],tz, bx,cb[1],bz],pFlat,mvp,[.78,.55,.18,1.0],4);
+  drawLines([tx,cb[1]+.01,tz, bx,cb[1]+.01,bz],pFlat,mvp,[.9,.72,.35,1.0],2);
+
+  // Aim guide line (dashes approximated as short segments)
+  const aimLen=4.5;
+  const adx=-Math.cos(aimAng),adz=-Math.sin(aimAng);
+  const dashPts=[];
+  for(let d=0.05;d<aimLen;d+=0.28){
+    dashPts.push(cb[0]+adx*d,cb[1]+.01,cb[2]+adz*d);
+    dashPts.push(cb[0]+adx*(d+0.14),cb[1]+.01,cb[2]+adz*(d+0.14));
+  }
+  drawLines(dashPts,pFlat,mvp,[1,1,1,.35],1);
+}
+
+// ── Main loop ──────────────────────────────────────────────────────────────
+let lastT=0,frames=0,fpsT=0;
+
+function render(now){
+  const t=now/1000, dt=Math.min(t-lastT,.05);
+  lastT=t;
+  frames++;fpsT+=dt;
+  if(fpsT>=.5){document.getElementById('fps').textContent=Math.round(frames/fpsT);frames=0;fpsT=0;}
+
+  // Camera
+  if(keys['KeyQ'])camYaw-=dt*1.4;
+  if(keys['KeyE'])camYaw+=dt*1.4;
+  if(keys['KeyR'])camPitch=Math.min(Math.PI/2-.05,camPitch+dt*1.2);
+  if(keys['KeyF'])camPitch=Math.max(.1,camPitch-dt*1.2);
+  updCam();
+
+  // Power charge
+  if(mouseDown&&!shooting&&!placeMode){
+    power=Math.min(1,(performance.now()-pressT)/1000*.75);
+    setPwr(power);
+  }
+
+  // Physics — run at fixed 240Hz internally for stable collisions
+  if(shooting){
+    const STEPS=4;
+    for(let s=0;s<STEPS;s++)physStep(dt/STEPS);
+    if(allStop()){shooting=false;resolveTurn();}
+  }
+
+  // Render
+  gl.enable(gl.DEPTH_TEST);
+  gl.clearColor(.04,.09,.03,1);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+
+  const vp=getVP();
+  drawTable(vp);
+  for(const b of balls)if(!b.dead)drawBall(b,vp);
+  drawCueAndAim(vp);
+
+  requestAnimationFrame(render);
+}
+
+updHUD();
+showMsg('🎱 3D POOL','Hold left mouse button to charge power, release to shoot.<br>Mouse aim around the cue ball. Q/E orbit, R/F tilt, scroll zoom.');
+requestAnimationFrame(t=>{lastT=t/1000;requestAnimationFrame(render);});
+</script>
+</body>
+</html>
