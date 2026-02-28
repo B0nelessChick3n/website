@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Physics Engine</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    color: #e0e0ff;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  canvas {
+    display: block;
+    flex: 1;
+    cursor: crosshair;
+  }
+  #hud {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    background: rgba(10,10,20,0.85);
+    border: 1px solid rgba(120,120,255,0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    line-height: 1.8;
+    backdrop-filter: blur(10px);
+    pointer-events: none;
+    color: #a0a0cc;
+    min-width: 180px;
+  }
+  #hud .title {
+    color: #8080ff;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  #hud .key { color: #60d0ff; }
+  #hud .val { color: #ffe080; }
+  #controls {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10,10,20,0.85);
+    border: 1px solid rgba(120,120,255,0.3);
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 11px;
+    color: #6060aa;
+    letter-spacing: 1px;
+    pointer-events: none;
+    text-align: center;
+    backdrop-filter: blur(10px);
+  }
+  #controls span { color: #8080cc; margin: 0 6px; }
+
+  /* Physics Panel */
+  #physics-panel {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: rgba(8,8,18,0.92);
+    border: 1px solid rgba(120,120,255,0.25);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    width: 230px;
+    backdrop-filter: blur(12px);
+    user-select: none;
+  }
+  #physics-panel .panel-title {
+    color: #8080ff;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(120,120,255,0.2);
+  }
+  .slider-row {
+    margin-bottom: 10px;
+  }
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    color: #8888bb;
+    letter-spacing: 1px;
+  }
+  .slider-label .sval {
+    color: #ffe080;
+    min-width: 36px;
+    text-align: right;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(80,80,160,0.4);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6060ff;
+    border: 2px solid #a0a0ff;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(100,100,255,0.6);
+  }
+  input[type=range]:hover::-webkit-slider-thumb {
+    background: #8080ff;
+  }
+  .toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(120,120,255,0.15);
+  }
+  .toggle-btn {
+    background: rgba(60,60,120,0.5);
+    border: 1px solid rgba(120,120,255,0.4);
+    color: #a0a0ff;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .toggle-btn:hover { background: rgba(80,80,160,0.7); color: #c0c0ff; }
+  .toggle-btn.on { background: rgba(60,120,60,0.5); border-color: rgba(80,200,80,0.5); color: #80ff80; }
+  .toggle-btn.on:hover { background: rgba(80,160,80,0.7); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="title">PHYSICS</div>
+  <div><span class="key">POS X:</span> <span class="val" id="px">0.00</span></div>
+  <div><span class="key">POS Y:</span> <span class="val" id="py">0.00</span></div>
+  <div><span class="key">POS Z:</span> <span class="val" id="pz">0.00</span></div>
+  <div><span class="key">VEL  :</span> <span class="val" id="spd">0.00</span></div>
+  <div><span class="key">BALLS:</span> <span class="val" id="cnt">1</span></div>
+  <div><span class="key">FPS  :</span> <span class="val" id="fps">60</span></div>
+</div>
+
+<div id="controls">
+  <span>WASD / ARROWS</span> move ball &nbsp;
+  <span>SPACE</span> jump &nbsp;
+  <span>QE</span> orbit camera &nbsp;
+  <span>RF</span> camera up/down &nbsp;
+  <span>CLICK</span> spawn ball
+</div>
+
+<div id="physics-panel">
+  <div class="panel-title">⚙ Physics</div>
+  <div class="slider-row">
+    <div class="slider-label"><span>GRAVITY</span><span class="sval" id="vGravity">25</span></div>
+    <input type="range" id="sGravity" min="0" max="60" step="1" value="25">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label"><span>ELASTICITY</span><span class="sval" id="vElasticity">0.65</span></div>
+    <input type="range" id="sElasticity" min="0" max="1" step="0.01" value="0.65">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label"><span>FRICTION</span><span class="sval" id="vFriction">0.15</span></div>
+    <input type="range" id="sFriction" min="0" max="1" step="0.01" value="0.15">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label"><span>MOVE FORCE</span><span class="sval" id="vForce">40</span></div>
+    <input type="range" id="sForce" min="5" max="150" step="5" value="40">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label"><span>JUMP POWER</span><span class="sval" id="vJump">12</span></div>
+    <input type="range" id="sJump" min="2" max="30" step="1" value="12">
+  </div>
+  <div class="slider-row">
+    <div class="slider-label"><span>AIR DRAG</span><span class="sval" id="vDrag">0.00</span></div>
+    <input type="range" id="sDrag" min="0" max="0.1" step="0.005" value="0">
+  </div>
+  <div class="toggle-row">
+    <button class="toggle-btn on" id="btnGravity">GRAVITY ON</button>
+    <button class="toggle-btn" id="btnReset">RESET</button>
+    <button class="toggle-btn" id="btnClear">CLEAR</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+if (!gl) {
+  document.body.innerHTML = '<div style="color:white;padding:40px;font-family:monospace">WebGL not supported. Try a modern browser.</div>';
+  throw new Error('no webgl');
+}
+
+// ---- Resize ----
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---- Shaders ----
+const vsSource = `
+  attribute vec3 aPos;
+  attribute vec3 aNorm;
+  uniform mat4 uMVP;
+  uniform mat4 uModel;
+  varying vec3 vNorm;
+  varying vec3 vPos;
+  void main(){
+    vec4 wpos = uModel * vec4(aPos, 1.0);
+    vPos = wpos.xyz;
+    vNorm = normalize((uModel * vec4(aNorm, 0.0)).xyz);
+    gl_Position = uMVP * vec4(aPos, 1.0);
+  }
+`;
+const fsSource = `
+  precision mediump float;
+  varying vec3 vNorm;
+  varying vec3 vPos;
+  uniform vec3 uColor;
+  uniform vec3 uLightPos;
+  uniform vec3 uCamPos;
+  void main(){
+    vec3 L = normalize(uLightPos - vPos);
+    vec3 N = normalize(vNorm);
+    vec3 V = normalize(uCamPos - vPos);
+    vec3 H = normalize(L + V);
+    float diff = max(dot(N, L), 0.0) * 0.8 + 0.2;
+    float spec = pow(max(dot(N, H), 0.0), 64.0) * 0.6;
+    float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * 0.3;
+    vec3 col = uColor * diff + vec3(1.0) * spec + uColor * rim;
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+const vsFloor = `
+  attribute vec3 aPos;
+  uniform mat4 uMVP;
+  varying vec2 vUV;
+  void main(){
+    vUV = aPos.xz * 0.2;
+    gl_Position = uMVP * vec4(aPos, 1.0);
+  }
+`;
+const fsFloor = `
+  precision mediump float;
+  varying vec2 vUV;
+  void main(){
+    vec2 g = fract(vUV);
+    float line = step(0.97, max(g.x, g.y));
+    vec3 col = mix(vec3(0.06, 0.06, 0.12), vec3(0.15, 0.15, 0.35), line);
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+
+function compileShader(type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS))
+    throw new Error(gl.getShaderInfoLog(sh));
+  return sh;
+}
+function makeProgram(vs, fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, compileShader(gl.VERTEX_SHADER, vs));
+  gl.attachShader(p, compileShader(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(p);
+  return p;
+}
+
+const ballProg = makeProgram(vsSource, fsSource);
+const floorProg = makeProgram(vsFloor, fsFloor);
+
+// ---- Math ----
+const mat4 = {
+  ident: () => new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]),
+  mul(a, b) {
+    const o = new Float32Array(16);
+    for (let r = 0; r < 4; r++)
+      for (let c = 0; c < 4; c++)
+        for (let k = 0; k < 4; k++)
+          o[r + c*4] += a[r + k*4] * b[k + c*4];
+    return o;
+  },
+  perspective(fov, asp, near, far) {
+    const f = 1 / Math.tan(fov/2);
+    const o = new Float32Array(16);
+    o[0] = f/asp; o[5] = f;
+    o[10] = (far+near)/(near-far); o[11] = -1;
+    o[14] = 2*far*near/(near-far);
+    return o;
+  },
+  lookAt(eye, target, up) {
+    let f = norm(sub3(target, eye));
+    let r = norm(cross3(f, up));
+    let u = cross3(r, f);
+    const o = new Float32Array(16);
+    o[0]=r[0]; o[1]=u[0]; o[2]=-f[0];
+    o[4]=r[1]; o[5]=u[1]; o[6]=-f[1];
+    o[8]=r[2]; o[9]=u[2]; o[10]=-f[2];
+    o[12]=-dot3(r,eye); o[13]=-dot3(u,eye); o[14]=dot3(f,eye);
+    o[15]=1;
+    return o;
+  },
+  translate(tx, ty, tz) {
+    const o = mat4.ident();
+    o[12]=tx; o[13]=ty; o[14]=tz;
+    return o;
+  },
+  scale(s) {
+    const o = mat4.ident();
+    o[0]=s; o[5]=s; o[10]=s;
+    return o;
+  }
+};
+const sub3 = (a,b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+const add3 = (a,b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]];
+const scale3 = (a,s) => [a[0]*s, a[1]*s, a[2]*s];
+const dot3 = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cross3 = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+const norm = v => { const l = Math.sqrt(dot3(v,v)); return l < 1e-9 ? [0,1,0] : [v[0]/l, v[1]/l, v[2]/l]; };
+const len3 = v => Math.sqrt(dot3(v,v));
+
+// ---- Sphere geometry ----
+function makeSphere(stacks, slices) {
+  const verts = [], norms = [], idx = [];
+  for (let i = 0; i <= stacks; i++) {
+    const phi = Math.PI * i / stacks;
+    for (let j = 0; j <= slices; j++) {
+      const theta = 2 * Math.PI * j / slices;
+      const x = Math.sin(phi) * Math.cos(theta);
+      const y = Math.cos(phi);
+      const z = Math.sin(phi) * Math.sin(theta);
+      verts.push(x, y, z);
+      norms.push(x, y, z);
+    }
+  }
+  for (let i = 0; i < stacks; i++)
+    for (let j = 0; j < slices; j++) {
+      const a = i*(slices+1)+j, b = a+slices+1;
+      idx.push(a,b,a+1, b,b+1,a+1);
+    }
+  return { verts: new Float32Array(verts), norms: new Float32Array(norms), idx: new Uint16Array(idx) };
+}
+
+const sphere = makeSphere(20, 20);
+const sphereVBuf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, sphereVBuf);
+gl.bufferData(gl.ARRAY_BUFFER, sphere.verts, gl.STATIC_DRAW);
+const sphereNBuf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, sphereNBuf);
+gl.bufferData(gl.ARRAY_BUFFER, sphere.norms, gl.STATIC_DRAW);
+const sphereIBuf = gl.createBuffer();
+gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIBuf);
+gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, sphere.idx, gl.STATIC_DRAW);
+
+// ---- Floor geometry ----
+const floorSize = 30;
+const floorVerts = new Float32Array([
+  -floorSize, 0, -floorSize,
+   floorSize, 0, -floorSize,
+   floorSize, 0,  floorSize,
+  -floorSize, 0,  floorSize,
+]);
+const floorIdx = new Uint16Array([0,1,2, 0,2,3]);
+const floorVBuf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, floorVBuf);
+gl.bufferData(gl.ARRAY_BUFFER, floorVerts, gl.STATIC_DRAW);
+const floorIBuf = gl.createBuffer();
+gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, floorIBuf);
+gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, floorIdx, gl.STATIC_DRAW);
+
+// ---- Physics params (live, driven by sliders) ----
+const P = {
+  gravity: 25,
+  elasticity: 0.65,
+  friction: 0.15,
+  force: 40,
+  jump: 12,
+  drag: 0,
+};
+const RADIUS = 0.5;
+const FLOOR_Y = 0;
+let gravityOn = true;
+const BALL_COLORS = [
+  [0.3, 0.5, 1.0],   // blue
+  [1.0, 0.35, 0.3],  // red
+  [0.3, 1.0, 0.5],   // green
+  [1.0, 0.85, 0.2],  // yellow
+  [0.85, 0.3, 1.0],  // purple
+  [0.3, 0.9, 1.0],   // cyan
+  [1.0, 0.6, 0.2],   // orange
+];
+
+function makeBall(x, y, z, colorIdx) {
+  return {
+    pos: [x, y, z],
+    vel: [0, 0, 0],
+    radius: RADIUS,
+    color: BALL_COLORS[colorIdx % BALL_COLORS.length],
+    onGround: false,
+  };
+}
+
+const balls = [makeBall(0, 3, 0, 0)];
+const mainBall = balls[0];
+
+// ---- Camera ----
+let camYaw = 0.5;
+let camPitch = 0.3;
+let camDist = 10;
+let camTarget = [0, 1, 0];
+let camPos = [0, 5, 10];
+
+function updateCamPos() {
+  const x = Math.sin(camYaw) * Math.cos(camPitch) * camDist;
+  const y = Math.sin(camPitch) * camDist;
+  const z = Math.cos(camYaw) * Math.cos(camPitch) * camDist;
+  camPos = [camTarget[0]+x, camTarget[1]+y, camTarget[2]+z];
+}
+
+// ---- Input ----
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.code] = true; });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (mainBall.onGround) { mainBall.vel[1] = P.jump; mainBall.onGround = false; }
+  }
+});
+
+canvas.addEventListener('click', e => {
+  const dir = camDir();
+  const sp = 15;
+  const b = makeBall(camPos[0], camPos[1], camPos[2], balls.length);
+  b.vel = [dir[0]*sp, dir[1]*sp, dir[2]*sp];
+  balls.push(b);
+  document.getElementById('cnt').textContent = balls.length;
+});
+
+// Wire up sliders
+function makeSlider(id, valId, key, fmt) {
+  const sl = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  sl.addEventListener('input', () => {
+    P[key] = parseFloat(sl.value);
+    vl.textContent = fmt ? P[key].toFixed(2) : P[key];
+  });
+}
+makeSlider('sGravity',    'vGravity',    'gravity',    false);
+makeSlider('sElasticity', 'vElasticity', 'elasticity', true);
+makeSlider('sFriction',   'vFriction',   'friction',   true);
+makeSlider('sForce',      'vForce',      'force',      false);
+makeSlider('sJump',       'vJump',       'jump',       false);
+makeSlider('sDrag',       'vDrag',       'drag',       true);
+
+document.getElementById('btnGravity').addEventListener('click', () => {
+  gravityOn = !gravityOn;
+  const btn = document.getElementById('btnGravity');
+  btn.textContent = gravityOn ? 'GRAVITY ON' : 'GRAVITY OFF';
+  btn.classList.toggle('on', gravityOn);
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  mainBall.pos = [0, 3, 0];
+  mainBall.vel = [0, 0, 0];
+  camTarget = [0, 1, 0];
+  camYaw = 0.5;
+});
+document.getElementById('btnClear').addEventListener('click', () => {
+  balls.splice(1);
+  document.getElementById('cnt').textContent = 1;
+});
+
+function camDir() {
+  return norm([camTarget[0]-camPos[0], camTarget[1]-camPos[1], camTarget[2]-camPos[2]]);
+}
+
+// ---- Update ----
+let lastT = 0;
+let frameCount = 0;
+let fpsTimer = 0;
+
+function update(dt) {
+  if (dt > 0.1) dt = 0.1;
+
+  // Camera controls
+  if (keys['KeyQ']) camYaw -= dt * 1.5;
+  if (keys['KeyE']) camYaw += dt * 1.5;
+  if (keys['KeyR']) camPitch = Math.min(Math.PI/2 - 0.1, camPitch + dt * 1.5);
+  if (keys['KeyF']) camPitch = Math.max(0.05, camPitch - dt * 1.5);
+
+  // Move direction relative to camera (fixed: W = forward into screen)
+  const fwd = norm([-Math.sin(camYaw), 0, -Math.cos(camYaw)]);
+  const right = norm(cross3(fwd, [0,1,0]));
+
+  let fx = 0, fz = 0;
+  if (keys['KeyW'] || keys['ArrowUp'])    { fx += fwd[0]; fz += fwd[2]; }
+  if (keys['KeyS'] || keys['ArrowDown'])  { fx -= fwd[0]; fz -= fwd[2]; }
+  if (keys['KeyA'] || keys['ArrowLeft'])  { fx -= right[0]; fz -= right[2]; }
+  if (keys['KeyD'] || keys['ArrowRight']) { fx += right[0]; fz += right[2]; }
+
+  const mlen = Math.sqrt(fx*fx + fz*fz);
+  if (mlen > 0) { fx /= mlen; fz /= mlen; }
+  mainBall.vel[0] += fx * P.force * dt;
+  mainBall.vel[2] += fz * P.force * dt;
+
+  // Physics for each ball
+  for (const b of balls) {
+    // Gravity
+    if (gravityOn) b.vel[1] -= P.gravity * dt;
+
+    // Air drag
+    if (P.drag > 0) {
+      const speed = len3(b.vel);
+      if (speed > 0) {
+        const dragF = P.drag * speed * speed;
+        b.vel[0] -= (b.vel[0]/speed) * dragF * dt;
+        b.vel[1] -= (b.vel[1]/speed) * dragF * dt;
+        b.vel[2] -= (b.vel[2]/speed) * dragF * dt;
+      }
+    }
+
+    b.pos[0] += b.vel[0] * dt;
+    b.pos[1] += b.vel[1] * dt;
+    b.pos[2] += b.vel[2] * dt;
+
+    // Floor collision
+    if (b.pos[1] - b.radius < FLOOR_Y) {
+      b.pos[1] = FLOOR_Y + b.radius;
+      b.vel[1] *= -P.elasticity;
+      if (Math.abs(b.vel[1]) < 0.5) { b.vel[1] = 0; }
+      // friction 0 = free slide, 1 = instant stop
+      const frictionKeep = 1 - P.friction;
+      b.vel[0] *= frictionKeep;
+      b.vel[2] *= frictionKeep;
+      b.onGround = true;
+    } else if (b.pos[1] - b.radius > FLOOR_Y + 0.05) {
+      b.onGround = false;
+    }
+
+    // Boundary walls
+    const WALL = floorSize - b.radius;
+    if (b.pos[0] > WALL)  { b.pos[0] = WALL;  b.vel[0] *= -P.elasticity; }
+    if (b.pos[0] < -WALL) { b.pos[0] = -WALL; b.vel[0] *= -P.elasticity; }
+    if (b.pos[2] > WALL)  { b.pos[2] = WALL;  b.vel[2] *= -P.elasticity; }
+    if (b.pos[2] < -WALL) { b.pos[2] = -WALL; b.vel[2] *= -P.elasticity; }
+  }
+
+  // Ball-ball collision
+  for (let i = 0; i < balls.length; i++) {
+    for (let j = i+1; j < balls.length; j++) {
+      const a = balls[i], b = balls[j];
+      const d = sub3(b.pos, a.pos);
+      const dist = len3(d);
+      const minDist = a.radius + b.radius;
+      if (dist < minDist && dist > 0.001) {
+        const n = norm(d);
+        const overlap = minDist - dist;
+        a.pos = sub3(a.pos, scale3(n, overlap * 0.5));
+        b.pos = add3(b.pos, scale3(n, overlap * 0.5));
+        const relVel = sub3(b.vel, a.vel);
+        const impulse = dot3(relVel, n) * 0.5 * (1 + P.elasticity);
+        if (impulse < 0) {
+          a.vel = add3(a.vel, scale3(n, -impulse));
+          b.vel = add3(b.vel, scale3(n, impulse));
+        }
+      }
+    }
+  }
+
+  // Camera follows main ball
+  const lerp = 1 - Math.pow(0.001, dt);
+  camTarget[0] += (mainBall.pos[0] - camTarget[0]) * lerp;
+  camTarget[1] += (mainBall.pos[1] - camTarget[1]) * lerp;
+  camTarget[2] += (mainBall.pos[2] - camTarget[2]) * lerp;
+  updateCamPos();
+}
+
+// ---- Draw ----
+function setUniform1(prog, name, v) { gl.uniform1f(gl.getUniformLocation(prog, name), v); }
+function setUniform3(prog, name, x, y, z) { gl.uniform3f(gl.getUniformLocation(prog, name), x, y, z); }
+function setUniformMat4(prog, name, m) { gl.uniformMatrix4fv(gl.getUniformLocation(prog, name), false, m); }
+
+function getVP() {
+  const proj = mat4.perspective(Math.PI/3, canvas.width/canvas.height, 0.1, 500);
+  const view = mat4.lookAt(camPos, camTarget, [0,1,0]);
+  return mat4.mul(proj, view);
+}
+
+function drawBall(b, vp) {
+  gl.useProgram(ballProg);
+
+  const model = mat4.mul(mat4.translate(b.pos[0], b.pos[1], b.pos[2]), mat4.scale(b.radius));
+  const mvp = mat4.mul(vp, model);
+
+  setUniformMat4(ballProg, 'uMVP', mvp);
+  setUniformMat4(ballProg, 'uModel', model);
+  setUniform3(ballProg, 'uColor', b.color[0], b.color[1], b.color[2]);
+  setUniform3(ballProg, 'uLightPos', 8, 15, 8);
+  setUniform3(ballProg, 'uCamPos', camPos[0], camPos[1], camPos[2]);
+
+  const aPos = gl.getAttribLocation(ballProg, 'aPos');
+  const aNorm = gl.getAttribLocation(ballProg, 'aNorm');
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, sphereVBuf);
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, sphereNBuf);
+  gl.enableVertexAttribArray(aNorm);
+  gl.vertexAttribPointer(aNorm, 3, gl.FLOAT, false, 0, 0);
+
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIBuf);
+  gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+}
+
+function drawFloor(vp) {
+  gl.useProgram(floorProg);
+  const model = mat4.ident();
+  const mvp = mat4.mul(vp, model);
+  setUniformMat4(floorProg, 'uMVP', mvp);
+
+  const aPos = gl.getAttribLocation(floorProg, 'aPos');
+  gl.bindBuffer(gl.ARRAY_BUFFER, floorVBuf);
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, floorIBuf);
+  gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+}
+
+// ---- HUD update ----
+let hpx = document.getElementById('px');
+let hpy = document.getElementById('py');
+let hpz = document.getElementById('pz');
+let hspd = document.getElementById('spd');
+let hfps = document.getElementById('fps');
+
+function render(now) {
+  const t = now / 1000;
+  const dt = t - lastT;
+  lastT = t;
+
+  frameCount++;
+  fpsTimer += dt;
+  if (fpsTimer >= 0.5) {
+    hfps.textContent = Math.round(frameCount / fpsTimer);
+    frameCount = 0;
+    fpsTimer = 0;
+  }
+
+  update(dt);
+
+  gl.enable(gl.DEPTH_TEST);
+  gl.clearColor(0.04, 0.04, 0.08, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  const vp = getVP();
+  drawFloor(vp);
+  for (const b of balls) drawBall(b, vp);
+
+  // HUD
+  hpx.textContent = mainBall.pos[0].toFixed(2);
+  hpy.textContent = mainBall.pos[1].toFixed(2);
+  hpz.textContent = mainBall.pos[2].toFixed(2);
+  hspd.textContent = len3(mainBall.vel).toFixed(2);
+
+  requestAnimationFrame(render);
+}
+
+requestAnimationFrame(t => { lastT = t/1000; requestAnimationFrame(render); });
+</script>
+</body>
+</html>
