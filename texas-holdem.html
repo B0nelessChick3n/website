@@ -1100,6 +1100,7 @@ let G = {
   smallBlind:5,
   bigBlind:10,
   lastAggressor:-1,
+  actedSet:new Set(),
   betsThisRound:0,
 };
 
@@ -1141,6 +1142,7 @@ function startNewHand(){
   G.currentBet=0;
   G.minRaise=G.bigBlind;
   G.lastAggressor=-1;
+  G.actedSet=new Set();
 
   // Reset players
   for(const p of G.players){
@@ -1226,15 +1228,16 @@ function dealHoleCards(){
 
 function postBlindsBet(){
   const aps=activePlayers();
-  const sbIdx=aps[(aps.indexOf(G.players[G.dealerIdx])+1)%aps.length].id;
-  const bbIdx=aps[(aps.indexOf(G.players[G.dealerIdx])+2)%aps.length].id;
-  const firstToAct=aps[(aps.indexOf(G.players[G.dealerIdx])+3)%aps.length].id;
+  const sbPos=(aps.findIndex(p=>p.id===G.players[G.dealerIdx].id)+1)%aps.length;
+  const bbPos=(sbPos+1)%aps.length;
+  const utPos=(bbPos+1)%aps.length;
+  const sbIdx=aps[sbPos].id;
+  const bbIdx=aps[bbPos].id;
 
-  // SB
   const sbAmt=Math.min(G.smallBlind,G.players[sbIdx].chips);
   placeBet(sbIdx,sbAmt);
   setStatus(sbIdx,'SMALL BLIND');
-  // BB
+
   const bbAmt=Math.min(G.bigBlind,G.players[bbIdx].chips);
   placeBet(bbIdx,bbAmt);
   G.currentBet=bbAmt;
@@ -1242,8 +1245,10 @@ function postBlindsBet(){
   setStatus(bbIdx,'BIG BLIND');
 
   G.phase='preflop';
-  G.lastAggressor=bbIdx;
-  G.currentIdx=firstToAct;
+  // Nobody has voluntarily acted yet — BB gets option last
+  G.actedSet=new Set();
+  // Preflop the BB gets to act last (big blind option), so don't pre-mark them
+  G.currentIdx=aps[utPos].id;
   setPhaseLabel('PRE-FLOP');
 
   updateHUD();
@@ -1282,57 +1287,80 @@ function setThinking(pid){
 }
 function setPhaseLabel(txt){ document.getElementById('phase-name').textContent=txt; }
 
-// ── BETTING ROUND ────────────────────────────────────
-function startBettingRound(){
-  // Reset bets tracking
-  G.betsThisRound=0;
+// ── BETTING ROUND ─────────────────────────────────────
+// Clean approach: track who has acted at the CURRENT bet level.
+// On raise: clear actedSet so everyone must respond again.
+// Round ends when every non-folded, non-allin player is in actedSet
+// AND all their bets equal currentBet.
 
-  // If only 1 non-folded player, go to showdown
+function startBettingRound(){
   const active=G.players.filter(p=>p.active&&!p.folded);
   if(active.length<=1){ endHand(); return; }
 
-  // If all remaining non-folded are all-in, proceed
   const canAct=G.players.filter(p=>p.active&&!p.folded&&!p.allIn);
-  if(canAct.length<=0){ revealAll(); return; }
+  if(canAct.length===0){ revealAll(); return; }
 
+  // For non-preflop rounds: start from first active player left of dealer
+  // actedSet is reset to empty; currentIdx already set by caller
   runCurrentTurn();
+}
+
+function isBettingComplete(){
+  const canAct=G.players.filter(p=>p.active&&!p.folded&&!p.allIn);
+  if(canAct.length===0) return true;
+  const maxBet=Math.max(...canAct.map(p=>p.bet));
+  // Every player who can act must have acted AND have matched the current bet
+  return canAct.every(p=>G.actedSet.has(p.id) && p.bet===maxBet);
+}
+
+function getNextToAct(fromIdx){
+  // Find the next player after fromIdx (exclusive) who can still act
+  for(let i=1;i<=4;i++){
+    const idx=(fromIdx+i)%4;
+    const p=G.players[idx];
+    if(p.active && !p.folded && !p.allIn) return idx;
+  }
+  return -1;
 }
 
 function runCurrentTurn(){
   const active=G.players.filter(p=>p.active&&!p.folded);
   if(active.length<=1){ endHand(); return; }
 
-  // Check if betting round is over
-  const canAct=G.players.filter(p=>p.active&&!p.folded&&!p.allIn);
-  if(canAct.length===0||isBettingDone()){ advancePhase(); return; }
+  if(isBettingComplete()){ advancePhase(); return; }
 
-  // Advance to next player who can act
-  while(G.players[G.currentIdx].folded||G.players[G.currentIdx].allIn||!G.players[G.currentIdx].active){
-    G.currentIdx=nextActive(G.currentIdx);
-    if(G.currentIdx===G.lastAggressor){ advancePhase(); return; }
+  // currentIdx points to who should act next
+  const p=G.players[G.currentIdx];
+
+  // Skip if this player can't act
+  if(!p.active||p.folded||p.allIn){
+    G.currentIdx=getNextToAct(G.currentIdx);
+    if(G.currentIdx===-1){ advancePhase(); return; }
+    setTimeout(()=>runCurrentTurn(),50);
+    return;
   }
 
-  // Mark active seat
+  // Highlight active seat
   for(let i=0;i<4;i++) document.getElementById(`info-${i}`).classList.remove('active');
   document.getElementById(`info-${G.currentIdx}`).classList.add('active');
 
   if(G.currentIdx===0){
     showPlayerButtons();
   } else {
-    // AI turn
     setThinking(G.currentIdx);
-    const thinkTime=600+Math.random()*1200;
+    const thinkTime=700+Math.random()*900;
     setTimeout(()=>aiTurn(G.currentIdx), thinkTime);
   }
 }
 
-function isBettingDone(){
-  const inHand=G.players.filter(p=>p.active&&!p.folded&&!p.allIn);
-  if(inHand.length===0) return true;
-  // Everyone has bet the same amount or folded/allin
-  const bets=inHand.map(p=>p.bet);
-  const maxBet=Math.max(...bets);
-  return inHand.every(p=>p.bet===maxBet) && G.lastAggressor!==-1;
+function recordAction(pid){
+  // Mark this player as having acted at current bet level
+  G.actedSet.add(pid);
+}
+
+function recordRaise(pid){
+  // On raise, clear everyone else — they all need to respond
+  G.actedSet=new Set([pid]);
 }
 
 function playerAction(action){
@@ -1341,33 +1369,35 @@ function playerAction(action){
 
   if(action==='fold'){
     p.folded=true;
+    recordAction(0);
     setStatus(0,'FOLDED');
     document.getElementById('info-0').classList.add('folded');
     sndFold();
     toast('FOLD');
   } else if(action==='check'){
-    if(G.currentBet>p.bet){ showPlayerButtons(); return; } // can't check
+    if(G.currentBet>p.bet){ showPlayerButtons(); return; }
+    recordAction(0);
     sndCheck();
     toast('CHECK');
     setStatus(0,'CHECK');
   } else if(action==='call'){
     const toCall=Math.min(G.currentBet-p.bet, p.chips);
     placeBet(0,toCall);
+    recordAction(0);
     setStatus(0,`CALL ${G.currentBet}`);
     toast(`CALL ${G.currentBet}`);
   } else if(action==='allin'){
     placeBet(0,p.chips);
-    if(p.bet>G.currentBet) G.currentBet=p.bet;
+    if(p.bet>G.currentBet){ G.currentBet=p.bet; G.minRaise=p.bet*2; recordRaise(0); }
+    else recordAction(0);
     setStatus(0,'ALL IN!');
     toast('ALL IN!');
     sndAllIn();
-    G.lastAggressor=0;
-    G.minRaise=p.bet*2;
   }
 
   document.getElementById('info-0').classList.remove('active');
-  G.currentIdx=nextActive(0);
-  setTimeout(()=>runCurrentTurn(),400);
+  G.currentIdx=getNextToAct(0);
+  setTimeout(()=>runCurrentTurn(), 400);
 }
 
 function playerRaise(amount){
@@ -1377,12 +1407,12 @@ function playerRaise(amount){
   placeBet(0,toAdd);
   G.currentBet=amount;
   G.minRaise=amount*2;
-  G.lastAggressor=0;
+  recordRaise(0);
   setStatus(0,`RAISE ${amount}`);
   toast(`RAISE TO ${amount}`);
   document.getElementById('info-0').classList.remove('active');
-  G.currentIdx=nextActive(0);
-  setTimeout(()=>runCurrentTurn(),400);
+  G.currentIdx=getNextToAct(0);
+  setTimeout(()=>runCurrentTurn(), 400);
 }
 
 let _raiseAmt=0;
@@ -1414,34 +1444,30 @@ document.getElementById('raise-slider').addEventListener('input',function(){
 // ── AI LOGIC ─────────────────────────────────────────
 function aiTurn(pid){
   const p=G.players[pid];
-  if(p.folded||p.allIn||!p.active){ G.currentIdx=nextActive(pid); setTimeout(()=>runCurrentTurn(),200); return; }
+  if(p.folded||p.allIn||!p.active){
+    G.currentIdx=getNextToAct(pid);
+    setTimeout(()=>runCurrentTurn(),200);
+    return;
+  }
 
   const toCall=G.currentBet-p.bet;
-  const potOdds=toCall/(G.pot+toCall)||0;
+  const potOdds=toCall>0 ? toCall/(G.pot+toCall) : 0;
   const strength=estimateHandStrength(p,pid);
   const personality=p.personality;
   let action='fold';
 
-  // Personality-based decision
   const bluff=Math.random();
   const aggFactor={tight:0.2,aggressive:0.5,loose:0.35}[personality];
   const foldThresh={tight:0.35,aggressive:0.2,loose:0.25}[personality];
   const raiseThresh={tight:0.75,aggressive:0.55,loose:0.65}[personality];
 
-  if(toCall===0){
-    // Can check for free
-    if(strength>raiseThresh||bluff<aggFactor*0.4){
-      action='raise';
-    } else {
-      action='check';
-    }
+  if(toCall<=0){
+    if(strength>raiseThresh||bluff<aggFactor*0.4) action='raise';
+    else action='check';
   } else {
     if(strength>potOdds+0.15||bluff<aggFactor*0.2){
-      if(strength>raiseThresh&&p.chips>toCall*2){
-        action='raise';
-      } else {
-        action='call';
-      }
+      if(strength>raiseThresh&&p.chips>toCall*2) action='raise';
+      else action='call';
     } else if(strength>foldThresh&&toCall<p.chips*0.4){
       action='call';
     } else {
@@ -1449,23 +1475,25 @@ function aiTurn(pid){
     }
   }
 
-  // All-in consideration
   if(p.chips<=toCall*1.2&&toCall>0&&strength>0.45) action='allin';
-  if(p.chips<=G.bigBlind*2&&action==='fold') action='call'; // desperation
+  if(p.chips<=G.bigBlind*2&&action==='fold') action='call';
 
-  // Execute
+  // Execute action
   if(action==='fold'){
     p.folded=true;
+    recordAction(pid);
     document.getElementById(`info-${pid}`).classList.add('folded');
     setStatus(pid,'FOLD');
     sndFold();
     toast(`${p.name}: FOLD`);
   } else if(action==='check'){
+    recordAction(pid);
     setStatus(pid,'CHECK');
     sndCheck();
   } else if(action==='call'){
     const amt=Math.min(toCall,p.chips);
     placeBet(pid,amt);
+    recordAction(pid);
     setStatus(pid,`CALL ${G.currentBet}`);
     toast(`${p.name}: CALL`);
   } else if(action==='raise'){
@@ -1473,24 +1501,27 @@ function aiTurn(pid){
     const toAdd=raiseAmt-p.bet;
     if(toAdd>0&&toAdd<=p.chips){
       placeBet(pid,toAdd);
-      G.currentBet=raiseAmt; G.minRaise=raiseAmt*2;
-      G.lastAggressor=pid;
+      G.currentBet=raiseAmt;
+      G.minRaise=raiseAmt*2;
+      recordRaise(pid);
       setStatus(pid,`RAISE ${raiseAmt}`);
       toast(`${p.name}: RAISE ${raiseAmt}`);
     } else {
+      recordAction(pid);
       setStatus(pid,'CHECK');
     }
   } else if(action==='allin'){
     placeBet(pid,p.chips);
-    if(p.bet>G.currentBet){ G.currentBet=p.bet; G.lastAggressor=pid; G.minRaise=p.bet*2; }
+    if(p.bet>G.currentBet){ G.currentBet=p.bet; G.minRaise=p.bet*2; recordRaise(pid); }
+    else recordAction(pid);
     setStatus(pid,'ALL IN!');
     toast(`${p.name}: ALL IN!`);
     sndAllIn();
   }
 
   document.getElementById(`info-${pid}`).classList.remove('active');
-  G.currentIdx=nextActive(pid);
-  setTimeout(()=>runCurrentTurn(),400);
+  G.currentIdx=getNextToAct(pid);
+  setTimeout(()=>runCurrentTurn(), 400);
 }
 
 function estimateHandStrength(player, pid){
@@ -1558,10 +1589,9 @@ function dealFlop(runout=false){
   setTimeout(()=>{
     updateHUD();
     if(runout){ setTimeout(()=>dealTurn(true),800); return; }
-    // Reset betting: first active after dealer
-    G.currentIdx=nextActive(G.dealerIdx);
-    G.lastAggressor=G.currentIdx;
-    G.betsThisRound=0;
+    // Reset betting for new street
+    G.actedSet=new Set();
+    G.currentIdx=getNextToAct(G.dealerIdx);
     setTimeout(()=>startBettingRound(),600);
   }, 700);
 }
@@ -1575,9 +1605,8 @@ function dealTurn(runout=false){
   setTimeout(()=>{
     updateHUD();
     if(runout){ setTimeout(()=>dealRiver(true),800); return; }
-    G.currentIdx=nextActive(G.dealerIdx);
-    G.lastAggressor=G.currentIdx;
-    G.betsThisRound=0;
+    G.actedSet=new Set();
+    G.currentIdx=getNextToAct(G.dealerIdx);
     setTimeout(()=>startBettingRound(),600);
   }, 600);
 }
@@ -1591,9 +1620,8 @@ function dealRiver(runout=false){
   setTimeout(()=>{
     updateHUD();
     if(runout){ setTimeout(()=>endHand(),800); return; }
-    G.currentIdx=nextActive(G.dealerIdx);
-    G.lastAggressor=G.currentIdx;
-    G.betsThisRound=0;
+    G.actedSet=new Set();
+    G.currentIdx=getNextToAct(G.dealerIdx);
     setTimeout(()=>startBettingRound(),600);
   }, 600);
 }
