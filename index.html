@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mission Control — b0nelesschick3n</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --base-url: "https://b0nelesschick3n.github.io/website/";
+      --glow: #00f5ff;
+      --glow2: #bf00ff;
+      --star: #ffffff;
+      --panel-bg: rgba(5, 10, 30, 0.75);
+      --border: rgba(0, 245, 255, 0.25);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: #020408;
+      font-family: 'Share Tech Mono', monospace;
+      color: #c8e8ff;
+      overflow-x: hidden;
+    }
+
+    /* ── Star canvas ── */
+    #stars {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Nebula blobs ── */
+    .nebula {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 20s ease-in-out infinite alternate;
+    }
+    .nebula-1 { width: 600px; height: 600px; top: -150px; left: -150px; background: radial-gradient(circle, #00f5ff, transparent); }
+    .nebula-2 { width: 500px; height: 500px; bottom: -100px; right: -100px; background: radial-gradient(circle, #bf00ff, transparent); animation-delay: -10s; }
+    .nebula-3 { width: 400px; height: 400px; top: 40%; left: 40%; background: radial-gradient(circle, #ff5f00, transparent); animation-delay: -5s; opacity: 0.10; }
+
+    @keyframes drift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(40px, 30px) scale(1.1); }
+    }
+
+    /* ── Layout ── */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .site-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.4em;
+      color: var(--glow);
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 12px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 5vw, 4rem);
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 1;
+      background: linear-gradient(135deg, #ffffff 0%, #00f5ff 50%, #bf00ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 20px rgba(0,245,255,0.4));
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .subtitle {
+      margin-top: 14px;
+      font-size: 0.8rem;
+      letter-spacing: 0.25em;
+      color: rgba(200,232,255,0.45);
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    /* Scanline under header */
+    .scanline {
+      width: 100%;
+      max-width: 700px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--glow), transparent);
+      margin: 24px auto 0;
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+
+    /* ── Panel ── */
+    .panel {
+      width: 100%;
+      max-width: 700px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(0,245,255,0.06), inset 0 0 40px rgba(0,0,0,0.4);
+      animation: fadeUp 0.7s 0.35s ease both;
+    }
+
+    .panel-header {
+      padding: 14px 22px;
+      background: rgba(0,245,255,0.04);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #28c940; }
+
+    .panel-title {
+      margin-left: 8px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      color: rgba(0,245,255,0.6);
+      text-transform: uppercase;
+    }
+
+    /* ── Link list ── */
+    #link-list {
+      list-style: none;
+      padding: 8px 0;
+    }
+
+    #link-list li {
+      border-bottom: 1px solid rgba(0,245,255,0.07);
+      animation: fadeUp 0.5s ease both;
+    }
+    #link-list li:last-child { border-bottom: none; }
+
+    #link-list a {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 22px;
+      text-decoration: none;
+      color: #c8e8ff;
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #link-list a::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--glow);
+      transform: scaleY(0);
+      transition: transform 0.2s;
+      transform-origin: center;
+    }
+
+    #link-list a:hover {
+      background: rgba(0,245,255,0.06);
+      color: #ffffff;
+    }
+    #link-list a:hover::before { transform: scaleY(1); }
+
+    .link-icon {
+      font-size: 1rem;
+      opacity: 0.5;
+      transition: opacity 0.2s, transform 0.2s;
+      flex-shrink: 0;
+    }
+    #link-list a:hover .link-icon { opacity: 1; transform: translateX(3px); }
+
+    .link-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      flex: 1;
+    }
+
+    .link-url {
+      font-size: 0.68rem;
+      color: rgba(0,245,255,0.45);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+      transition: color 0.2s;
+    }
+    #link-list a:hover .link-url { color: var(--glow); }
+
+    /* ── Empty state ── */
+    .empty {
+      padding: 48px 22px;
+      text-align: center;
+      color: rgba(200,232,255,0.3);
+      font-size: 0.8rem;
+      line-height: 1.8;
+    }
+
+    /* ── Add file form ── */
+    .add-section {
+      width: 100%;
+      max-width: 700px;
+      margin-top: 20px;
+      animation: fadeUp 0.7s 0.5s ease both;
+    }
+
+    .add-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: rgba(5,10,30,0.8);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 12px 16px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: #c8e8ff;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="text"]::placeholder { color: rgba(200,232,255,0.25); }
+    input[type="text"]:focus {
+      border-color: var(--glow);
+      box-shadow: 0 0 12px rgba(0,245,255,0.15);
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid var(--glow);
+      border-radius: 3px;
+      padding: 12px 22px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--glow);
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      background: rgba(0,245,255,0.1);
+      box-shadow: 0 0 16px rgba(0,245,255,0.2);
+    }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 0.68rem;
+      color: rgba(200,232,255,0.3);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 60px;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      color: rgba(200,232,255,0.2);
+      text-align: center;
+      animation: fadeUp 0.7s 0.6s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Shooting star ── */
+    .shoot {
+      position: fixed;
+      width: 2px;
+      height: 80px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), white);
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 0;
+      animation: shoot 1s linear forwards;
+    }
+    @keyframes shoot {
+      from { opacity: 1; }
+      to   { opacity: 0; transform: translate(200px, 200px); }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
+
+<div class="page-wrap">
+
+  <header>
+    <div class="site-label">b0nelesschick3n.github.io</div>
+    <h1>Mission&nbsp;Control</h1>
+    <p class="subtitle">// navigation hub — select your destination //</p>
+    <div class="scanline"></div>
+  </header>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="dot dot-r"></span>
+      <span class="dot dot-y"></span>
+      <span class="dot dot-g"></span>
+      <span class="panel-title">Discovered Pages</span>
+    </div>
+    <ul id="link-list">
+      <!-- populated by JS -->
+    </ul>
+  </div>
+
+  <div class="add-section">
+    <div class="add-row">
+      <input type="text" id="file-input" placeholder="add-page.html" />
+      <button onclick="addPage()">&#43; Add Page</button>
+    </div>
+    <p class="hint">// type a filename to add it to the nav above //</p>
+  </div>
+
+  <footer>&#x2604; transmission end &#x2604;</footer>
+
+</div>
+
+<script>
+  /* ───────── Star canvas ───────── */
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = Array.from({length: 220}, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.2,
+      o: Math.random(),
+      speed: Math.random() * 0.4 + 0.05
+    }));
+  }
+
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.o += s.speed * 0.015;
+      if (s.o > 1) s.o = 0;
+      ctx.globalAlpha = Math.abs(Math.sin(s.o * Math.PI));
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(drawStars);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  drawStars();
+
+  /* ───────── Shooting stars ───────── */
+  function spawnShoot() {
+    const el = document.createElement('div');
+    el.className = 'shoot';
+    el.style.left = (Math.random() * window.innerWidth) + 'px';
+    el.style.top = (Math.random() * window.innerHeight * 0.5) + 'px';
+    el.style.transform = 'rotate(' + (30 + Math.random() * 30) + 'deg)';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+  setInterval(spawnShoot, 3500);
+
+  /* ───────── Page list ───────── */
+  const BASE = 'https://b0nelesschick3n.github.io/website/';
+  const STORAGE_KEY = 'bc_pages';
+
+  // Default pages – add your known HTML files here
+  const DEFAULT_PAGES = [
+    // e.g. { file: 'about.html', name: 'About' }
+  ];
+
+  function loadPages() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [...DEFAULT_PAGES];
+    } catch { return [...DEFAULT_PAGES]; }
+  }
+
+  function savePages(pages) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pages));
+  }
+
+  function prettyName(filename) {
+    return filename.replace(/\.html$/i, '').replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function renderList() {
+    const pages = loadPages();
+    const ul = document.getElementById('link-list');
+    ul.innerHTML = '';
+
+    if (pages.length === 0) {
+      ul.innerHTML = '<li><div class="empty">[ no pages discovered ]<br/>type a filename below to add one</div></li>';
+      return;
+    }
+
+    pages.forEach((p, i) => {
+      const li = document.createElement('li');
+      li.style.animationDelay = (i * 0.05) + 's';
+      const href = BASE + p.file;
+      li.innerHTML = `
+        <a href="${href}" target="_blank">
+          <span class="link-icon">&#x2197;</span>
+          <span class="link-name">${p.name || prettyName(p.file)}</span>
+          <span class="link-url">${href}</span>
+        </a>`;
+      ul.appendChild(li);
+    });
+  }
+
+  function addPage() {
+    const input = document.getElementById('file-input');
+    let val = input.value.trim();
+    if (!val) return;
+    if (!val.endsWith('.html')) val += '.html';
+
+    const pages = loadPages();
+    if (pages.some(p => p.file === val)) {
+      input.value = '';
+      return;
+    }
+    pages.push({ file: val, name: prettyName(val) });
+    savePages(pages);
+    input.value = '';
+    renderList();
+  }
+
+  document.getElementById('file-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addPage();
+  });
+
+  // Auto-discover siblings by scanning the current directory's link tags
+  // (works when served from GitHub Pages which lists files in some cases)
+  (function autoDiscover() {
+    // Try fetching the directory listing (GitHub Pages doesn't expose this,
+    // but if there's a sitemap or the user is on a local server it might work)
+    const knownFromDOM = Array.from(document.querySelectorAll('a[href$=".html"]'))
+      .map(a => a.getAttribute('href'))
+      .filter(h => h && !h.startsWith('http') && !h.includes('/'))
+      .map(h => ({ file: h, name: prettyName(h) }));
+
+    if (knownFromDOM.length > 0) {
+      const pages = loadPages();
+      const existing = new Set(pages.map(p => p.file));
+      knownFromDOM.forEach(p => { if (!existing.has(p.file)) pages.push(p); });
+      savePages(pages);
+    }
+  })();
+
+  renderList();
+</script>
+
+</body>
+</html>
