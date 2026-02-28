@@ -6,8 +6,9 @@
 <title>3D Pool</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#0a1408; overflow:hidden; height:100vh; font-family:'Courier New',monospace; }
-canvas { display:block; width:100vw; height:100vh; cursor:crosshair; }
+body { background:#000; overflow:hidden; height:100vh; font-family:'Courier New',monospace; }
+#starfield { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+canvas { display:block; width:100vw; height:100vh; cursor:crosshair; position:relative; z-index:1; }
 
 #hud {
   position:fixed; top:16px; left:16px;
@@ -60,6 +61,7 @@ canvas { display:block; width:100vw; height:100vh; cursor:crosshair; }
 </style>
 </head>
 <body>
+<canvas id="starfield"></canvas>
 <canvas id="c"></canvas>
 
 <div id="hud">
@@ -91,7 +93,7 @@ canvas { display:block; width:100vw; height:100vh; cursor:crosshair; }
 <script>
 // ── WebGL ──────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
-const gl = canvas.getContext('webgl',{antialias:true}) || canvas.getContext('experimental-webgl');
+const gl = canvas.getContext('webgl',{antialias:true,alpha:true}) || canvas.getContext('experimental-webgl',{antialias:true,alpha:true});
 if(!gl){document.body.innerHTML='<p style="color:#fff;padding:40px">WebGL not supported</p>';throw 0;}
 
 function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;gl.viewport(0,0,canvas.width,canvas.height);}
@@ -487,6 +489,7 @@ function doShoot(){
   const dx=-Math.cos(aimAng),dz=-Math.sin(aimAng);
   cueBall.vel=[dx*power*MAX_PWR,0,dz*power*MAX_PWR];
   power=0;setPwr(0);
+  if(typeof stopChargeSound==='function') stopChargeSound();
   shooting=true;foul=false;firstHit=null;pocketedThisShot=[];
 }
 
@@ -562,6 +565,8 @@ function physStep(dt){
               if(a===cueBall)firstHit=b;
               else if(b===cueBall)firstHit=a;
             }
+            // Clack sound — volume proportional to impact speed
+            if(typeof sndBall==='function') sndBall(Math.abs(imp));
           }
         }
       }
@@ -590,26 +595,36 @@ function physStep(dt){
 
 function railHit(b){
   const pGap=PR*1.5;
-  // Check each rail; skip collision if ball is near a pocket mouth
-  const atCorner=(bx,bz)=>POCKETS.some(p=>{
+  // Returns true if ball center is close enough to a pocket to pass through
+  const nearPocket=(bx,bz)=>POCKETS.some(p=>{
     const dx=bx-p[0],dz=bz-p[2];
-    return Math.sqrt(dx*dx+dz*dz)<PR*1.6;
+    return dx*dx+dz*dz < PR*PR*2.2;
   });
 
-  if(b.pos[0]>TX-b.r && !atCorner(TX,b.pos[2])){
-    b.pos[0]=TX-b.r; b.vel[0]*=-E_RAIL;
+  let hit=false;
+  if(b.pos[0]>TX-b.r){
+    if(!nearPocket(b.pos[0],b.pos[2])){ b.pos[0]=TX-b.r; b.vel[0]*=-E_RAIL; hit=true; }
   }
-  if(b.pos[0]<-TX+b.r && !atCorner(-TX,b.pos[2])){
-    b.pos[0]=-TX+b.r; b.vel[0]*=-E_RAIL;
+  if(b.pos[0]<-TX+b.r){
+    if(!nearPocket(b.pos[0],b.pos[2])){ b.pos[0]=-TX+b.r; b.vel[0]*=-E_RAIL; hit=true; }
   }
-  // Side rails split by center pocket
+  // Side rails — gap at center (side pockets at z=±TZ, x=0)
   const nearSide=(b.pos[0]>-pGap&&b.pos[0]<pGap);
-  if(b.pos[2]>TZ-b.r && !nearSide && !atCorner(b.pos[0],TZ)){
-    b.pos[2]=TZ-b.r; b.vel[2]*=-E_RAIL;
+  if(b.pos[2]>TZ-b.r){
+    if(!nearSide&&!nearPocket(b.pos[0],b.pos[2])){ b.pos[2]=TZ-b.r; b.vel[2]*=-E_RAIL; hit=true; }
   }
-  if(b.pos[2]<-TZ+b.r && !nearSide && !atCorner(b.pos[0],-TZ)){
-    b.pos[2]=-TZ+b.r; b.vel[2]*=-E_RAIL;
+  if(b.pos[2]<-TZ+b.r){
+    if(!nearSide&&!nearPocket(b.pos[0],b.pos[2])){ b.pos[2]=-TZ+b.r; b.vel[2]*=-E_RAIL; hit=true; }
   }
+
+  // Hard safety clamp — ball can NEVER leave the table (pockets will catch it first normally)
+  const HARD=TX+b.r*2;
+  if(b.pos[0]>HARD){b.pos[0]=TX-b.r;b.vel[0]=Math.abs(b.vel[0])*-E_RAIL;}
+  if(b.pos[0]<-HARD){b.pos[0]=-TX+b.r;b.vel[0]=Math.abs(b.vel[0])*E_RAIL;}
+  if(b.pos[2]>HARD){b.pos[2]=TZ-b.r;b.vel[2]=Math.abs(b.vel[2])*-E_RAIL;}
+  if(b.pos[2]<-HARD){b.pos[2]=-TZ+b.r;b.vel[2]=Math.abs(b.vel[2])*E_RAIL;}
+
+  if(hit) sndRail(Math.sqrt(b.vel[0]*b.vel[0]+b.vel[2]*b.vel[2]));
 }
 
 function pocketCheck(b){
@@ -624,6 +639,7 @@ function pocketCheck(b){
 function doPocket(b){
   b.dead=true;
   b.pos=[0,-8,0];b.vel=[0,0,0];
+  if(typeof sndPocket==='function') sndPocket();
   if(b.num===0){foul=true;}
   else pocketedThisShot.push(b);
 }
@@ -793,6 +809,9 @@ function render(now){
   if(mouseDown&&!shooting&&!placeMode){
     power=Math.min(1,(performance.now()-pressT)/1000*.75);
     setPwr(power);
+    if(typeof updateChargeSound==='function') updateChargeSound(power);
+  } else if(!mouseDown && power===0){
+    if(typeof stopChargeSound==='function') stopChargeSound();
   }
 
   // Physics — run at fixed 240Hz internally for stable collisions
@@ -804,7 +823,7 @@ function render(now){
 
   // Render
   gl.enable(gl.DEPTH_TEST);
-  gl.clearColor(.04,.09,.03,1);
+  gl.clearColor(0,0,0,0);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
 
   const vp=getVP();
@@ -818,6 +837,255 @@ function render(now){
 updHUD();
 showMsg('🎱 3D POOL','Hold left mouse button to charge power, release to shoot.<br>Mouse aim around the cue ball. Q/E orbit, R/F tilt, scroll zoom.');
 requestAnimationFrame(t=>{lastT=t/1000;requestAnimationFrame(render);});
+
+// ── Web Audio Sound Engine ─────────────────────────────────────────────────
+let _actx = null;
+function getACtx(){
+  if(!_actx) _actx = new (window.AudioContext||window.webkitAudioContext)();
+  if(_actx.state==='suspended') _actx.resume();
+  return _actx;
+}
+
+function playBuf(buf, vol=1, when=0){
+  const ctx=getACtx();
+  const src=ctx.createBufferSource();
+  src.buffer=buf;
+  const gain=ctx.createGain();
+  gain.gain.value=Math.min(1,Math.max(0,vol));
+  src.connect(gain);
+  gain.connect(ctx.destination);
+  src.start(ctx.currentTime+when);
+}
+
+// Synthesise pool ball clack — hard transient + short resonance
+function makeBallClack(vol=1){
+  const ctx=getACtx();
+  const dur=0.18, sr=ctx.sampleRate;
+  const buf=ctx.createBuffer(1,Math.floor(sr*dur),sr);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++){
+    const t=i/sr;
+    // sharp click transient
+    const click = Math.exp(-t*280) * (Math.random()*2-1);
+    // resonant tone of billiard ball (~2kHz)
+    const tone  = Math.exp(-t*55) * Math.sin(2*Math.PI*2100*t) * 0.6;
+    const tone2 = Math.exp(-t*80) * Math.sin(2*Math.PI*3400*t) * 0.3;
+    d[i] = (click + tone + tone2) * vol;
+  }
+  return buf;
+}
+
+// Rail thud — lower woody thwack
+function makeRailThud(vol=1){
+  const ctx=getACtx();
+  const dur=0.22, sr=ctx.sampleRate;
+  const buf=ctx.createBuffer(1,Math.floor(sr*dur),sr);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++){
+    const t=i/sr;
+    const thump = Math.exp(-t*160) * (Math.random()*2-1) * 0.7;
+    const wood  = Math.exp(-t*35) * Math.sin(2*Math.PI*320*t) * 0.5;
+    const wood2 = Math.exp(-t*50) * Math.sin(2*Math.PI*520*t) * 0.25;
+    d[i] = (thump + wood + wood2) * vol;
+  }
+  return buf;
+}
+
+// Pocket drop — hollow tumbling swish
+function makePocketDrop(){
+  const ctx=getACtx();
+  const dur=0.55, sr=ctx.sampleRate;
+  const buf=ctx.createBuffer(1,Math.floor(sr*dur),sr);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++){
+    const t=i/sr;
+    // soft initial click
+    const click  = Math.exp(-t*180) * (Math.random()*2-1) * 0.4;
+    // hollow resonance (leather pocket)
+    const hollow = Math.exp(-t*14) * Math.sin(2*Math.PI*(160+t*-60)*t) * 0.5;
+    const rumble = Math.exp(-t*8)  * (Math.random()*2-1) * Math.exp(-t*12) * 0.25;
+    d[i] = click + hollow + rumble;
+  }
+  return buf;
+}
+
+// Cue charge — rising woody creak (continuous, updated each frame)
+let chargeOsc=null, chargeGain=null;
+function startChargeSound(){
+  if(chargeOsc) return;
+  const ctx=getACtx();
+  chargeOsc=ctx.createOscillator();
+  chargeGain=ctx.createGain();
+  chargeOsc.type='sawtooth';
+  chargeOsc.frequency.value=80;
+  chargeGain.gain.value=0;
+  // Add subtle distortion for woody feel
+  const wave=ctx.createWaveShaper();
+  const curve=new Float32Array(256);
+  for(let i=0;i<256;i++){const x=i/128-1; curve[i]=x*(3+8*Math.abs(x))/(1+8*Math.abs(x));}
+  wave.curve=curve;
+  chargeOsc.connect(wave);
+  wave.connect(chargeGain);
+  chargeGain.connect(ctx.destination);
+  chargeOsc.start();
+}
+function updateChargeSound(pwr){
+  if(!chargeOsc) startChargeSound();
+  const ctx=getACtx();
+  const freq=90+pwr*220;
+  const vol=pwr*0.12;
+  chargeOsc.frequency.setTargetAtTime(freq, ctx.currentTime, 0.04);
+  chargeGain.gain.setTargetAtTime(vol, ctx.currentTime, 0.04);
+}
+function stopChargeSound(){
+  if(!chargeOsc) return;
+  const ctx=getACtx();
+  chargeGain.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+  setTimeout(()=>{ try{chargeOsc.stop();chargeOsc=null;chargeGain=null;}catch(e){} }, 200);
+}
+
+// Sound cooldowns to prevent spam
+const _sndCd={ball:0, rail:0, pocket:0};
+function sndBall(spd){
+  const now=performance.now();
+  if(now-_sndCd.ball < 30) return;
+  _sndCd.ball=now;
+  const vol=Math.min(1, spd/8);
+  if(vol<0.05) return;
+  playBuf(makeBallClack(vol));
+}
+function sndRail(spd){
+  const now=performance.now();
+  if(now-_sndCd.rail < 40) return;
+  _sndCd.rail=now;
+  const vol=Math.min(1, spd/10);
+  if(vol<0.04) return;
+  playBuf(makeRailThud(vol));
+}
+function sndPocket(){
+  const now=performance.now();
+  if(now-_sndCd.pocket < 120) return;
+  _sndCd.pocket=now;
+  playBuf(makePocketDrop());
+}
+
+// Hook sounds into physics events
+// Ball-ball collision sound — add call inside collision block
+// Rail sound — already called in railHit above
+// Pocket sound — add to doPocket
+// Charge sound — update/stop in mouse handlers
+
+// ── Starfield ─────────────────────────────────────────────────────────────
+(function initStars(){
+  const sc=document.getElementById('starfield');
+  const ctx2=sc.getContext('2d');
+  const N=420;
+  const stars=[];
+
+  function resizeStar(){
+    sc.width=window.innerWidth;
+    sc.height=window.innerHeight;
+  }
+  window.addEventListener('resize',resizeStar);
+  resizeStar();
+
+  for(let i=0;i<N;i++){
+    stars.push({
+      x:Math.random(),
+      y:Math.random(),
+      r:Math.random()*1.4+0.2,
+      spd:Math.random()*0.00004+0.000008,
+      twink:Math.random()*Math.PI*2,
+      twinkSpd:Math.random()*2+0.5,
+      col: Math.random()<0.15 ? `hsl(${200+Math.random()*60},80%,85%)` :
+           Math.random()<0.08 ? `hsl(${30+Math.random()*30},90%,80%)` : '#fff'
+    });
+  }
+
+  // Nebula clouds (static, drawn once on a separate offscreen)
+  const off=document.createElement('canvas');
+  off.width=sc.width||1920; off.height=sc.height||1080;
+  const oc=off.getContext('2d');
+  const nebulas=[
+    {x:0.15,y:0.25,rx:0.22,ry:0.14,col:'rgba(80,20,140,0.055)'},
+    {x:0.78,y:0.6, rx:0.18,ry:0.22,col:'rgba(20,60,130,0.06)'},
+    {x:0.5, y:0.8, rx:0.28,ry:0.12,col:'rgba(140,30,60,0.04)'},
+    {x:0.35,y:0.45,rx:0.16,ry:0.16,col:'rgba(20,100,120,0.04)'},
+  ];
+  for(const nb of nebulas){
+    const grd=oc.createRadialGradient(
+      nb.x*off.width, nb.y*off.height, 0,
+      nb.x*off.width, nb.y*off.height,
+      Math.max(nb.rx*off.width, nb.ry*off.height)
+    );
+    grd.addColorStop(0, nb.col);
+    grd.addColorStop(1, 'transparent');
+    oc.save();
+    oc.scale(1, nb.ry/nb.rx);
+    oc.fillStyle=grd;
+    oc.beginPath();
+    oc.arc(nb.x*off.width, nb.y*off.height*(nb.rx/nb.ry), nb.rx*off.width, 0, Math.PI*2);
+    oc.fill();
+    oc.restore();
+  }
+
+  let last=0;
+  function drawStars(now){
+    const dt=(now-last)/1000; last=now;
+    ctx2.clearRect(0,0,sc.width,sc.height);
+
+    // Deep space gradient
+    const bg=ctx2.createLinearGradient(0,0,sc.width*0.3,sc.height);
+    bg.addColorStop(0,'#06010f');
+    bg.addColorStop(0.4,'#020510');
+    bg.addColorStop(1,'#010208');
+    ctx2.fillStyle=bg;
+    ctx2.fillRect(0,0,sc.width,sc.height);
+
+    // Nebula
+    ctx2.drawImage(off,0,0,sc.width,sc.height);
+
+    // Stars
+    for(const s of stars){
+      s.twink+=s.twinkSpd*dt;
+      s.x+=s.spd*dt;
+      if(s.x>1) s.x-=1;
+      const alpha=0.55+0.45*Math.sin(s.twink);
+      const px=s.x*sc.width, py=s.y*sc.height;
+      ctx2.globalAlpha=alpha;
+      ctx2.fillStyle=s.col;
+      ctx2.beginPath();
+      ctx2.arc(px,py,s.r,0,Math.PI*2);
+      ctx2.fill();
+      // Bright stars get a small glow
+      if(s.r>1.1){
+        const grd=ctx2.createRadialGradient(px,py,0,px,py,s.r*4);
+        grd.addColorStop(0,s.col.replace(')',',0.3)').replace('rgb','rgba').replace('#fff','rgba(255,255,255,0.3)'));
+        grd.addColorStop(1,'transparent');
+        ctx2.fillStyle=grd;
+        ctx2.beginPath();
+        ctx2.arc(px,py,s.r*4,0,Math.PI*2);
+        ctx2.fill();
+      }
+    }
+    ctx2.globalAlpha=1;
+    requestAnimationFrame(drawStars);
+  }
+  requestAnimationFrame(drawStars);
+})();
+
+// ── Wire up charge sound to mouse events ──────────────────────────────────
+// Patch setPwr to also drive charge sound
+const _origSetPwr = setPwr;
+window.setPwr = function(v){
+  _origSetPwr(v);
+  if(v>0.01) updateChargeSound(v);
+  else stopChargeSound();
+};
+// Also patch doShoot to stop charge sound
+const _origShoot = doShoot;
+window.doShoot = doShoot; // already global
+
 </script>
 </body>
 </html>
