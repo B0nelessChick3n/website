@@ -14,7 +14,7 @@ canvas { display:block; width:100vw; height:100vh; cursor:crosshair; position:re
   position:fixed; top:16px; left:16px;
   background:rgba(4,18,4,0.94); border:1px solid rgba(50,140,50,0.45);
   border-radius:10px; padding:14px 18px; font-size:12px; line-height:2;
-  color:#70b870; min-width:200px; backdrop-filter:blur(10px); pointer-events:none;
+  color:#70b870; min-width:220px; backdrop-filter:blur(10px); pointer-events:none;
   box-shadow:0 4px 24px rgba(0,0,0,0.5);
 }
 #hud .title { color:#40d040; font-size:16px; font-weight:bold; letter-spacing:3px; margin-bottom:6px; }
@@ -23,6 +23,7 @@ canvas { display:block; width:100vw; height:100vh; cursor:crosshair; position:re
 #hud .turn-p1 { color:#50c8ff; }
 #hud .turn-p2 { color:#ffaa40; }
 #hud .foul { color:#ff3030; font-weight:bold; animation:blink .55s infinite; }
+#hud .balls-left { color:#88ff88; font-size:11px; }
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.1}}
 
 #aim-panel {
@@ -33,7 +34,7 @@ canvas { display:block; width:100vw; height:100vh; cursor:crosshair; position:re
   box-shadow:0 4px 24px rgba(0,0,0,0.5);
 }
 #power-bg { width:160px; height:9px; background:rgba(20,50,20,.8); border-radius:5px; border:1px solid rgba(50,140,50,.3); overflow:hidden; }
-#power-fill { height:100%; width:0%; background:linear-gradient(90deg,#28b028,#e8c820,#d82020); border-radius:5px; }
+#power-fill { height:100%; width:0%; background:linear-gradient(90deg,#28b028,#e8c820,#d82020); border-radius:5px; transition:width 0.02s; }
 #power-lbl { color:#90ee90; font-weight:bold; min-width:36px; text-align:right; }
 .kh { color:#3a603a; } .kh b { color:#60a060; }
 
@@ -66,10 +67,11 @@ canvas { display:block; width:100vw; height:100vh; cursor:crosshair; position:re
 
 <div id="hud">
   <div class="title">🎱 POOL</div>
-  <div><span class="lbl">PLAYER 1 </span><span class="val" id="s1">0</span><span class="lbl"> balls</span></div>
-  <div><span class="lbl">PLAYER 2 </span><span class="val" id="s2">0</span><span class="lbl"> balls</span></div>
+  <div><span class="lbl">PLAYER 1 </span><span class="val" id="s1">0</span><span class="lbl"> pocketed</span></div>
+  <div><span class="lbl">PLAYER 2 </span><span class="val" id="s2">0</span><span class="lbl"> pocketed</span></div>
   <div><span class="lbl">TURN: </span><span class="val turn-p1" id="turn-txt">PLAYER 1</span></div>
   <div><span class="lbl">TYPE: </span><span class="val" id="type-txt">—</span></div>
+  <div id="balls-remain" style="display:none"><span class="lbl">NEED: </span><span class="balls-left" id="balls-remain-txt"></span></div>
   <div id="foul-line" style="display:none"><span class="foul">⚠ FOUL — PLACE CUE BALL</span></div>
   <div><span class="lbl">FPS: </span><span class="val" id="fps">60</span></div>
 </div>
@@ -109,7 +111,7 @@ attribute vec3 aPos,aNorm;
 uniform mat4 uMVP,uModel;
 varying vec3 vN,vP,vL;
 void main(){
-  vL=aPos; // local space for stripe
+  vL=aPos;
   vec4 wp=uModel*vec4(aPos,1);
   vP=wp.xyz;
   vN=normalize(mat3(uModel)*aNorm);
@@ -123,7 +125,6 @@ uniform int uStripe;
 void main(){
   float t=1.0;
   if(uStripe==1){
-    // stripe band around equator
     float band=abs(vL.y);
     t=band>0.42?1.0:0.0;
   }
@@ -217,7 +218,6 @@ function cylinder(r1,r2,h,seg){
   return uploadVN(v,n,i);
 }
 
-// Disc (filled circle) for pocket openings
 function disc(cx,cy,cz,r,seg,ny){
   const v=[cx,cy,cz],n=[0,ny,0],idx=[];
   for(let i=0;i<=seg;i++){const a=2*Math.PI*i/seg;v.push(cx+Math.cos(a)*r,cy,cz+Math.sin(a)*r);n.push(0,ny,0);}
@@ -225,7 +225,6 @@ function disc(cx,cy,cz,r,seg,ny){
   return uploadVN(v,n,idx);
 }
 
-// Annulus (ring) for pocket rim cutout area in felt
 function annulus(cx,cz,rInner,rOuter,seg){
   const v=[],n=[],idx=[];
   for(let i=0;i<=seg;i++){
@@ -243,37 +242,25 @@ const GEO = {
 };
 
 // ── Table constants ────────────────────────────────────────────────────────
-const TX=5.0,TZ=2.5;   // half extents of playing surface
+const TX=5.0,TZ=2.5;
 const RAIL_H=0.30, RAIL_W=0.42;
-const FY=0.0;           // felt Y
+const FY=0.0;
 const BALL_R=0.145;
 
-// Pocket positions & radius
-const PR=0.30;  // pocket mouth radius
-// 6 pockets: 4 corners, 2 side midpoints
+const PR=0.30;
 const POCKETS=[
   [-TX,FY,-TZ],[0,FY,-TZ],[TX,FY,-TZ],
   [-TX,FY, TZ],[0,FY, TZ],[TX,FY, TZ],
 ];
 
 // ── Build table mesh ───────────────────────────────────────────────────────
-// Felt: two triangles per section between pocket arcs — we approximate by
-// drawing felt as full quad then drawing pocket cutouts (dark discs) on top
-// Rails: wood boxes around the perimeter, with rounded pocket openings modeled
-// by simply cutting the corner/side visually using dark discs + cylinder tunnels
-
-// Felt quad (drawn behind everything pocket-related)
 function makeFelt(){
   const v=[-TX,FY,TZ, TX,FY,TZ, TX,FY,-TZ, -TX,FY,-TZ];
   const n=[0,1,0, 0,1,0, 0,1,0, 0,1,0];
   return uploadVN(v,n,[0,1,2,0,2,3]);
 }
 
-// Build rail quads as solid wood blocks with pocket notches cut by omitting
-// geometry at pocket locations and filling with a dark curved inner wall
 function makeRailSegments(){
-  // We'll build 8 rail segments (2 per side, split by pockets)
-  // Each segment is a box: top + inner + outer face quads
   const verts=[], norms=[], idx=[];
   let vi=0;
   function quad(pts,n){
@@ -282,32 +269,22 @@ function makeRailSegments(){
   }
   const Y0=FY, Y1=RAIL_H, RW=RAIL_W;
 
-  // -- LEFT side (x=-TX), two segments split by no pocket (corners only)
-  // Segment from z=-TZ to z=+TZ (no side pocket on long rail)
-  // inner face
   quad([[-TX,Y0,-TZ],[-TX,Y1,-TZ],[-TX,Y1,TZ],[-TX,Y0,TZ]],[1,0,0]);
-  // top face
   quad([[-TX-RW,Y1,-TZ],[-TX,Y1,-TZ],[-TX,Y1,TZ],[-TX-RW,Y1,TZ]],[0,1,0]);
-  // outer face
   quad([[-TX-RW,Y0,-TZ-RW],[-TX-RW,Y1,-TZ-RW],[-TX-RW,Y1,TZ+RW],[-TX-RW,Y0,TZ+RW]],[-1,0,0]);
 
-  // -- RIGHT side (x=+TX)
   quad([[TX,Y0,TZ],[TX,Y1,TZ],[TX,Y1,-TZ],[TX,Y0,-TZ]],[-1,0,0]);
   quad([[TX,Y1,TZ],[TX+RW,Y1,TZ],[TX+RW,Y1,-TZ],[TX,Y1,-TZ]],[0,1,0]);
   quad([[TX+RW,Y0,TZ+RW],[TX+RW,Y1,TZ+RW],[TX+RW,Y1,-TZ-RW],[TX+RW,Y0,-TZ-RW]],[1,0,0]);
 
-  // -- FAR side (z=-TZ), two segments: left half and right half split by center pocket
   const pGap=PR*1.6;
-  // Left half: from x=-TX to x=-pGap
   quad([[-TX,Y0,-TZ],[-pGap,Y0,-TZ],[-pGap,Y1,-TZ],[-TX,Y1,-TZ]],[0,0,-1]);
   quad([[-TX,Y1,-TZ],[-pGap,Y1,-TZ],[-pGap,Y1,-TZ-RW],[-TX-RW,Y1,-TZ-RW]],[0,1,0]);
   quad([[-TX-RW,Y0,-TZ-RW],[-TX-RW,Y1,-TZ-RW],[-pGap,Y1,-TZ-RW],[-pGap,Y0,-TZ-RW]],[0,0,-1]);
-  // Right half: from x=+pGap to x=+TX
   quad([[pGap,Y0,-TZ],[TX,Y0,-TZ],[TX,Y1,-TZ],[pGap,Y1,-TZ]],[0,0,-1]);
   quad([[pGap,Y1,-TZ],[TX,Y1,-TZ],[TX+RW,Y1,-TZ-RW],[pGap,Y1,-TZ-RW]],[0,1,0]);
   quad([[pGap,Y0,-TZ-RW],[pGap,Y1,-TZ-RW],[TX+RW,Y1,-TZ-RW],[TX+RW,Y0,-TZ-RW]],[0,0,-1]);
 
-  // -- NEAR side (z=+TZ)
   quad([[-TX,Y0,TZ],[-TX,Y1,TZ],[-pGap,Y1,TZ],[-pGap,Y0,TZ]],[0,0,1]);
   quad([[-TX-RW,Y1,TZ+RW],[-pGap,Y1,TZ+RW],[-pGap,Y1,TZ],[-TX,Y1,TZ]],[0,1,0]);
   quad([[-TX-RW,Y0,TZ+RW],[-pGap,Y0,TZ+RW],[-pGap,Y1,TZ+RW],[-TX-RW,Y1,TZ+RW]],[0,0,1]);
@@ -315,28 +292,18 @@ function makeRailSegments(){
   quad([[pGap,Y1,TZ],[TX+RW,Y1,TZ],[TX+RW,Y1,TZ+RW],[pGap,Y1,TZ+RW]],[0,1,0]);
   quad([[pGap,Y1,TZ+RW],[TX+RW,Y1,TZ+RW],[TX+RW,Y0,TZ+RW],[pGap,Y0,TZ+RW]],[0,0,1]);
 
-  // Corner connector blocks — fill corner pocket gaps with diagonal angled wood
   function corner(x,z,sx,sz){
     const px=x+sx*RW, pz=z+sz*RW;
-    // top face in corner
     quad([[x,Y1,z],[px,Y1,z],[px,Y1,pz],[x,Y1,pz]],[0,1,0]);
-    // diagonal inner face (angled across the corner)
     quad([[x,Y0,z],[px,Y0,pz],[px,Y1,pz],[x,Y1,z]],[sx*0.707,0,sz*0.707]);
   }
   corner(-TX,-TZ,-1,-1);corner(TX,-TZ,1,-1);corner(-TX,TZ,-1,1);corner(TX,TZ,1,1);
 
-  // Side pocket surrounds — short end-cap faces on each rail half facing into the pocket gap
-  // FAR rail (z=-TZ): left half ends at x=-pGap, right half starts at x=+pGap
-  // End-cap of left half (right face, facing +x toward pocket)
   quad([[-pGap,Y0,-TZ-RW],[-pGap,Y0,-TZ],[-pGap,Y1,-TZ],[-pGap,Y1,-TZ-RW]],[1,0,0]);
-  // End-cap of right half (left face, facing -x toward pocket)
   quad([[pGap,Y0,-TZ],[pGap,Y0,-TZ-RW],[pGap,Y1,-TZ-RW],[pGap,Y1,-TZ]],[-1,0,0]);
-  // Short back wall of side pocket gap on far rail (outer edge, z=-TZ-RW, between -pGap and +pGap)
   quad([[-pGap,Y0,-TZ-RW],[pGap,Y0,-TZ-RW],[pGap,Y1,-TZ-RW],[-pGap,Y1,-TZ-RW]],[0,0,1]);
-  // Top cover of the pocket surround gap on far rail
   quad([[-pGap,Y1,-TZ],[pGap,Y1,-TZ],[pGap,Y1,-TZ-RW],[-pGap,Y1,-TZ-RW]],[0,1,0]);
 
-  // NEAR rail (z=+TZ): same treatment
   quad([[-pGap,Y0,TZ],[-pGap,Y0,TZ+RW],[-pGap,Y1,TZ+RW],[-pGap,Y1,TZ]],[1,0,0]);
   quad([[pGap,Y0,TZ+RW],[pGap,Y0,TZ],[pGap,Y1,TZ],[pGap,Y1,TZ+RW]],[-1,0,0]);
   quad([[pGap,Y0,TZ+RW],[-pGap,Y0,TZ+RW],[-pGap,Y1,TZ+RW],[pGap,Y1,TZ+RW]],[0,0,-1]);
@@ -345,16 +312,12 @@ function makeRailSegments(){
   return uploadVN(verts,norms,idx);
 }
 
-// Pocket inner cylinder (the hole going down)
-function makePocketCylinder(cx,cz){return cylinder(PR,PR*0.8,0.5,16);}
-
 const feltGeo  = makeFelt();
 const railGeo  = makeRailSegments();
 const legGeo   = GEO.legCyl;
 
-// Pre-build pocket discs and annuli
-const pocketDiscs = POCKETS.map(p=>disc(p[0],FY+0.002,p[2],PR,32,1));     // dark hole ON felt surface
-const pocketRims  = POCKETS.map(p=>annulus(p[0],p[2],PR,PR*1.3,24));         // dark leather rim around hole
+const pocketDiscs = POCKETS.map(p=>disc(p[0],FY+0.002,p[2],PR,32,1));
+const pocketRims  = POCKETS.map(p=>annulus(p[0],p[2],PR,PR*1.3,24));
 
 // ── Uniform helpers ────────────────────────────────────────────────────────
 function u1(p,n,v){gl.uniform1f(gl.getUniformLocation(p,n),v);}
@@ -380,7 +343,6 @@ function drawFlat(geo,prog_,mvp,col){
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,geo.ib);gl.drawElements(gl.TRIANGLES,geo.cnt,gl.UNSIGNED_SHORT,0);
 }
 
-// Lines helper
 function drawLines(pts,prog_,mvp,col,lw){
   gl.useProgram(prog_);
   um(prog_,'uMVP',mvp); u4(prog_,'uCol',...col);
@@ -394,14 +356,14 @@ function drawLines(pts,prog_,mvp,col,lw){
 
 // ── Ball definitions ───────────────────────────────────────────────────────
 const BDEFS=[
-  {num:1, c:[.95,.83,.08],c2:[.9,.9,.9],s:false},// yellow solid
-  {num:2, c:[.1,.18,.9],  c2:[.9,.9,.9],s:false},// blue
-  {num:3, c:[.88,.1,.1],  c2:[.9,.9,.9],s:false},// red
-  {num:4, c:[.52,.1,.7],  c2:[.9,.9,.9],s:false},// purple
-  {num:5, c:[.95,.45,.05],c2:[.9,.9,.9],s:false},// orange
-  {num:6, c:[.1,.62,.1],  c2:[.9,.9,.9],s:false},// green
-  {num:7, c:[.62,.08,.08],c2:[.9,.9,.9],s:false},// maroon
-  {num:8, c:[.06,.06,.06],c2:[.9,.9,.9],s:false},// black
+  {num:1, c:[.95,.83,.08],c2:[.9,.9,.9],s:false},
+  {num:2, c:[.1,.18,.9],  c2:[.9,.9,.9],s:false},
+  {num:3, c:[.88,.1,.1],  c2:[.9,.9,.9],s:false},
+  {num:4, c:[.52,.1,.7],  c2:[.9,.9,.9],s:false},
+  {num:5, c:[.95,.45,.05],c2:[.9,.9,.9],s:false},
+  {num:6, c:[.1,.62,.1],  c2:[.9,.9,.9],s:false},
+  {num:7, c:[.62,.08,.08],c2:[.9,.9,.9],s:false},
+  {num:8, c:[.06,.06,.06],c2:[.9,.9,.9],s:false},
   {num:9, c:[.95,.83,.08],c2:[.9,.9,.9],s:true},
   {num:10,c:[.1,.18,.9],  c2:[.9,.9,.9],s:true},
   {num:11,c:[.88,.1,.1],  c2:[.9,.9,.9],s:true},
@@ -467,7 +429,11 @@ canvas.addEventListener('mousemove',e=>{
   }
   if(placeMode){
     const wp=s2t(e.clientX,e.clientY);
-    if(wp){cueBall.pos[0]=Math.max(-TX+BALL_R,Math.min(TX-BALL_R,wp[0]));cueBall.pos[2]=Math.max(-TZ+BALL_R,Math.min(TZ-BALL_R,wp[2]));}
+    if(wp){
+      // In placeMode after foul — limit to left half (behind head string)
+      cueBall.pos[0]=Math.max(-TX+BALL_R,Math.min(TX-BALL_R,wp[0]));
+      cueBall.pos[2]=Math.max(-TZ+BALL_R,Math.min(TZ-BALL_R,wp[2]));
+    }
   }
 });
 canvas.addEventListener('mousedown',e=>{
@@ -498,14 +464,12 @@ function setPwr(v){
   document.getElementById('power-lbl').textContent=Math.round(v*100)+'%';
 }
 
-// world-to-screen
 function w2s(p){
   const vp=getVP();
   const c=[vp[0]*p[0]+vp[4]*p[1]+vp[8]*p[2]+vp[12],vp[1]*p[0]+vp[5]*p[1]+vp[9]*p[2]+vp[13],vp[2]*p[0]+vp[6]*p[1]+vp[10]*p[2]+vp[14],vp[3]*p[0]+vp[7]*p[1]+vp[11]*p[2]+vp[15]];
   if(Math.abs(c[3])<.001)return[canvas.width/2,canvas.height/2];
   return[(c[0]/c[3]+1)/2*canvas.width,(1-c[1]/c[3])/2*canvas.height];
 }
-// screen-to-table
 function s2t(sx,sy){
   const nx=(sx/canvas.width)*2-1, ny=1-(sy/canvas.height)*2;
   const f=Math.tan(Math.PI/6),asp=canvas.width/canvas.height;
@@ -521,24 +485,20 @@ function s2t(sx,sy){
 }
 
 // ── Physics ────────────────────────────────────────────────────────────────
-// Key physics params — tuned for authentic pool feel
-const DECEL=0.7;        // m/s^2 linear deceleration (felt rolling friction force)
-const E_BALL=0.96;      // ball-ball elasticity (near-perfect elastic)
-const E_RAIL=0.75;      // rail elasticity
-const STOP_V=0.04;      // velocity below which ball stops
+const DECEL=0.7;
+const E_BALL=0.96;
+const E_RAIL=0.75;
+const STOP_V=0.04;
 
 function physStep(dt){
   const live=balls.filter(b=>!b.dead);
 
-  // ── Integrate positions first (velocity unchanged this step) ──
   for(const b of live){
     b.pos[0]+=b.vel[0]*dt;
     b.pos[2]+=b.vel[2]*dt;
-    b.pos[1]=FY+BALL_R; // locked to table
+    b.pos[1]=FY+BALL_R;
   }
 
-  // ── Ball-ball collisions — multiple passes to resolve clusters ──
-  // Sort by kinetic energy (fastest first) for more stable resolution
   for(let pass=0;pass<3;pass++){
     for(let i=0;i<live.length;i++){
       for(let j=i+1;j<live.length;j++){
@@ -549,23 +509,18 @@ function physStep(dt){
         if(dist2<minD*minD&&dist2>1e-8){
           const dist=Math.sqrt(dist2);
           const nx=dx/dist, nz=dz/dist;
-          // Push apart fully (positional correction)
           const pen=(minD-dist)*0.5+0.0001;
           a.pos[0]+=nx*pen; a.pos[2]+=nz*pen;
           b.pos[0]-=nx*pen; b.pos[2]-=nz*pen;
-          // Velocity impulse along normal (1D elastic, equal mass)
           const relV=(a.vel[0]-b.vel[0])*nx+(a.vel[2]-b.vel[2])*nz;
-          if(relV<0){ // approaching (n points a->b so relV<0 means moving toward each other)
-            // Perfect elastic equal-mass: swap velocity components along normal
-            const imp=relV; // full exchange (e=1)
+          if(relV<0){
+            const imp=relV;
             a.vel[0]-=imp*nx; a.vel[2]-=imp*nz;
             b.vel[0]+=imp*nx; b.vel[2]+=imp*nz;
-            // Log first contact with cue ball
             if(!firstHit){
               if(a===cueBall)firstHit=b;
               else if(b===cueBall)firstHit=a;
             }
-            // Clack sound — volume proportional to impact speed
             if(typeof sndBall==='function') sndBall(Math.abs(imp));
           }
         }
@@ -573,13 +528,11 @@ function physStep(dt){
     }
   }
 
-  // ── Rail collisions ──
   for(const b of live){
     railHit(b);
     pocketCheck(b);
   }
 
-  // ── Apply rolling friction AFTER all collisions ──
   for(const b of live){
     if(b.dead)continue;
     const spd=Math.sqrt(b.vel[0]*b.vel[0]+b.vel[2]*b.vel[2]);
@@ -594,37 +547,81 @@ function physStep(dt){
 }
 
 function railHit(b){
-  const pGap=PR*1.5;
-  // Returns true if ball center is close enough to a pocket to pass through
-  const nearPocket=(bx,bz)=>POCKETS.some(p=>{
+  // Determine if ball is near a pocket opening (gives extra clearance)
+  const nearPocket=(bx,bz,extra=0)=>POCKETS.some(p=>{
     const dx=bx-p[0],dz=bz-p[2];
-    return dx*dx+dz*dz < PR*PR*2.2;
+    return dx*dx+dz*dz < (PR+extra)*(PR+extra)*2.2;
   });
 
-  let hit=false;
+  // Corner cushion pocket zones — balls near corners get absorbed into pockets naturally
+  const inCornerZone=(bx,bz)=>{
+    return (bx>TX-PR*1.5||bx<-TX+PR*1.5)&&(bz>TZ-PR*1.5||bz<-TZ+PR*1.5);
+  };
+
+  let bounced=false;
+
+  // X-axis rails (long cushions)
   if(b.pos[0]>TX-b.r){
-    if(!nearPocket(b.pos[0],b.pos[2])){ b.pos[0]=TX-b.r; b.vel[0]*=-E_RAIL; hit=true; }
+    if(!nearPocket(b.pos[0],b.pos[2])){
+      b.pos[0]=TX-b.r;
+      b.vel[0]*=-E_RAIL;
+      bounced=true;
+    }
   }
   if(b.pos[0]<-TX+b.r){
-    if(!nearPocket(b.pos[0],b.pos[2])){ b.pos[0]=-TX+b.r; b.vel[0]*=-E_RAIL; hit=true; }
+    if(!nearPocket(b.pos[0],b.pos[2])){
+      b.pos[0]=-TX+b.r;
+      b.vel[0]*=-E_RAIL;
+      bounced=true;
+    }
   }
-  // Side rails — gap at center (side pockets at z=±TZ, x=0)
+
+  // Z-axis rails (short cushions) — gap in middle for side pockets
+  const pGap=PR*1.5;
   const nearSide=(b.pos[0]>-pGap&&b.pos[0]<pGap);
   if(b.pos[2]>TZ-b.r){
-    if(!nearSide&&!nearPocket(b.pos[0],b.pos[2])){ b.pos[2]=TZ-b.r; b.vel[2]*=-E_RAIL; hit=true; }
+    if(!nearSide&&!nearPocket(b.pos[0],b.pos[2])){
+      b.pos[2]=TZ-b.r;
+      b.vel[2]*=-E_RAIL;
+      bounced=true;
+    }
   }
   if(b.pos[2]<-TZ+b.r){
-    if(!nearSide&&!nearPocket(b.pos[0],b.pos[2])){ b.pos[2]=-TZ+b.r; b.vel[2]*=-E_RAIL; hit=true; }
+    if(!nearSide&&!nearPocket(b.pos[0],b.pos[2])){
+      b.pos[2]=-TZ+b.r;
+      b.vel[2]*=-E_RAIL;
+      bounced=true;
+    }
   }
 
-  // Hard safety clamp — ball can NEVER leave the table (pockets will catch it first normally)
-  const HARD=TX+b.r*2;
-  if(b.pos[0]>HARD){b.pos[0]=TX-b.r;b.vel[0]=Math.abs(b.vel[0])*-E_RAIL;}
-  if(b.pos[0]<-HARD){b.pos[0]=-TX+b.r;b.vel[0]=Math.abs(b.vel[0])*E_RAIL;}
-  if(b.pos[2]>HARD){b.pos[2]=TZ-b.r;b.vel[2]=Math.abs(b.vel[2])*-E_RAIL;}
-  if(b.pos[2]<-HARD){b.pos[2]=-TZ+b.r;b.vel[2]=Math.abs(b.vel[2])*E_RAIL;}
+  // ── Absolute hard clamp — no ball ever escapes the table ──
+  // This is the safety net; if a ball somehow gets past rails it is snapped back hard
+  const CLAMP_X = TX - b.r * 0.5;
+  const CLAMP_Z = TZ - b.r * 0.5;
+  if(b.pos[0] > CLAMP_X && !nearPocket(b.pos[0],b.pos[2],b.r)){
+    b.pos[0] = CLAMP_X;
+    b.vel[0] = -Math.abs(b.vel[0]) * E_RAIL;
+  }
+  if(b.pos[0] < -CLAMP_X && !nearPocket(b.pos[0],b.pos[2],b.r)){
+    b.pos[0] = -CLAMP_X;
+    b.vel[0] = Math.abs(b.vel[0]) * E_RAIL;
+  }
+  if(b.pos[2] > CLAMP_Z && !nearPocket(b.pos[0],b.pos[2],b.r)){
+    b.pos[2] = CLAMP_Z;
+    b.vel[2] = -Math.abs(b.vel[2]) * E_RAIL;
+  }
+  if(b.pos[2] < -CLAMP_Z && !nearPocket(b.pos[0],b.pos[2],b.r)){
+    b.pos[2] = -CLAMP_Z;
+    b.vel[2] = Math.abs(b.vel[2]) * E_RAIL;
+  }
 
-  if(hit) sndRail(Math.sqrt(b.vel[0]*b.vel[0]+b.vel[2]*b.vel[2]));
+  // Absolute last resort — teleport any truly escaped ball back to table center
+  if(Math.abs(b.pos[0])>TX+1 || Math.abs(b.pos[2])>TZ+1){
+    b.pos[0]=0; b.pos[2]=0;
+    b.vel[0]=0; b.vel[2]=0;
+  }
+
+  if(bounced) sndRail(Math.sqrt(b.vel[0]*b.vel[0]+b.vel[2]*b.vel[2]));
 }
 
 function pocketCheck(b){
@@ -650,30 +647,48 @@ function allStop(){return balls.filter(b=>!b.dead).every(b=>b.vel[0]===0&&b.vel[
 function resolveTurn(){
   let keep=false;
   let isFoul=foul;
-  if(!firstHit&&!isFoul)isFoul=true; // miss = foul
+  if(!firstHit&&!isFoul)isFoul=true; // scratch — no contact = foul
 
   const poc=pocketedThisShot;
-  const eight=poc.some(b=>b.num===8);
+  const eightPocketed=poc.some(b=>b.num===8);
 
-  if(eight){
+  if(eightPocketed){
     const mytype=turn===1?p1type:p2type;
-    const myLeft=balls.filter(b=>!b.dead&&b.num!==0&&b.num!==8&&(mytype==='solid'?b.num<8:b.num>8));
-    endGame(myLeft.length===0&&!isFoul?turn:turn===1?2:1);
+    // Check if all of current player's balls have been pocketed already
+    const myBalls = mytype==='solid'
+      ? balls.filter(b=>b.num>=1&&b.num<=7)
+      : balls.filter(b=>b.num>=9&&b.num<=15);
+    const myRemaining = myBalls.filter(b=>!b.dead);
+
+    if(myRemaining.length===0 && !isFoul){
+      // Legal 8-ball pocket — you win!
+      endGame(turn, '8-ball legally pocketed!');
+    } else if(isFoul){
+      endGame(turn===1?2:1, `Foul on 8-ball — Player ${turn===1?2:1} wins!`);
+    } else {
+      // Pocketed 8-ball early — you lose
+      endGame(turn===1?2:1, `8-ball pocketed too early — Player ${turn===1?2:1} wins!`);
+    }
     return;
   }
 
   if(poc.length>0){
+    // Assign ball types on first pocket
     if(p1type===null&&!isFoul){
-      const s=poc[0];
-      if(turn===1){p1type=s.num<8?'solid':'stripe';p2type=s.num<8?'stripe':'solid';}
-      else{p2type=s.num<8?'solid':'stripe';p1type=s.num<8?'stripe':'solid';}
+      const firstBall=poc[0];
+      if(turn===1){p1type=firstBall.num<8?'solid':'stripe';p2type=firstBall.num<8?'stripe':'solid';}
+      else{p2type=firstBall.num<8?'solid':'stripe';p1type=firstBall.num<8?'stripe':'solid';}
     }
     const mytype=turn===1?p1type:p2type;
-    const valid=poc.every(b=>(mytype==='solid'?b.num<8:b.num>8));
-    if(valid&&!isFoul){keep=true;if(turn===1)p1sc+=poc.length;else p2sc+=poc.length;}
+    const valid=mytype&&poc.every(b=>(mytype==='solid'?b.num<8:b.num>8));
+    if(valid&&!isFoul){
+      keep=true;
+      if(turn===1)p1sc+=poc.length;
+      else p2sc+=poc.length;
+    }
   }
 
-  if(foul){
+  if(isFoul){
     cueBall.dead=false;
     cueBall.pos=[-(TX*.5),FY+BALL_R,0];
     cueBall.vel=[0,0,0];
@@ -687,13 +702,17 @@ function resolveTurn(){
   updHUD();
 }
 
-function endGame(w){over=true;showMsg(`PLAYER ${w} WINS! 🎱`,'8-ball pocketed. New game?');}
+function endGame(winner, reason){
+  over=true;
+  showMsg(`PLAYER ${winner} WINS! 🎱`, reason+'<br><br>Play again?');
+}
 
 function newGame(){
   balls=rackBalls();cueBall=balls[0];
   turn=1;p1type=null;p2type=null;p1sc=0;p2sc=0;
   shooting=false;foul=false;firstHit=null;pocketedThisShot=[];over=false;placeMode=false;power=0;setPwr(0);
   document.getElementById('foul-line').style.display='none';
+  document.getElementById('balls-remain').style.display='none';
   document.body.style.cursor='crosshair';
   updHUD();
 }
@@ -707,6 +726,18 @@ function updHUD(){
   const tm={solid:'SOLIDS (1-7)',stripe:'STRIPES (9-15)'};
   const myT=turn===1?p1type:p2type;
   document.getElementById('type-txt').textContent=myT?tm[myT]:'—';
+
+  // Show how many balls remain for current player
+  if(myT){
+    const remaining = myT==='solid'
+      ? balls.filter(b=>b.num>=1&&b.num<=7&&!b.dead).length
+      : balls.filter(b=>b.num>=9&&b.num<=15&&!b.dead).length;
+    document.getElementById('balls-remain').style.display='block';
+    const suffix = remaining===0 ? '8-ball!' : `${remaining} ball${remaining!==1?'s':''} then 8`;
+    document.getElementById('balls-remain-txt').textContent=suffix;
+  } else {
+    document.getElementById('balls-remain').style.display='none';
+  }
 }
 
 let _msgCb=null;
@@ -742,26 +773,39 @@ function drawBall(b,vp){
 
 function drawTable(vp){
   const I=m4.id(),mvp=m4.mul(vp,I);
-
-  // Felt green
   drawVN(feltGeo,pPhong,mvp,[.07,.38,.12],0.08,LIT,camPos);
-
-  // Rails wood
   drawVN(railGeo,pPhong,mvp,[.42,.20,.05],0.55,LIT,camPos);
 
-  // Pockets: dark rim rings on felt, then dark hole disc
   for(let i=0;i<POCKETS.length;i++){
     drawVN(pocketRims[i],pPhong,mvp,[.02,.02,.02],0,LIT,camPos);
     drawVN(pocketDiscs[i],pPhong,mvp,[.01,.01,.01],0,LIT,camPos);
   }
 
-  // Pocket depth — pocketDiscs already drawn above as dark caps at FY-0.01
-
-  // Legs
   const legPos=[[-TX-RAIL_W+0.1,-TZ-RAIL_W+0.1],[TX+RAIL_W-0.1,-TZ-RAIL_W+0.1],[-TX-RAIL_W+0.1,TZ+RAIL_W-0.1],[TX+RAIL_W-0.1,TZ+RAIL_W-0.1]];
   for(const[lx,lz]of legPos){
     drawVN(legGeo,pPhong,m4.mul(vp,m4.tr(lx,-2.2,lz)),[.30,.14,.04],0.4,LIT,camPos);
   }
+}
+
+// Ghost ball: shows where cue ball will be at first contact
+function calcGhostBall(){
+  if(shooting||placeMode||over)return null;
+  const cb=cueBall.pos;
+  const dx=-Math.cos(aimAng),dz=-Math.sin(aimAng);
+  let bestT=Infinity, ghostPos=null;
+  for(const b of balls){
+    if(b===cueBall||b.dead)continue;
+    // Ray-circle intersection: find t where |cb+t*d - b.pos| = 2r
+    const ox=cb[0]-b.pos[0], oz=cb[2]-b.pos[2];
+    const A=dx*dx+dz*dz;
+    const B=2*(ox*dx+oz*dz);
+    const C=ox*ox+oz*oz-4*BALL_R*BALL_R;
+    const disc2=B*B-4*A*C;
+    if(disc2<0)continue;
+    const t=(-B-Math.sqrt(disc2))/(2*A);
+    if(t>0&&t<bestT){bestT=t;ghostPos=[cb[0]+dx*t,cb[1],cb[2]+dz*t];}
+  }
+  return ghostPos;
 }
 
 function drawCueAndAim(vp){
@@ -769,24 +813,64 @@ function drawCueAndAim(vp){
   const cb=cueBall.pos;
   const dx=Math.cos(aimAng),dz=Math.sin(aimAng);
   const pull=0.25+power*0.7;
-  // Cue stick (thick line from tip behind cue ball to butt)
   const tx=cb[0]+dx*(BALL_R+pull), tz=cb[2]+dz*(BALL_R+pull);
   const bx=cb[0]+dx*(BALL_R+pull+3.2), bz=cb[2]+dz*(BALL_R+pull+3.2);
   const mvp=m4.mul(vp,m4.id());
 
-  // Cue stick — two lines side by side for thickness illusion
+  // Cue stick
   drawLines([tx,cb[1],tz, bx,cb[1],bz],pFlat,mvp,[.78,.55,.18,1.0],4);
   drawLines([tx,cb[1]+.01,tz, bx,cb[1]+.01,bz],pFlat,mvp,[.9,.72,.35,1.0],2);
 
-  // Aim guide line (dashes approximated as short segments)
-  const aimLen=4.5;
+  // Aim guide dashes — stop at first obstacle
   const adx=-Math.cos(aimAng),adz=-Math.sin(aimAng);
+  const ghost=calcGhostBall();
+  const aimLen=ghost?Math.sqrt((ghost[0]-cb[0])**2+(ghost[2]-cb[2])**2)-BALL_R*2:5;
+
   const dashPts=[];
   for(let d=0.05;d<aimLen;d+=0.28){
+    const d2=Math.min(d+0.14,aimLen);
     dashPts.push(cb[0]+adx*d,cb[1]+.01,cb[2]+adz*d);
-    dashPts.push(cb[0]+adx*(d+0.14),cb[1]+.01,cb[2]+adz*(d+0.14));
+    dashPts.push(cb[0]+adx*d2,cb[1]+.01,cb[2]+adz*d2);
   }
-  drawLines(dashPts,pFlat,mvp,[1,1,1,.35],1);
+  if(dashPts.length>0)drawLines(dashPts,pFlat,mvp,[1,1,1,.35],1);
+
+  // Ghost ball circle at contact point
+  if(ghost){
+    const circlePts=[];
+    const segs=28;
+    for(let i=0;i<=segs;i++){
+      const a=2*Math.PI*i/segs;
+      circlePts.push(ghost[0]+Math.cos(a)*BALL_R, ghost[1], ghost[2]+Math.sin(a)*BALL_R);
+      if(i>0&&i<=segs){
+        circlePts.push(ghost[0]+Math.cos(a)*BALL_R, ghost[1], ghost[2]+Math.sin(a)*BALL_R);
+      }
+    }
+    // Draw as line loop
+    const circLoop=[];
+    for(let i=0;i<segs;i++){
+      const a=2*Math.PI*i/segs, a2=2*Math.PI*(i+1)/segs;
+      circLoop.push(ghost[0]+Math.cos(a)*BALL_R, ghost[1]+0.01, ghost[2]+Math.sin(a)*BALL_R);
+      circLoop.push(ghost[0]+Math.cos(a2)*BALL_R, ghost[1]+0.01, ghost[2]+Math.sin(a2)*BALL_R);
+    }
+    drawLines(circLoop,pFlat,mvp,[1,1,1,.28],1);
+  }
+}
+
+// Draw placement indicator when placing cue ball after foul
+function drawPlaceIndicator(vp){
+  if(!placeMode)return;
+  const cb=cueBall.pos;
+  const mvp=m4.mul(vp,m4.id());
+  const segs=32, r=BALL_R*1.6;
+  const pts=[];
+  const t=Date.now()/600;
+  for(let i=0;i<segs;i++){
+    const a=2*Math.PI*i/segs, a2=2*Math.PI*(i+1)/segs;
+    pts.push(cb[0]+Math.cos(a)*r, FY+0.01, cb[2]+Math.sin(a)*r);
+    pts.push(cb[0]+Math.cos(a2)*r, FY+0.01, cb[2]+Math.sin(a2)*r);
+  }
+  const alpha=0.5+0.5*Math.sin(t*2);
+  drawLines(pts,pFlat,mvp,[0.4,0.8,1.0,alpha],2);
 }
 
 // ── Main loop ──────────────────────────────────────────────────────────────
@@ -798,14 +882,12 @@ function render(now){
   frames++;fpsT+=dt;
   if(fpsT>=.5){document.getElementById('fps').textContent=Math.round(frames/fpsT);frames=0;fpsT=0;}
 
-  // Camera
   if(keys['KeyQ'])camYaw-=dt*1.4;
   if(keys['KeyE'])camYaw+=dt*1.4;
   if(keys['KeyR'])camPitch=Math.min(Math.PI/2-.05,camPitch+dt*1.2);
   if(keys['KeyF'])camPitch=Math.max(.1,camPitch-dt*1.2);
   updCam();
 
-  // Power charge
   if(mouseDown&&!shooting&&!placeMode){
     power=Math.min(1,(performance.now()-pressT)/1000*.75);
     setPwr(power);
@@ -814,14 +896,12 @@ function render(now){
     if(typeof stopChargeSound==='function') stopChargeSound();
   }
 
-  // Physics — run at fixed 240Hz internally for stable collisions
   if(shooting){
     const STEPS=4;
     for(let s=0;s<STEPS;s++)physStep(dt/STEPS);
     if(allStop()){shooting=false;resolveTurn();}
   }
 
-  // Render
   gl.enable(gl.DEPTH_TEST);
   gl.clearColor(0,0,0,0);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
@@ -830,12 +910,13 @@ function render(now){
   drawTable(vp);
   for(const b of balls)if(!b.dead)drawBall(b,vp);
   drawCueAndAim(vp);
+  drawPlaceIndicator(vp);
 
   requestAnimationFrame(render);
 }
 
 updHUD();
-showMsg('🎱 3D POOL','Hold left mouse button to charge power, release to shoot.<br>Mouse aim around the cue ball. Q/E orbit, R/F tilt, scroll zoom.');
+showMsg('🎱 3D POOL','Hold left mouse button to charge power, release to shoot.<br>Mouse aim around the cue ball. Q/E orbit, R/F tilt, scroll zoom.<br><br>Pocket all your balls first, then sink the 8!');
 requestAnimationFrame(t=>{lastT=t/1000;requestAnimationFrame(render);});
 
 // ── Web Audio Sound Engine ─────────────────────────────────────────────────
@@ -857,7 +938,6 @@ function playBuf(buf, vol=1, when=0){
   src.start(ctx.currentTime+when);
 }
 
-// Synthesise pool ball clack — hard transient + short resonance
 function makeBallClack(vol=1){
   const ctx=getACtx();
   const dur=0.18, sr=ctx.sampleRate;
@@ -865,9 +945,7 @@ function makeBallClack(vol=1){
   const d=buf.getChannelData(0);
   for(let i=0;i<d.length;i++){
     const t=i/sr;
-    // sharp click transient
     const click = Math.exp(-t*280) * (Math.random()*2-1);
-    // resonant tone of billiard ball (~2kHz)
     const tone  = Math.exp(-t*55) * Math.sin(2*Math.PI*2100*t) * 0.6;
     const tone2 = Math.exp(-t*80) * Math.sin(2*Math.PI*3400*t) * 0.3;
     d[i] = (click + tone + tone2) * vol;
@@ -875,7 +953,6 @@ function makeBallClack(vol=1){
   return buf;
 }
 
-// Rail thud — lower woody thwack
 function makeRailThud(vol=1){
   const ctx=getACtx();
   const dur=0.22, sr=ctx.sampleRate;
@@ -891,7 +968,6 @@ function makeRailThud(vol=1){
   return buf;
 }
 
-// Pocket drop — hollow tumbling swish
 function makePocketDrop(){
   const ctx=getACtx();
   const dur=0.55, sr=ctx.sampleRate;
@@ -899,9 +975,7 @@ function makePocketDrop(){
   const d=buf.getChannelData(0);
   for(let i=0;i<d.length;i++){
     const t=i/sr;
-    // soft initial click
     const click  = Math.exp(-t*180) * (Math.random()*2-1) * 0.4;
-    // hollow resonance (leather pocket)
     const hollow = Math.exp(-t*14) * Math.sin(2*Math.PI*(160+t*-60)*t) * 0.5;
     const rumble = Math.exp(-t*8)  * (Math.random()*2-1) * Math.exp(-t*12) * 0.25;
     d[i] = click + hollow + rumble;
@@ -909,7 +983,6 @@ function makePocketDrop(){
   return buf;
 }
 
-// Cue charge — rising woody creak (continuous, updated each frame)
 let chargeOsc=null, chargeGain=null;
 function startChargeSound(){
   if(chargeOsc) return;
@@ -919,7 +992,6 @@ function startChargeSound(){
   chargeOsc.type='sawtooth';
   chargeOsc.frequency.value=80;
   chargeGain.gain.value=0;
-  // Add subtle distortion for woody feel
   const wave=ctx.createWaveShaper();
   const curve=new Float32Array(256);
   for(let i=0;i<256;i++){const x=i/128-1; curve[i]=x*(3+8*Math.abs(x))/(1+8*Math.abs(x));}
@@ -944,7 +1016,6 @@ function stopChargeSound(){
   setTimeout(()=>{ try{chargeOsc.stop();chargeOsc=null;chargeGain=null;}catch(e){} }, 200);
 }
 
-// Sound cooldowns to prevent spam
 const _sndCd={ball:0, rail:0, pocket:0};
 function sndBall(spd){
   const now=performance.now();
@@ -969,12 +1040,6 @@ function sndPocket(){
   playBuf(makePocketDrop());
 }
 
-// Hook sounds into physics events
-// Ball-ball collision sound — add call inside collision block
-// Rail sound — already called in railHit above
-// Pocket sound — add to doPocket
-// Charge sound — update/stop in mouse handlers
-
 // ── Starfield ─────────────────────────────────────────────────────────────
 (function initStars(){
   const sc=document.getElementById('starfield');
@@ -982,27 +1047,20 @@ function sndPocket(){
   const N=420;
   const stars=[];
 
-  function resizeStar(){
-    sc.width=window.innerWidth;
-    sc.height=window.innerHeight;
-  }
+  function resizeStar(){sc.width=window.innerWidth;sc.height=window.innerHeight;}
   window.addEventListener('resize',resizeStar);
   resizeStar();
 
   for(let i=0;i<N;i++){
     stars.push({
-      x:Math.random(),
-      y:Math.random(),
-      r:Math.random()*1.4+0.2,
-      spd:Math.random()*0.00004+0.000008,
-      twink:Math.random()*Math.PI*2,
+      x:Math.random(),y:Math.random(),r:Math.random()*1.4+0.2,
+      spd:Math.random()*0.00004+0.000008,twink:Math.random()*Math.PI*2,
       twinkSpd:Math.random()*2+0.5,
       col: Math.random()<0.15 ? `hsl(${200+Math.random()*60},80%,85%)` :
            Math.random()<0.08 ? `hsl(${30+Math.random()*30},90%,80%)` : '#fff'
     });
   }
 
-  // Nebula clouds (static, drawn once on a separate offscreen)
   const off=document.createElement('canvas');
   off.width=sc.width||1920; off.height=sc.height||1080;
   const oc=off.getContext('2d');
@@ -1013,59 +1071,31 @@ function sndPocket(){
     {x:0.35,y:0.45,rx:0.16,ry:0.16,col:'rgba(20,100,120,0.04)'},
   ];
   for(const nb of nebulas){
-    const grd=oc.createRadialGradient(
-      nb.x*off.width, nb.y*off.height, 0,
-      nb.x*off.width, nb.y*off.height,
-      Math.max(nb.rx*off.width, nb.ry*off.height)
-    );
-    grd.addColorStop(0, nb.col);
-    grd.addColorStop(1, 'transparent');
-    oc.save();
-    oc.scale(1, nb.ry/nb.rx);
-    oc.fillStyle=grd;
-    oc.beginPath();
-    oc.arc(nb.x*off.width, nb.y*off.height*(nb.rx/nb.ry), nb.rx*off.width, 0, Math.PI*2);
-    oc.fill();
-    oc.restore();
+    const grd=oc.createRadialGradient(nb.x*off.width,nb.y*off.height,0,nb.x*off.width,nb.y*off.height,Math.max(nb.rx*off.width,nb.ry*off.height));
+    grd.addColorStop(0,nb.col);grd.addColorStop(1,'transparent');
+    oc.save();oc.scale(1,nb.ry/nb.rx);oc.fillStyle=grd;oc.beginPath();
+    oc.arc(nb.x*off.width,nb.y*off.height*(nb.rx/nb.ry),nb.rx*off.width,0,Math.PI*2);
+    oc.fill();oc.restore();
   }
 
   let last=0;
   function drawStars(now){
     const dt=(now-last)/1000; last=now;
     ctx2.clearRect(0,0,sc.width,sc.height);
-
-    // Deep space gradient
     const bg=ctx2.createLinearGradient(0,0,sc.width*0.3,sc.height);
-    bg.addColorStop(0,'#06010f');
-    bg.addColorStop(0.4,'#020510');
-    bg.addColorStop(1,'#010208');
-    ctx2.fillStyle=bg;
-    ctx2.fillRect(0,0,sc.width,sc.height);
-
-    // Nebula
+    bg.addColorStop(0,'#06010f');bg.addColorStop(0.4,'#020510');bg.addColorStop(1,'#010208');
+    ctx2.fillStyle=bg;ctx2.fillRect(0,0,sc.width,sc.height);
     ctx2.drawImage(off,0,0,sc.width,sc.height);
-
-    // Stars
     for(const s of stars){
-      s.twink+=s.twinkSpd*dt;
-      s.x+=s.spd*dt;
-      if(s.x>1) s.x-=1;
+      s.twink+=s.twinkSpd*dt;s.x+=s.spd*dt;if(s.x>1)s.x-=1;
       const alpha=0.55+0.45*Math.sin(s.twink);
       const px=s.x*sc.width, py=s.y*sc.height;
-      ctx2.globalAlpha=alpha;
-      ctx2.fillStyle=s.col;
-      ctx2.beginPath();
-      ctx2.arc(px,py,s.r,0,Math.PI*2);
-      ctx2.fill();
-      // Bright stars get a small glow
+      ctx2.globalAlpha=alpha;ctx2.fillStyle=s.col;
+      ctx2.beginPath();ctx2.arc(px,py,s.r,0,Math.PI*2);ctx2.fill();
       if(s.r>1.1){
         const grd=ctx2.createRadialGradient(px,py,0,px,py,s.r*4);
-        grd.addColorStop(0,s.col.replace(')',',0.3)').replace('rgb','rgba').replace('#fff','rgba(255,255,255,0.3)'));
-        grd.addColorStop(1,'transparent');
-        ctx2.fillStyle=grd;
-        ctx2.beginPath();
-        ctx2.arc(px,py,s.r*4,0,Math.PI*2);
-        ctx2.fill();
+        grd.addColorStop(0,'rgba(255,255,255,0.3)');grd.addColorStop(1,'transparent');
+        ctx2.fillStyle=grd;ctx2.beginPath();ctx2.arc(px,py,s.r*4,0,Math.PI*2);ctx2.fill();
       }
     }
     ctx2.globalAlpha=1;
@@ -1074,18 +1104,13 @@ function sndPocket(){
   requestAnimationFrame(drawStars);
 })();
 
-// ── Wire up charge sound to mouse events ──────────────────────────────────
-// Patch setPwr to also drive charge sound
 const _origSetPwr = setPwr;
 window.setPwr = function(v){
   _origSetPwr(v);
   if(v>0.01) updateChargeSound(v);
   else stopChargeSound();
 };
-// Also patch doShoot to stop charge sound
-const _origShoot = doShoot;
-window.doShoot = doShoot; // already global
-
+window.doShoot = doShoot;
 </script>
 </body>
 </html>
