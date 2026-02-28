@@ -310,16 +310,35 @@ function makeRailSegments(){
   quad([[-TX-RW,Y1,TZ+RW],[-pGap,Y1,TZ+RW],[-pGap,Y1,TZ],[-TX,Y1,TZ]],[0,1,0]);
   quad([[-TX-RW,Y0,TZ+RW],[-pGap,Y0,TZ+RW],[-pGap,Y1,TZ+RW],[-TX-RW,Y1,TZ+RW]],[0,0,1]);
   quad([[pGap,Y0,TZ],[TX,Y0,TZ],[TX,Y1,TZ],[pGap,Y1,TZ]],[0,0,1]);
-  quad([[pGap,Y1,TZ],[TX+RW,Y1,TZ+RW],[TX+RW,Y1,TZ+RW],[pGap,Y1,TZ+RW]],[0,1,0]);
+  quad([[pGap,Y1,TZ],[TX+RW,Y1,TZ],[TX+RW,Y1,TZ+RW],[pGap,Y1,TZ+RW]],[0,1,0]);
   quad([[pGap,Y1,TZ+RW],[TX+RW,Y1,TZ+RW],[TX+RW,Y0,TZ+RW],[pGap,Y0,TZ+RW]],[0,0,1]);
 
-  // Corner connector blocks (diagonal faces at 45°)
+  // Corner connector blocks — fill corner pocket gaps with diagonal angled wood
   function corner(x,z,sx,sz){
-    const px=x+sx*RAIL_W, pz=z+sz*RAIL_W;
-    // small diagonal top face
+    const px=x+sx*RW, pz=z+sz*RW;
+    // top face in corner
     quad([[x,Y1,z],[px,Y1,z],[px,Y1,pz],[x,Y1,pz]],[0,1,0]);
+    // diagonal inner face (angled across the corner)
+    quad([[x,Y0,z],[px,Y0,pz],[px,Y1,pz],[x,Y1,z]],[sx*0.707,0,sz*0.707]);
   }
   corner(-TX,-TZ,-1,-1);corner(TX,-TZ,1,-1);corner(-TX,TZ,-1,1);corner(TX,TZ,1,1);
+
+  // Side pocket surrounds — short end-cap faces on each rail half facing into the pocket gap
+  // FAR rail (z=-TZ): left half ends at x=-pGap, right half starts at x=+pGap
+  // End-cap of left half (right face, facing +x toward pocket)
+  quad([[-pGap,Y0,-TZ-RW],[-pGap,Y0,-TZ],[-pGap,Y1,-TZ],[-pGap,Y1,-TZ-RW]],[1,0,0]);
+  // End-cap of right half (left face, facing -x toward pocket)
+  quad([[pGap,Y0,-TZ],[pGap,Y0,-TZ-RW],[pGap,Y1,-TZ-RW],[pGap,Y1,-TZ]],[-1,0,0]);
+  // Short back wall of side pocket gap on far rail (outer edge, z=-TZ-RW, between -pGap and +pGap)
+  quad([[-pGap,Y0,-TZ-RW],[pGap,Y0,-TZ-RW],[pGap,Y1,-TZ-RW],[-pGap,Y1,-TZ-RW]],[0,0,1]);
+  // Top cover of the pocket surround gap on far rail
+  quad([[-pGap,Y1,-TZ],[pGap,Y1,-TZ],[pGap,Y1,-TZ-RW],[-pGap,Y1,-TZ-RW]],[0,1,0]);
+
+  // NEAR rail (z=+TZ): same treatment
+  quad([[-pGap,Y0,TZ],[-pGap,Y0,TZ+RW],[-pGap,Y1,TZ+RW],[-pGap,Y1,TZ]],[1,0,0]);
+  quad([[pGap,Y0,TZ+RW],[pGap,Y0,TZ],[pGap,Y1,TZ],[pGap,Y1,TZ+RW]],[-1,0,0]);
+  quad([[pGap,Y0,TZ+RW],[-pGap,Y0,TZ+RW],[-pGap,Y1,TZ+RW],[pGap,Y1,TZ+RW]],[0,0,-1]);
+  quad([[-pGap,Y1,TZ+RW],[pGap,Y1,TZ+RW],[pGap,Y1,TZ],[-pGap,Y1,TZ]],[0,1,0]);
 
   return uploadVN(verts,norms,idx);
 }
@@ -332,8 +351,8 @@ const railGeo  = makeRailSegments();
 const legGeo   = GEO.legCyl;
 
 // Pre-build pocket discs and annuli
-const pocketDiscs = POCKETS.map(p=>disc(p[0],FY-0.01,p[2],PR,24,-1));    // dark bottom cap
-const pocketRims  = POCKETS.map(p=>annulus(p[0],p[2],PR*0.82,PR*1.05,24)); // dark ring on felt
+const pocketDiscs = POCKETS.map(p=>disc(p[0],FY+0.002,p[2],PR,32,1));     // dark hole ON felt surface
+const pocketRims  = POCKETS.map(p=>annulus(p[0],p[2],PR,PR*1.3,24));         // dark leather rim around hole
 
 // ── Uniform helpers ────────────────────────────────────────────────────────
 function u1(p,n,v){gl.uniform1f(gl.getUniformLocation(p,n),v);}
@@ -500,7 +519,7 @@ function s2t(sx,sy){
 
 // ── Physics ────────────────────────────────────────────────────────────────
 // Key physics params — tuned for authentic pool feel
-const DECEL=2.4;        // m/s^2 linear deceleration (felt rolling friction force)
+const DECEL=0.7;        // m/s^2 linear deceleration (felt rolling friction force)
 const E_BALL=0.96;      // ball-ball elasticity (near-perfect elastic)
 const E_RAIL=0.75;      // rail elasticity
 const STOP_V=0.04;      // velocity below which ball stops
@@ -508,19 +527,11 @@ const STOP_V=0.04;      // velocity below which ball stops
 function physStep(dt){
   const live=balls.filter(b=>!b.dead);
 
-  // ── Move + felt friction (physics-based: constant deceleration) ──
+  // ── Integrate positions first (velocity unchanged this step) ──
   for(const b of live){
-    const spd=Math.sqrt(b.vel[0]*b.vel[0]+b.vel[2]*b.vel[2]);
-    if(spd>STOP_V){
-      const decel=Math.min(DECEL*dt, spd); // don't overshoot zero
-      const nx=b.vel[0]/spd, nz=b.vel[2]/spd;
-      b.vel[0]-=nx*decel; b.vel[2]-=nz*decel;
-    } else {
-      b.vel[0]=0; b.vel[2]=0;
-    }
     b.pos[0]+=b.vel[0]*dt;
     b.pos[2]+=b.vel[2]*dt;
-    b.pos[1]=FY+BALL_R; // stay on table
+    b.pos[1]=FY+BALL_R; // locked to table
   }
 
   // ── Ball-ball collisions — multiple passes to resolve clusters ──
@@ -541,8 +552,9 @@ function physStep(dt){
           b.pos[0]-=nx*pen; b.pos[2]-=nz*pen;
           // Velocity impulse along normal (1D elastic, equal mass)
           const relV=(a.vel[0]-b.vel[0])*nx+(a.vel[2]-b.vel[2])*nz;
-          if(relV>0){ // only if approaching
-            const imp=relV*(1+E_BALL)*0.5;
+          if(relV<0){ // approaching (n points a->b so relV<0 means moving toward each other)
+            // Perfect elastic equal-mass: swap velocity components along normal
+            const imp=relV; // full exchange (e=1)
             a.vel[0]-=imp*nx; a.vel[2]-=imp*nz;
             b.vel[0]+=imp*nx; b.vel[2]+=imp*nz;
             // Log first contact with cue ball
@@ -560,6 +572,19 @@ function physStep(dt){
   for(const b of live){
     railHit(b);
     pocketCheck(b);
+  }
+
+  // ── Apply rolling friction AFTER all collisions ──
+  for(const b of live){
+    if(b.dead)continue;
+    const spd=Math.sqrt(b.vel[0]*b.vel[0]+b.vel[2]*b.vel[2]);
+    if(spd>STOP_V){
+      const decel=Math.min(DECEL*dt, spd);
+      const nx=b.vel[0]/spd, nz=b.vel[2]/spd;
+      b.vel[0]-=nx*decel; b.vel[2]-=nz*decel;
+    } else {
+      b.vel[0]=0; b.vel[2]=0;
+    }
   }
 }
 
@@ -714,11 +739,7 @@ function drawTable(vp){
     drawVN(pocketDiscs[i],pPhong,mvp,[.01,.01,.01],0,LIT,camPos);
   }
 
-  // Pocket inner tunnels — small dark cylinders at each pocket, going down
-  for(const pk of POCKETS){
-    const tunnelMVP=m4.mul(vp,m4.tr(pk[0],FY,pk[2]));
-    drawVN(GEO.legCyl, pPhong, m4.mul(vp,m4.mul(m4.tr(pk[0],FY-0.4,pk[2]),m4.sc(PR/0.12))), [.02,.02,.02], 0, LIT, camPos);
-  }
+  // Pocket depth — pocketDiscs already drawn above as dark caps at FY-0.01
 
   // Legs
   const legPos=[[-TX-RAIL_W+0.1,-TZ-RAIL_W+0.1],[TX+RAIL_W-0.1,-TZ-RAIL_W+0.1],[-TX-RAIL_W+0.1,TZ+RAIL_W-0.1],[TX+RAIL_W-0.1,TZ+RAIL_W-0.1]];
