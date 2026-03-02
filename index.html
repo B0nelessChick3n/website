@@ -1,1164 +1,506 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>RPO Sim</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100vw;height:100vh;overflow:hidden;background:#000;color:#0f0;font-family:'Share Tech Mono',monospace;font-size:11px}
-#layout{display:flex;width:100vw;height:100vh}
-#left{width:310px;min-width:310px;display:flex;flex-direction:column;background:#020d06;border-right:1px solid #0f422233;overflow:hidden}
-#orbit-wrap{flex:0 0 310px;position:relative}
-#orbit-canvas{display:block;width:310px;height:310px}
-#left-telem{flex:1;padding:7px;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
-#center{flex:1;display:flex;flex-direction:column;min-width:0}
-#topbar{height:30px;background:#020d06;border-bottom:1px solid #0f422233;display:flex;align-items:center;padding:0 8px;gap:7px;flex-shrink:0;overflow:hidden}
-#prox-wrap{flex:1;position:relative;overflow:hidden}
-#prox-canvas{display:block;cursor:crosshair}
-#bottombar{height:22px;background:#020d06;border-top:1px solid #0f422233;display:flex;align-items:center;padding:0 10px;gap:12px;flex-shrink:0}
-#right{width:265px;min-width:265px;background:#020d06;border-left:1px solid #0f422233;display:flex;flex-direction:column;padding:7px;gap:5px;overflow-y:auto}
-.sec{border:1px solid #0f422255;border-radius:3px;padding:6px;background:#010a04}
-.st{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:#00ff8899;margin-bottom:4px;text-transform:uppercase}
-.row{display:flex;justify-content:space-between;align-items:center;margin:2px 0}
-.lbl{color:#00cc6677;font-size:9px}
-.val{color:#00ffaa;font-size:11px;font-family:'Orbitron',monospace}
-.val.w{color:#ff5533}.val.ok{color:#00ffaa}.val.ca{color:#ffaa00}
-input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:#0a2a15;outline:none;border-radius:2px;cursor:pointer}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;background:#00ff88;border-radius:50%;cursor:pointer}
-input[type=number]{background:#010a04;border:1px solid #0f422255;color:#00ffaa;font-family:'Share Tech Mono',monospace;font-size:10px;width:72px;padding:2px 4px;text-align:right;border-radius:2px}
-button{background:#010a04;border:1px solid #0f422266;color:#00ff88;font-family:'Share Tech Mono',monospace;font-size:9px;padding:4px 7px;cursor:pointer;border-radius:2px;letter-spacing:.5px;transition:all .1s;text-transform:uppercase}
-button:hover{background:#0f3322;border-color:#00ff88}
-button.on{background:#00ff8833;border-color:#00ff88;color:#fff}
-button.red{border-color:#ff444466;color:#ff8888}
-button.red:hover{background:#330a0a;border-color:#ff4444}
-button.ora{border-color:#ffaa0066;color:#ffcc88}
-.tg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:4px}
-.tk{background:#010a04;border:1px solid #0f422266;color:#00cc88;font-family:'Share Tech Mono',monospace;font-size:8px;padding:4px 2px;cursor:pointer;border-radius:2px;text-align:center;user-select:none;transition:all .07s}
-.tk.lit{background:#ff660033;border-color:#ff8800;color:#ffaa44}
-.tk.sp{visibility:hidden}
-.dots{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
-.dot{width:8px;height:8px;border-radius:50%;background:#010a04;border:1px solid #0f422266;display:inline-block;transition:all .07s}
-.dot.lit{background:#ff7700;border-color:#ffaa00;box-shadow:0 0 5px #ff770088}
-.pb{font-family:'Orbitron',monospace;font-size:9px;padding:3px 6px;border-radius:3px;text-align:center;letter-spacing:1px}
-.far{background:#001a10;border:1px solid #00884455;color:#00ff88}
-.mid{background:#141000;border:1px solid #887700;color:#ffcc00}
-.clo{background:#0a0022;border:1px solid #0066aa;color:#44aaff}
-.dan{background:#1a0000;border:1px solid #aa2222;color:#ff4444;animation:blink .5s infinite}
-.dok{background:#001422;border:1px solid #00aaff;color:#00ffff}
-.die{background:#2a0000;border:1px solid #ff0000;color:#ff4444;animation:blink .3s infinite}
-@keyframes blink{50%{opacity:.3}}
-.bk{animation:blink .8s infinite}
-.vt{font-size:8px;padding:3px 5px}
-.vt.on{background:#00ff8833;border-color:#00ff88;color:#00ffaa}
-#cl{height:65px;overflow-y:auto;font-size:8px;color:#00ff8877;line-height:1.6;border:1px solid #0f422233;padding:3px;background:#000a04;border-radius:2px}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mission Control — b0nelesschick3n</title>
+  <title>👽Mission Control🤖</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --base-url: "https://b0nelesschick3n.github.io/website/";
+      --glow: #00f5ff;
+      --glow2: #bf00ff;
+      --star: #ffffff;
+      --panel-bg: rgba(5, 10, 30, 0.75);
+      --border: rgba(0, 245, 255, 0.25);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: #020408;
+      font-family: 'Share Tech Mono', monospace;
+      color: #c8e8ff;
+      overflow-x: hidden;
+    }
+
+    /* ── Star canvas ── */
+    #stars {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Nebula blobs ── */
+    .nebula {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 20s ease-in-out infinite alternate;
+    }
+    .nebula-1 { width: 600px; height: 600px; top: -150px; left: -150px; background: radial-gradient(circle, #00f5ff, transparent); }
+    .nebula-2 { width: 500px; height: 500px; bottom: -100px; right: -100px; background: radial-gradient(circle, #bf00ff, transparent); animation-delay: -10s; }
+    .nebula-3 { width: 400px; height: 400px; top: 40%; left: 40%; background: radial-gradient(circle, #ff5f00, transparent); animation-delay: -5s; opacity: 0.10; }
+
+    @keyframes drift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(40px, 30px) scale(1.1); }
+    }
+
+    /* ── Layout ── */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .site-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.4em;
+      color: var(--glow);
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 12px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 5vw, 4rem);
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 1;
+      background: linear-gradient(135deg, #ffffff 0%, #00f5ff 50%, #bf00ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 20px rgba(0,245,255,0.4));
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .subtitle {
+      margin-top: 14px;
+      font-size: 0.8rem;
+      letter-spacing: 0.25em;
+      color: rgba(200,232,255,0.45);
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    /* Scanline under header */
+    .scanline {
+      width: 100%;
+      max-width: 700px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--glow), transparent);
+      margin: 24px auto 0;
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+
+    /* ── Panel ── */
+    .panel {
+      width: 100%;
+      max-width: 700px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(0,245,255,0.06), inset 0 0 40px rgba(0,0,0,0.4);
+      animation: fadeUp 0.7s 0.35s ease both;
+    }
+
+    .panel-header {
+      padding: 14px 22px;
+      background: rgba(0,245,255,0.04);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #28c940; }
+
+    .panel-title {
+      margin-left: 8px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      color: rgba(0,245,255,0.6);
+      text-transform: uppercase;
+    }
+
+    /* ── Link list ── */
+    #link-list {
+      list-style: none;
+      padding: 8px 0;
+    }
+
+    #link-list li {
+      border-bottom: 1px solid rgba(0,245,255,0.07);
+      animation: fadeUp 0.5s ease both;
+    }
+    #link-list li:last-child { border-bottom: none; }
+
+    #link-list a {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 22px;
+      text-decoration: none;
+      color: #c8e8ff;
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #link-list a::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--glow);
+      transform: scaleY(0);
+      transition: transform 0.2s;
+      transform-origin: center;
+    }
+
+    #link-list a:hover {
+      background: rgba(0,245,255,0.06);
+      color: #ffffff;
+    }
+    #link-list a:hover::before { transform: scaleY(1); }
+
+    .link-icon {
+      font-size: 1rem;
+      opacity: 0.5;
+      transition: opacity 0.2s, transform 0.2s;
+      flex-shrink: 0;
+    }
+    #link-list a:hover .link-icon { opacity: 1; transform: translateX(3px); }
+
+    .link-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      flex: 1;
+    }
+
+    .link-url {
+      font-size: 0.68rem;
+      color: rgba(0,245,255,0.45);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+      transition: color 0.2s;
+    }
+    #link-list a:hover .link-url { color: var(--glow); }
+
+    /* ── Empty state ── */
+    .empty {
+      padding: 48px 22px;
+      text-align: center;
+      color: rgba(200,232,255,0.3);
+      font-size: 0.8rem;
+      line-height: 1.8;
+    }
+
+    /* ── Add file form ── */
+    .add-section {
+      width: 100%;
+      max-width: 700px;
+      margin-top: 20px;
+      animation: fadeUp 0.7s 0.5s ease both;
+    }
+
+    .add-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: rgba(5,10,30,0.8);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 12px 16px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: #c8e8ff;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="text"]::placeholder { color: rgba(200,232,255,0.25); }
+    input[type="text"]:focus {
+      border-color: var(--glow);
+      box-shadow: 0 0 12px rgba(0,245,255,0.15);
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid var(--glow);
+      border-radius: 3px;
+      padding: 12px 22px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--glow);
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      background: rgba(0,245,255,0.1);
+      box-shadow: 0 0 16px rgba(0,245,255,0.2);
+    }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 0.68rem;
+      color: rgba(200,232,255,0.3);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 60px;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      color: rgba(200,232,255,0.2);
+      text-align: center;
+      animation: fadeUp 0.7s 0.6s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Shooting star ── */
+    .shoot {
+      position: fixed;
+      width: 2px;
+      height: 80px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), white);
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 0;
+      animation: shoot 1s linear forwards;
+    }
+    @keyframes shoot {
+      from { opacity: 1; }
+      to   { opacity: 0; transform: translate(200px, 200px); }
+    }
+  </style>
 </head>
 <body>
-<div id="layout">
 
-<!-- LEFT -->
-<div id="left">
-  <div id="orbit-wrap"><canvas id="orbit-canvas" width="310" height="310"></canvas></div>
-  <div id="left-telem">
-    <div class="sec">
-      <div class="st">Orbital Elements</div>
-      <div class="row"><span class="lbl">Altitude</span><span class="val" id="el-alt">420 km</span></div>
-      <div class="row"><span class="lbl">Inclination</span><span class="val" id="el-inc">51.6°</span></div>
-      <div class="row"><span class="lbl">Eccentricity</span><span class="val" id="el-ecc">0.000</span></div>
-      <div class="row"><span class="lbl">Period</span><span class="val" id="el-T">92.7 min</span></div>
-      <div class="row"><span class="lbl">Mean motion n</span><span class="val" id="el-n">0.00113/s</span></div>
-      <div class="row"><span class="lbl">Orbital V</span><span class="val" id="el-v">7.66 km/s</span></div>
-    </div>
-    <div class="sec">
-      <div class="st">Hill Frame (R/I/C)</div>
-      <div class="row"><span class="lbl">Radial R</span><span class="val" id="hr">0.0 m</span></div>
-      <div class="row"><span class="lbl">In-Track I</span><span class="val" id="hi">-500 m</span></div>
-      <div class="row"><span class="lbl">Cross C</span><span class="val" id="hc">0.0 m</span></div>
-      <div class="row"><span class="lbl">Vr</span><span class="val" id="vr">0.000</span></div>
-      <div class="row"><span class="lbl">Vi</span><span class="val" id="vi">0.000</span></div>
-      <div class="row"><span class="lbl">Vc</span><span class="val" id="vc">0.000</span></div>
-    </div>
-    <div class="sec">
-      <div class="st">Propulsion</div>
-      <div class="row"><span class="lbl">ΔV Used</span><span class="val" id="dv">0.00 m/s</span></div>
-      <div class="row"><span class="lbl">Fuel</span><span class="val" id="fl">35.0%</span></div>
-      <div style="height:5px;background:#010a04;border:1px solid #0f422255;border-radius:2px;margin:3px 0;overflow:hidden">
-        <div id="fb" style="height:100%;width:35%;background:linear-gradient(90deg,#ff4400,#ffaa00,#00ff88);transition:width .3s"></div>
-      </div>
-    </div>
-    <div class="sec"><div class="st">Comms / Events</div><div id="cl"></div></div>
-  </div>
-</div>
+<canvas id="stars"></canvas>
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
 
-<!-- CENTER -->
-<div id="center">
-  <div id="topbar">
-    <span style="font-family:Orbitron;font-size:9px;letter-spacing:2px;color:#00ff88cc;white-space:nowrap">RPO SIM</span>
-    <div style="display:flex;gap:3px">
-      <button class="vt on" id="vt-chase" onclick="setView('chase')">CHASE</button>
-      <button class="vt" id="vt-ric" onclick="setView('ric')">RIC</button>
-      <button class="vt" id="vt-free" onclick="setView('free')">FREE</button>
-    </div>
-    <span id="ptb" class="pb far">FAR APPROACH</span>
-    <button id="vvb" onclick="toggleVV()" class="on ora" style="font-size:8px;padding:3px 5px">V-VEC ON</button>
-    <span style="margin-left:auto;font-size:9px;color:#00ff8877;white-space:nowrap" id="clk">MET: 00:00:00</span>
-  </div>
-  <div id="prox-wrap"><canvas id="prox-canvas"></canvas></div>
-  <div id="bottombar">
-    <span style="color:#00ff8844;font-size:8px">SCROLL=ZOOM · ALT+DRAG=PAN</span>
-    <span id="bb-r" style="color:#00ffaa">RNG:---</span>
-    <span id="bb-v" style="color:#00ffaa">V:---</span>
-    <span id="bb-ric" style="color:#00ff8866">R:0 I:-500 C:0</span>
-    <span id="bb-z" style="margin-left:auto;color:#00ff8844">1.00×</span>
-  </div>
-</div>
+<div class="page-wrap">
 
-<!-- RIGHT -->
-<div id="right">
-  <div class="sec">
-    <div class="st">Mission Status</div>
-    <div id="pd" class="pb far" style="margin-bottom:4px">FAR APPROACH</div>
-    <div class="row"><span class="lbl">Range</span><span class="val" id="cr">---</span></div>
-    <div class="row"><span class="lbl">Closure</span><span class="val" id="cc">---</span></div>
-    <div class="row"><span class="lbl">Max Safe V</span><span class="val" id="csv">---</span></div>
-    <div id="dm" class="bk" style="color:#00ffff;text-align:center;display:none;margin-top:3px">✓ DOCKED</div>
-    <div id="wm" class="bk" style="color:#ff4444;text-align:center;display:none;margin-top:3px">⚠ HIGH CLOSURE</div>
-    <div id="xm" style="color:#ff2222;text-align:center;display:none;margin-top:3px;font-family:Orbitron;font-size:9px;animation:blink .3s infinite">✗ MISSION FAILURE — PRESS R</div>
+  <header>
+    <div class="site-label">b0nelesschick3n.github.io</div>
+    <h1>Mission&nbsp;Control</h1>
+    <p class="subtitle">// navigation hub — select your destination //</p>
+    <div class="scanline"></div>
+  </header>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="dot dot-r"></span>
+      <span class="dot dot-y"></span>
+      <span class="dot dot-g"></span>
+      <span class="panel-title">Discovered Pages</span>
+    </div>
+    <ul id="link-list">
+      <!-- populated by JS -->
+    </ul>
   </div>
 
-  <div class="sec">
-    <div class="st">RCS  (WASD/Arrows · Q/E=Yaw · Z/X=Up/Dn)</div>
-    <div class="tg">
-      <div class="tk sp"></div>
-      <div class="tk" id="tk-fwd" onpointerdown="thrOn('fwd')" onpointerup="thrOff('fwd')" onpointerleave="thrOff('fwd')">▲FWD<br><small>W/↑</small></div>
-      <div class="tk sp"></div>
-      <div class="tk" id="tk-port" onpointerdown="thrOn('port')" onpointerup="thrOff('port')" onpointerleave="thrOff('port')">◄PORT<br><small>A/←</small></div>
-      <div class="tk" id="tk-aft" onpointerdown="thrOn('aft')" onpointerup="thrOff('aft')" onpointerleave="thrOff('aft')">▼AFT<br><small>S/↓</small></div>
-      <div class="tk" id="tk-stbd" onpointerdown="thrOn('stbd')" onpointerup="thrOff('stbd')" onpointerleave="thrOff('stbd')">►STBD<br><small>D/→</small></div>
-      <div class="tk" id="tk-yawl" onpointerdown="thrOn('yawL')" onpointerup="thrOff('yawL')" onpointerleave="thrOff('yawL')">↺YAW<br><small>Q</small></div>
-      <div class="tk" id="tk-up" onpointerdown="thrOn('up')" onpointerup="thrOff('up')" onpointerleave="thrOff('up')">▲UP<br><small>Z</small></div>
-      <div class="tk" id="tk-yawr" onpointerdown="thrOn('yawR')" onpointerup="thrOff('yawR')" onpointerleave="thrOff('yawR')">↻YAW<br><small>E</small></div>
+  <div class="add-section">
+    <div class="add-row">
+      <input type="text" id="file-input" placeholder="add-page.html" />
+      <button onclick="addPage()">&#43; Add Page</button>
     </div>
-    <div class="dots">
-      <span class="dot" id="d-fwd"></span><span class="dot" id="d-aft"></span>
-      <span class="dot" id="d-port"></span><span class="dot" id="d-stbd"></span>
-      <span class="dot" id="d-up"></span><span class="dot" id="d-dn"></span>
-      <span class="dot" id="d-yl"></span><span class="dot" id="d-yr"></span>
-    </div>
+    <p class="hint">// type a filename to add it to the nav above //</p>
   </div>
 
-  <div class="sec">
-    <div class="st">Time Scale</div>
-    <div class="row"><span class="lbl">Multiplier</span><span class="val" id="tsl">1×</span></div>
-    <input type="range" id="tss" min="0" max="5" step="1" value="2" oninput="setTS(this.value)">
-    <div style="display:flex;justify-content:space-between;font-size:8px;color:#00ff8533;margin-top:1px">
-      <span>0.1×</span><span>0.25×</span><span>1×</span><span>5×</span><span>20×</span><span>100×</span>
-    </div>
-  </div>
+  <footer>&#x2604; transmission end &#x2604;</footer>
 
-  <div class="sec">
-    <div class="st">Orbital Parameters</div>
-    <div class="row"><span class="lbl">Altitude (km)</span>
-      <input type="number" id="ia" value="420" min="200" max="2000" step="10" onchange="updateOrb()"></div>
-    <div class="row"><span class="lbl">Inclination (°)</span>
-      <input type="number" id="ii" value="51.6" min="0" max="90" step="0.1" onchange="updateOrb()"></div>
-    <div class="row"><span class="lbl">Eccentricity</span>
-      <input type="number" id="ie" value="0.000" min="0" max="0.3" step="0.001" onchange="updateOrb()"></div>
-    <div class="row"><span class="lbl">Init Range (m)</span>
-      <input type="number" id="ir" value="500" min="10" max="5000" step="10"></div>
-    <button onclick="resetSim()" class="red" style="width:100%;margin-top:5px">⟳ RESET [R]</button>
-  </div>
-
-  <div class="sec">
-    <div class="st">Docking</div>
-    <div style="color:#00ff8844;font-size:8px;line-height:1.8">
-      Approach along the −I corridor (±15m radial)<br>
-      Align probe to port: yaw=0°, probe within 4m<br>
-      Close at &lt;0.3 m/s for capture<br>
-      Any collision &gt;0.5 m/s = mission failure
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="st">Keys</div>
-    <div style="color:#00ff8844;font-size:8px;line-height:1.9">
-      W/↑ Fwd · S/↓ Aft · A/← Port · D/→ Stbd<br>
-      Z Up · X Down · Q YawL · E YawR<br>
-      V Vel-vector · R Reset<br>
-      Scroll=Zoom · ALT+Drag=Pan
-    </div>
-  </div>
-</div>
 </div>
 
 <script>
-'use strict';
-const TAU=Math.PI*2, DEG=Math.PI/180;
-const MU=3.986004418e14, R_EARTH=6371000;
-const INIT_FUEL=35;
+  /* ───────── Star canvas ───────── */
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
 
-// ── ORBITAL ELEMENTS ──────────────────────────────────
-let ORB={alt:420e3, inc:51.6, ecc:0};
-let R_ORB,V_ORB,T_ORB,N_OM;
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = Array.from({length: 220}, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.2,
+      o: Math.random(),
+      speed: Math.random() * 0.4 + 0.05
+    }));
+  }
 
-function updateOrb(){
-  ORB.alt=(parseFloat(document.getElementById('ia').value)||420)*1e3;
-  ORB.inc=parseFloat(document.getElementById('ii').value)||51.6;
-  ORB.ecc=parseFloat(document.getElementById('ie').value)||0;
-  // Semi-major axis = R_ORB (circular approx; for eccentric use mean orbit radius)
-  R_ORB = R_EARTH + ORB.alt;
-  V_ORB = Math.sqrt(MU/R_ORB);
-  T_ORB = TAU*Math.sqrt(R_ORB**3/MU);
-  N_OM  = TAU/T_ORB;
-  document.getElementById('el-alt').textContent=(ORB.alt/1000).toFixed(0)+' km';
-  document.getElementById('el-inc').textContent=ORB.inc.toFixed(1)+'°';
-  document.getElementById('el-ecc').textContent=ORB.ecc.toFixed(3);
-  document.getElementById('el-T').textContent=(T_ORB/60).toFixed(1)+' min';
-  document.getElementById('el-n').textContent=N_OM.toFixed(5)+'/s';
-  document.getElementById('el-v').textContent=(V_ORB/1000).toFixed(2)+' km/s';
-}
-updateOrb();
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.o += s.speed * 0.015;
+      if (s.o > 1) s.o = 0;
+      ctx.globalAlpha = Math.abs(Math.sin(s.o * Math.PI));
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(drawStars);
+  }
 
-// ── SIM STATE ─────────────────────────────────────────
-// Hill frame: x=Radial(+out), y=In-track(+prograde), z=Cross(+normal)
-// Target at Hill origin. Chaser starts at (0, -initRange, 0).
-let C={rx:0,ry:-500,rz:0,vx:0,vy:0,vz:0,yaw:0,fuel:INIT_FUEL,dv:0};
-let targetAngle=0, simTime=0, missionTime=0, lastTS=null;
-let docked=false, failed=false;
-const TS_VALS=[0.1,0.25,1,5,20,100];
-let timeScale=1;
-const THRUST_A=0.5, YAW_R=1.5*DEG;
-let thr={fwd:false,aft:false,port:false,stbd:false,up:false,dn:false,yawL:false,yawR:false};
-let showVV=true;
+  window.addEventListener('resize', resize);
+  resize();
+  drawStars();
 
-// ── STARS ─────────────────────────────────────────────
-let stars3d=[];
-for(let i=0;i<700;i++){
-  const th=Math.acos(2*Math.random()-1), ph=Math.random()*TAU, s=Math.sin(th);
-  stars3d.push({x:s*Math.cos(ph),y:s*Math.sin(ph),z:Math.cos(th),r:Math.random()*1.3+.15,b:Math.random()*.8+.2,tw:Math.random()*TAU});
-}
-let orbitStars=[];
-for(let i=0;i<200;i++) orbitStars.push({x:Math.random(),y:Math.random(),r:Math.random()*.9+.1,b:Math.random()*.7+.3});
+  /* ───────── Shooting stars ───────── */
+  function spawnShoot() {
+    const el = document.createElement('div');
+    el.className = 'shoot';
+    el.style.left = (Math.random() * window.innerWidth) + 'px';
+    el.style.top = (Math.random() * window.innerHeight * 0.5) + 'px';
+    el.style.transform = 'rotate(' + (30 + Math.random() * 30) + 'deg)';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+  setInterval(spawnShoot, 3500);
 
-// ── BACKGROUND DERELICTS ──────────────────────────────
-let bgDerelicts=[];
-function genDerelicts(){
-  bgDerelicts=[];
-  for(let i=0;i<5;i++){
-    const a=Math.random()*TAU, d=900+Math.random()*1300;
-    bgDerelicts.push({
-      rx:Math.cos(a)*d, ry:Math.sin(a)*d*.4, rz:0,
-      rot:Math.random()*TAU, rr:(Math.random()-.5)*.04,
-      type:Math.floor(Math.random()*3), sz:6+Math.random()*8
+  /* ───────── Page list ───────── */
+  const BASE = 'https://b0nelesschick3n.github.io/website/';
+  const STORAGE_KEY = 'bc_pages';
+
+  // Default pages – add your known HTML files here
+  const DEFAULT_PAGES = [
+    { file: 'VOID CRAWLER ROUGELIKE.html', name: 'Void Crawler' },
+    { file: 'Physics Engine.html', name: 'Physics Engine' },
+    { file: 'voidrunner.html', name: 'Void Runner' },
+    { file: 'pool.html', name: 'Billiards' },
+    { file: 'texas-holdem.html', name: 'Gambling!!!!' },
+    { file: 'RPO_Sim.html', name: 'Become a Space Pirate' }
+  ];
+
+  function loadPages() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [...DEFAULT_PAGES];
+    } catch { return [...DEFAULT_PAGES]; }
+  }
+
+  function savePages(pages) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pages));
+  }
+
+  function prettyName(filename) {
+    return filename.replace(/\.html$/i, '').replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function renderList() {
+    const pages = loadPages();
+    const ul = document.getElementById('link-list');
+    ul.innerHTML = '';
+
+    if (pages.length === 0) {
+      ul.innerHTML = '<li><div class="empty">[ no pages discovered ]<br/>type a filename below to add one</div></li>';
+      return;
+    }
+
+    pages.forEach((p, i) => {
+      const li = document.createElement('li');
+      li.style.animationDelay = (i * 0.05) + 's';
+      const href = BASE + p.file;
+      li.innerHTML = `
+        <a href="${href}" target="_blank">
+          <span class="link-icon">&#x2197;</span>
+          <span class="link-name">${p.name || prettyName(p.file)}</span>
+          <span class="link-url">${href}</span>
+        </a>`;
+      ul.appendChild(li);
     });
   }
-}
-genDerelicts();
 
-// ── DEBRIS ────────────────────────────────────────────
-let debris=[], debTimer=0;
-let nextDeb=20+Math.random()*30;
+  function addPage() {
+    const input = document.getElementById('file-input');
+    let val = input.value.trim();
+    if (!val) return;
+    if (!val.endsWith('.html')) val += '.html';
 
-function spawnDebris(){
-  if(docked||failed) return;
-  const ang=Math.random()*TAU, spd=4+Math.random()*10;
-  const sd=400+Math.random()*300;
-  const rx=C.rx+Math.cos(ang)*sd, ry=C.ry+Math.sin(ang)*sd;
-  const dx=C.rx-rx, dy=C.ry-ry, len=Math.hypot(dx,dy);
-  const sc=(Math.random()-.5)*.3;
-  debris.push({
-    rx, ry, rz:0,
-    vx:(dx/len+sc)*spd, vy:(dy/len+sc)*spd, vz:0,
-    rot:Math.random()*TAU, rr:(Math.random()-.5)*1.2,
-    sz:3+Math.random()*4, hit:false
+    const pages = loadPages();
+    if (pages.some(p => p.file === val)) {
+      input.value = '';
+      return;
+    }
+    pages.push({ file: val, name: prettyName(val) });
+    savePages(pages);
+    input.value = '';
+    renderList();
+  }
+
+  document.getElementById('file-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addPage();
   });
-  commsLog("CAUTION: DEBRIS TRACK — REL V "+spd.toFixed(0)+" m/s");
-}
 
-function stepDebris(dt){
-  for(const d of debris){
-    d.rx+=d.vx*dt; d.ry+=d.vy*dt;
-    d.rot+=d.rr*dt;
-    if(!d.hit&&!failed&&!docked){
-      const dr=Math.hypot(d.rx-C.rx, d.ry-C.ry);
-      if(dr<9){
-        d.hit=true;
-        const iv=Math.hypot(d.vx-C.vx, d.vy-C.vy);
-        // Debris hits chaser at chaser screen position (PW/2, PH/2 in chase mode)
-        triggerFailure(`DEBRIS STRIKE REL-V ${iv.toFixed(1)} m/s`);
-      }
+  // Auto-discover siblings by scanning the current directory's link tags
+  // (works when served from GitHub Pages which lists files in some cases)
+  (function autoDiscover() {
+    // Try fetching the directory listing (GitHub Pages doesn't expose this,
+    // but if there's a sitemap or the user is on a local server it might work)
+    const knownFromDOM = Array.from(document.querySelectorAll('a[href$=".html"]'))
+      .map(a => a.getAttribute('href'))
+      .filter(h => h && !h.startsWith('http') && !h.includes('/'))
+      .map(h => ({ file: h, name: prettyName(h) }));
+
+    if (knownFromDOM.length > 0) {
+      const pages = loadPages();
+      const existing = new Set(pages.map(p => p.file));
+      knownFromDOM.forEach(p => { if (!existing.has(p.file)) pages.push(p); });
+      savePages(pages);
     }
-  }
-  debris=debris.filter(d=>Math.hypot(d.rx-C.rx,d.ry-C.ry)<2500&&!d.hit);
-  if(!failed&&!docked){
-    debTimer+=dt;
-    if(debTimer>nextDeb){
-      debTimer=0; nextDeb=20+Math.random()*30;
-      if(Math.random()<.55) spawnDebris();
-    }
-  }
-}
+  })();
 
-// ── PARTICLES ─────────────────────────────────────────
-let parts=[], flares=[];
-
-function spawnFlares(wx,wy){
-  if(Math.random()>.4) return;
-  flares.push({x:wx,y:wy,vx:(Math.random()-.5)*50,vy:(Math.random()-.5)*50-30,life:1,r:Math.random()*2.5+.5});
-}
-function spawnExplosion(sx,sy){
-  for(let i=0;i<80;i++){
-    const a=Math.random()*TAU, sp=30+Math.random()*120;
-    parts.push({x:sx,y:sy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:Math.random()*4+1,
-      col:`hsl(${Math.random()*40},100%,${50+Math.random()*30}%)`});
-  }
-}
-function spawnDockSparks(sx,sy){
-  for(let i=0;i<50;i++){
-    const a=Math.random()*TAU, sp=20+Math.random()*70;
-    parts.push({x:sx,y:sy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:Math.random()*2.5+.5,
-      col:`hsl(${180+Math.random()*50},100%,70%)`});
-  }
-}
-
-// ── AUDIO ─────────────────────────────────────────────
-let AC=null, thrNode=null, thrGain=null;
-function initAudio(){
-  if(AC) return;
-  try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){AC=null;}
-  if(AC){ startAmbient(); startThrNoise(); }
-}
-function startAmbient(){
-  const o=AC.createOscillator(); o.frequency.value=48; o.type='sine';
-  const g=AC.createGain(); g.gain.value=0.025;
-  o.connect(g); g.connect(AC.destination); o.start();
-}
-function startThrNoise(){
-  const buf=AC.createBuffer(1,AC.sampleRate*.2,AC.sampleRate);
-  const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
-  thrNode=AC.createBufferSource(); thrNode.buffer=buf; thrNode.loop=true;
-  thrGain=AC.createGain(); thrGain.gain.value=0;
-  const bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=200; bp.Q.value=.7;
-  thrNode.connect(bp); bp.connect(thrGain); thrGain.connect(AC.destination);
-  thrNode.start();
-}
-function setThrVol(v){
-  if(!AC||!thrGain) return;
-  thrGain.gain.setTargetAtTime(Math.min(.2,v),AC.currentTime,.05);
-}
-function playImpact(){
-  if(!AC) return;
-  const buf=AC.createBuffer(1,AC.sampleRate*.6,AC.sampleRate);
-  const d=buf.getChannelData(0);
-  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/AC.sampleRate*10)*2;
-  const s=AC.createBufferSource(); s.buffer=buf;
-  const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=600;
-  const g=AC.createGain(); g.gain.value=.8;
-  s.connect(lp); lp.connect(g); g.connect(AC.destination); s.start();
-}
-function playDockSound(){
-  if(!AC) return;
-  [440,550,660,880].forEach((f,i)=>{
-    setTimeout(()=>{
-      const o=AC.createOscillator(); const g=AC.createGain();
-      o.frequency.value=f; o.type='sine';
-      g.gain.setValueAtTime(.18,AC.currentTime);
-      g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.15);
-      o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+.16);
-    },i*80);
-  });
-}
-function playExpSound(){
-  if(!AC) return;
-  const buf=AC.createBuffer(1,AC.sampleRate*1.5,AC.sampleRate);
-  const d=buf.getChannelData(0);
-  for(let i=0;i<d.length;i++){const t=i/AC.sampleRate; d[i]=(Math.random()*2-1)*Math.pow(Math.max(0,1-t/1.5),1.2)*1.8;}
-  const s=AC.createBufferSource(); s.buffer=buf;
-  const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=350;
-  const g=AC.createGain(); g.gain.value=.9;
-  s.connect(lp); lp.connect(g); g.connect(AC.destination); s.start();
-}
-function playCommsBeep(msg){
-  if(!AC) return;
-  const dur=.5+Math.random()*.3;
-  const buf=AC.createBuffer(1,AC.sampleRate*dur,AC.sampleRate);
-  const d=buf.getChannelData(0);
-  for(let i=0;i<d.length;i++){
-    const t=i/AC.sampleRate, env=Math.min(t*25,1)*Math.min((dur-t)*15,1);
-    d[i]=(Math.random()*2-1)*.25*env+Math.sin(t*1600)*.08*env;
-  }
-  const s=AC.createBufferSource(); s.buffer=buf;
-  const bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=3;
-  const g=AC.createGain(); g.gain.value=.2;
-  s.connect(bp); bp.connect(g); g.connect(AC.destination); s.start();
-}
-
-// ── COMMS LOG ─────────────────────────────────────────
-let lastCommsT=-999, commsTimer=0;
-const COMMS=[
-  "HOUSTON CHASER — ON CORRIDOR, PROCEEDING",
-  "RANGE RATE NOMINAL — COPY",
-  "SYSTEMS GREEN — CONTINUE APPROACH",
-  "SOLAR ANGLE ADJUSTING — NOMINAL",
-  "RCS PRESSURE NOMINAL",
-  "TRACKING LOCK CONFIRMED",
-];
-function commsLog(msg){
-  const el=document.getElementById('cl');
-  const ln=document.createElement('div');
-  const mm=String(Math.floor(missionTime/60)).padStart(2,'0');
-  const ss=String(Math.floor(missionTime%60)).padStart(2,'0');
-  ln.textContent=`[${mm}:${ss}] ${msg}`;
-  el.appendChild(ln); el.scrollTop=el.scrollHeight;
-}
-function tickComms(dt){
-  commsTimer+=dt;
-  if(commsTimer>35+Math.random()*25){
-    commsTimer=0;
-    const range=Math.hypot(C.rx,C.ry,C.rz);
-    let msg;
-    if(C.fuel<10) msg="FUEL CRITICAL — CONSERVE PROPELLANT";
-    else if(C.fuel<20) msg="FUEL BELOW 20% — USE SPARINGLY";
-    else if(range<30) msg="RANGE "+range.toFixed(0)+"m — FINAL APPROACH";
-    else if(range<100) msg="RANGE "+range.toFixed(0)+"m — RATE NOMINAL";
-    else msg=COMMS[Math.floor(Math.random()*COMMS.length)];
-    commsLog(msg);
-    playCommsBeep(msg);
-  }
-}
-
-// ── FAILURE / DOCK ────────────────────────────────────
-let failFlash=0;
-let impactAt=null; // {x,y} screen coords of impact for particle spawn
-
-function triggerFailure(reason, impactX, impactY){
-  if(failed||docked) return;
-  failed=true;
-  Object.keys(thr).forEach(k=>thr[k]=false);
-  failFlash=1;
-  commsLog("** MISSION FAILURE: "+reason+" **");
-  commsLog("PRESS R TO RESTART");
-  playExpSound(); playImpact();
-  document.getElementById('xm').style.display='block';
-  // Explosion at impact point if provided, else at chaser
-  const ex = (impactX !== undefined) ? impactX : PW/2;
-  const ey = (impactY !== undefined) ? impactY : PH/2;
-  spawnExplosion(ex, ey);
-  // Also spawn at chaser
-  if(impactX !== undefined) spawnExplosion(PW/2, PH/2);
-}
-
-// ── CW PHYSICS ────────────────────────────────────────
-function cwDeriv(s,a){
-  const[rx,ry,rz,vx,vy,vz]=s,[ax,ay,az]=a,n=N_OM;
-  return[vx,vy,vz, 3*n*n*rx+2*n*vy+ax, -2*n*vx+ay, -n*n*rz+az];
-}
-function rk4(s,dt,a){
-  const k1=cwDeriv(s,a);
-  const k2=cwDeriv(s.map((v,i)=>v+k1[i]*dt/2),a);
-  const k3=cwDeriv(s.map((v,i)=>v+k2[i]*dt/2),a);
-  const k4=cwDeriv(s.map((v,i)=>v+k3[i]*dt),a);
-  return s.map((v,i)=>v+(k1[i]+2*k2[i]+2*k3[i]+k4[i])*dt/6);
-}
-function cwStep(dt){
-  if(docked||failed) return;
-  if(C.fuel<=0){ Object.keys(thr).forEach(k=>thr[k]=false); return; }
-  const y=C.yaw, cy=Math.cos(y), sy=Math.sin(y);
-  let ax=0,ay=0,az=0;
-  if(thr.fwd) { ax-=sy*THRUST_A; ay+=cy*THRUST_A; }
-  if(thr.aft) { ax+=sy*THRUST_A; ay-=cy*THRUST_A; }
-  if(thr.stbd){ ax+=cy*THRUST_A; ay+=sy*THRUST_A; }
-  if(thr.port){ ax-=cy*THRUST_A; ay-=sy*THRUST_A; }
-  if(thr.up)   az+=THRUST_A;
-  if(thr.dn)   az-=THRUST_A;
-  const mag=Math.hypot(ax,ay,az);
-  if(mag>0){ C.fuel=Math.max(0,C.fuel-0.004*dt*mag/THRUST_A); C.dv+=mag*dt; }
-  if(thr.yawL) C.yaw-=YAW_R*dt;
-  if(thr.yawR) C.yaw+=YAW_R*dt;
-  const ns=rk4([C.rx,C.ry,C.rz,C.vx,C.vy,C.vz],dt,[ax,ay,az]);
-  [C.rx,C.ry,C.rz,C.vx,C.vy,C.vz]=ns;
-}
-
-// ── CANVASES ──────────────────────────────────────────
-const OC=document.getElementById('orbit-canvas'), OCX=OC.getContext('2d');
-const PW_EL=document.getElementById('prox-wrap');
-const PC=document.getElementById('prox-canvas'), PCX=PC.getContext('2d');
-let PW=0,PH=0;
-function resizePC(){ PW=PW_EL.clientWidth; PH=PW_EL.clientHeight; PC.width=PW; PC.height=PH; }
-resizePC(); window.addEventListener('resize',resizePC);
-
-// ── CAMERA ────────────────────────────────────────────
-let vm='chase';
-let ZM={chase:2, ric:1.5, free:1.5};
-let fc={x:0,y:-250};
-let drag=false, dl={x:0,y:0};
-PC.addEventListener('wheel',e=>{ e.preventDefault(); const f=e.deltaY<0?1.18:1/1.18; ZM[vm]=Math.max(.02,Math.min(600,ZM[vm]*f)); },{passive:false});
-PC.addEventListener('pointerdown',e=>{ if(vm==='free'||e.altKey){drag=true;dl={x:e.clientX,y:e.clientY};e.preventDefault();} });
-PC.addEventListener('pointermove',e=>{ if(!drag) return; const dx=e.clientX-dl.x,dy=e.clientY-dl.y; dl={x:e.clientX,y:e.clientY}; const p=bPPM()*ZM[vm]; fc.x-=dx/p; fc.y+=dy/p; });
-PC.addEventListener('pointerup',()=>drag=false);
-PC.addEventListener('pointerleave',()=>drag=false);
-function bPPM(){ return Math.min(PW,PH)/600; }
-function setView(m){ vm=m; ['chase','ric','free'].forEach(v=>document.getElementById('vt-'+v).classList.toggle('on',v===m)); if(m==='free'){fc.x=C.rx;fc.y=C.ry;} }
-function toggleVV(){ showVV=!showVV; const b=document.getElementById('vvb'); b.textContent=showVV?'V-VEC ON':'V-VEC OFF'; b.classList.toggle('on',showVV); }
-
-// ── ORBIT DRAW ────────────────────────────────────────
-function drawOrbit(){
-  const ctx=OCX, W=310, H=310, cx=W/2, cy=H/2;
-  ctx.fillStyle='#000508'; ctx.fillRect(0,0,W,H);
-
-  // Stars
-  for(const s of orbitStars){ ctx.globalAlpha=s.b*.5; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r,0,TAU); ctx.fill(); }
-  ctx.globalAlpha=1;
-
-  // Earth radius in panel pixels — computed from actual orbital radius
-  // We want the orbit track to be at a fixed fraction of panel size
-  // Earth pixel radius proportional to R_EARTH/R_ORB * orbit_track_radius
-  const PANEL_ORBIT_R = cx * 0.80; // orbit track always at 80% of panel half-width
-  const eR = PANEL_ORBIT_R * (R_EARTH / R_ORB); // Earth radius in panel pixels, scales with altitude
-
-  // Earth glow
-  const eg=ctx.createRadialGradient(cx,cy,eR*.3,cx,cy,eR*2.2);
-  eg.addColorStop(0,'#0d3a8844'); eg.addColorStop(1,'transparent');
-  ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(cx,cy,eR*2.2,0,TAU); ctx.fill();
-
-  // Earth ocean
-  const erd=ctx.createRadialGradient(cx-eR*.3,cy-eR*.3,0,cx,cy,eR);
-  erd.addColorStop(0,'#1e5fc4'); erd.addColorStop(.5,'#0c3a88'); erd.addColorStop(1,'#041a55');
-  ctx.fillStyle=erd; ctx.beginPath(); ctx.arc(cx,cy,eR,0,TAU); ctx.fill();
-
-  // Atmosphere rim
-  ctx.strokeStyle='#2277ff55'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.arc(cx,cy,eR+3,0,TAU); ctx.stroke();
-
-  // Lat grid lines on Earth
-  ctx.strokeStyle='#ffffff08'; ctx.lineWidth=.5;
-  for(let lat=-60;lat<=60;lat+=30){ const xr=eR*Math.cos(lat*DEG); ctx.beginPath(); ctx.arc(cx,cy,xr,0,TAU); ctx.stroke(); }
-
-  // ── ORBITS — always at PANEL_ORBIT_R, projected using inclination ──
-  const incC=Math.cos(ORB.inc*DEG);
-  // a = semi-major = PANEL_ORBIT_R, b = a * cos(inc) for inclination tilt projection
-  // For eccentricity: semi-latus rectum; scale so it's visually interesting
-  const orb_a = PANEL_ORBIT_R;
-  const orb_b = orb_a * incC; // inclination compresses Y axis
-
-  // Other satellites (fixed decorative orbits)
-  const sats=[
-    {n:'HST', rF:1.015, ia:targetAngle+1.4, inc:28, c:'#88aaff'},
-    {n:'GPS', rF:4.2,   ia:targetAngle+0.9, inc:55, c:'#aaffaa'},
-    {n:'STA', rF:0.988, ia:targetAngle+.55, inc:57, c:'#ffaaaa'},
-    {n:'CRS', rF:1.008, ia:targetAngle-.9,  inc:51, c:'#ddaaff'},
-  ];
-  for(const s of sats){
-    const sa=orb_a*s.rF, sb=sa*Math.cos(s.inc*DEG);
-    ctx.save(); ctx.translate(cx,cy);
-    ctx.strokeStyle=s.c+'20'; ctx.lineWidth=.5; ctx.setLineDash([2,4]);
-    ctx.beginPath(); ctx.ellipse(0,0,sa,sb,0,0,TAU); ctx.stroke(); ctx.setLineDash([]);
-    const sx=Math.cos(s.ia)*sa, sy=Math.sin(s.ia)*sb;
-    ctx.fillStyle=s.c; ctx.beginPath(); ctx.arc(sx,sy,2,0,TAU); ctx.fill();
-    ctx.font='7px Share Tech Mono'; ctx.fillStyle=s.c+'88'; ctx.fillText(s.n,sx+4,sy+3);
-    ctx.restore();
-  }
-
-  // Main orbit path — dashed, matches ecc if any
-  // For eccentric orbits, draw a true ellipse: semi-major=orb_a, semi-minor adjusted
-  const ecc_b = orb_a * Math.sqrt(1 - ORB.ecc*ORB.ecc) * incC;
-  const focus_offset = orb_a * ORB.ecc; // center offset toward focus
-  ctx.save(); ctx.translate(cx,cy);
-  ctx.strokeStyle='#00ff8855'; ctx.lineWidth=1.5; ctx.setLineDash([5,5]);
-  ctx.beginPath(); ctx.ellipse(focus_offset,0, orb_a, ecc_b, 0, 0, TAU);
-  ctx.stroke(); ctx.setLineDash([]);
-
-  // Apo/Peri markers for eccentric
-  if(ORB.ecc>0.01){
-    ctx.fillStyle='#ff880066'; ctx.beginPath(); ctx.arc(orb_a+focus_offset,0,3,0,TAU); ctx.fill();
-    ctx.fillStyle='#00aaffaa'; ctx.beginPath(); ctx.arc(-orb_a+focus_offset,0,3,0,TAU); ctx.fill();
-    ctx.font='7px Share Tech Mono'; ctx.fillStyle='#ff880088'; ctx.fillText('Apo',orb_a+focus_offset+4,4);
-    ctx.fillStyle='#00aaffaa'; ctx.fillText('Peri',-orb_a+focus_offset+4,4);
-  }
-  ctx.restore();
-
-  // ISS position on orbit (true anomaly position accounting for eccentricity)
-  const issX = cx + (Math.cos(targetAngle)*orb_a + focus_offset);
-  const issY = cy + Math.sin(targetAngle)*ecc_b;
-  drawMiniISS(ctx, issX, issY, 3.5);
-
-  // Chaser — offset from ISS along orbit using Hill frame coordinates
-  // In-track offset maps to angular offset, radial maps to orbit radius change
-  const angOff = C.ry / R_ORB; // radians offset along orbit
-  const radFrac = C.rx / R_ORB; // fractional radial offset
-  const ca = targetAngle - angOff;
-  const chaX = cx + (Math.cos(ca)*(orb_a*(1+radFrac*5)) + focus_offset);
-  const chaY = cy + Math.sin(ca)*ecc_b*(1+radFrac*2);
-
-  if(!failed){
-    ctx.fillStyle='#00ff88';
-    ctx.beginPath(); ctx.arc(chaX,chaY,3,0,TAU); ctx.fill();
-    ctx.strokeStyle='#00ff8833'; ctx.lineWidth=.5; ctx.setLineDash([2,3]);
-    ctx.beginPath(); ctx.moveTo(issX,issY); ctx.lineTo(chaX,chaY); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.font='8px Share Tech Mono'; ctx.fillStyle='#00ff88'; ctx.fillText('CHASER',chaX+4,chaY-4);
-  }
-
-  // Debris on orbit view
-  for(const d of debris){
-    const dAng=targetAngle-d.ry/R_ORB;
-    const dX=cx+(Math.cos(dAng)*orb_a+focus_offset);
-    const dY=cy+Math.sin(dAng)*ecc_b;
-    ctx.fillStyle='#ff440077'; ctx.beginPath(); ctx.arc(dX,dY,2,0,TAU); ctx.fill();
-  }
-
-  ctx.font='8px Share Tech Mono'; ctx.fillStyle='#00ff8877'; ctx.fillText('ISS',issX+5,issY-4);
-
-  // Annotations
-  ctx.font='7px Share Tech Mono'; ctx.fillStyle='#ffffff33';
-  ctx.fillText('h='+(ORB.alt/1000).toFixed(0)+'km  T='+(T_ORB/60).toFixed(0)+'min  i='+ORB.inc.toFixed(0)+'°', 4, H-4);
-}
-
-function drawMiniISS(ctx,x,y,s){
-  ctx.save(); ctx.translate(x,y);
-  ctx.fillStyle='#aaaacc'; ctx.fillRect(-s*5,-.7*s,s*10,1.4*s);
-  ctx.fillStyle='#1a3a88';
-  ctx.fillRect(-s*8,-.5*s,s*2.5,s); ctx.fillRect(s*5.5,-.5*s,s*2.5,s);
-  ctx.fillRect(-s*1.5,-s*2.8,s*3,s*2);
-  ctx.restore();
-}
-
-// ── PROX DRAW ─────────────────────────────────────────
-function drawProx(rdt){
-  const ctx=PCX;
-  ctx.fillStyle='#000205'; ctx.fillRect(0,0,PW,PH);
-
-  // Stars (sphere projection, camera aligned to chaser yaw in chase mode)
-  const camY=vm==='chase'?C.yaw:0;
-  for(const s of stars3d){
-    const px=s.x*Math.cos(camY)+s.y*Math.sin(camY);
-    const py=-s.z;
-    const pz=-s.x*Math.sin(camY)+s.y*Math.cos(camY);
-    if(pz<=0) continue;
-    const sx=PW/2+px/pz*PW*.6, sy=PH/2+py/pz*PH*.6;
-    if(sx<-2||sx>PW+2||sy<-2||sy>PH+2) continue;
-    ctx.globalAlpha=s.b*(.5+.5*Math.sin(simTime+s.tw));
-    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(sx,sy,s.r,0,TAU); ctx.fill();
-  }
-  ctx.globalAlpha=1;
-
-  // Earth limb
-  {
-    const ex=PW*.87, ey=PH+PH*.06, eR=PH*.88;
-    const g=ctx.createRadialGradient(ex,ey,eR*.2,ex,ey,eR);
-    g.addColorStop(0,'#0a1f6022'); g.addColorStop(.65,'#051444aa'); g.addColorStop(.9,'#041244'); g.addColorStop(1,'transparent');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,eR,0,TAU); ctx.fill();
-    const ag=ctx.createRadialGradient(ex,ey,eR*.9,ex,ey,eR+50);
-    ag.addColorStop(0,'#3388ff44'); ag.addColorStop(1,'transparent');
-    ctx.fillStyle=ag; ctx.beginPath(); ctx.arc(ex,ey,eR+40,0,TAU); ctx.fill();
-  }
-
-  // World transform
-  const ppm=bPPM()*ZM[vm];
-  let tX,tY; // target (ISS) screen pos
-  if(vm==='chase'){ tX=PW/2-C.rx*ppm; tY=PH/2+C.ry*ppm; }
-  else if(vm==='ric'){ tX=PW/2; tY=PH/2; }
-  else { tX=PW/2-fc.x*ppm; tY=PH/2+fc.y*ppm; }
-  const cX=vm==='chase'?PW/2:tX+C.rx*ppm;
-  const cY=vm==='chase'?PH/2:tY-C.ry*ppm;
-
-  // Background derelicts
-  for(const d of bgDerelicts){
-    d.rot+=d.rr*rdt;
-    const dx=tX+d.rx*ppm, dy=tY-d.ry*ppm;
-    if(dx<-200||dx>PW+200||dy<-200||dy>PH+200) continue;
-    const dist=Math.max(50,Math.hypot(d.rx-C.rx,d.ry-C.ry));
-    ctx.globalAlpha=Math.min(.6,80/dist);
-    ctx.save(); ctx.translate(dx,dy); ctx.rotate(d.rot);
-    drawBgDerelict(ctx,d.type,d.sz*.5);
-    ctx.restore();
-    ctx.globalAlpha=1;
-  }
-
-  // Range rings
-  for(const rr of[2000,1000,500,200,100,50,20,5,1]){
-    const rPx=rr*ppm; if(rPx<5||rPx>Math.max(PW,PH)*2.5) continue;
-    ctx.strokeStyle=rr<=20?'#ffaa0030':'#00ff8816'; ctx.lineWidth=rr<=20?1:.5;
-    ctx.beginPath(); ctx.arc(tX,tY,rPx,0,TAU); ctx.stroke();
-    if(rPx>20){ ctx.font='8px Share Tech Mono'; ctx.fillStyle=rr<=20?'#ffaa0050':'#00ff8830'; ctx.fillText(rr>=1000?(rr/1000)+'km':rr+'m',tX+rPx+2,tY-2); }
-  }
-
-  // Approach corridor
-  { const cw=15*ppm; ctx.strokeStyle='#00ff8813'; ctx.lineWidth=1; ctx.setLineDash([6,9]); ctx.beginPath(); ctx.moveTo(tX-cw,tY-3000); ctx.lineTo(tX-cw,tY+3000); ctx.moveTo(tX+cw,tY-3000); ctx.lineTo(tX+cw,tY+3000); ctx.stroke(); ctx.setLineDash([]); }
-
-  // RIC axes
-  if(vm==='ric'||vm==='free'){
-    const L=Math.min(PW,PH)*.35;
-    ctx.strokeStyle='#ff444418'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(tX,tY); ctx.lineTo(tX+L,tY); ctx.stroke(); ctx.fillStyle='#ff4444aa'; ctx.font='9px Share Tech Mono'; ctx.fillText('R+',tX+L-14,tY-3);
-    ctx.strokeStyle='#00ff8818'; ctx.beginPath(); ctx.moveTo(tX,tY); ctx.lineTo(tX,tY-L); ctx.stroke(); ctx.fillStyle='#00ff88aa'; ctx.fillText('I+',tX+3,tY-L+11);
-    ctx.strokeStyle='#4488ff18'; ctx.beginPath(); ctx.moveTo(tX,tY); ctx.lineTo(tX-L*.65,tY+L*.65); ctx.stroke(); ctx.fillStyle='#4488ffaa'; ctx.fillText('C',tX-L*.65-8,tY+L*.65+10);
-  }
-
-  // Active debris — drawn as tumbling triangles, with warning diamond when close
-  for(const d of debris){
-    const dsx=tX+d.rx*ppm, dsy=tY-d.ry*ppm;
-    const s=Math.max(.8, Math.min(5, ppm*.04))*d.sz*.3;
-    const dr=Math.hypot(d.rx-C.rx, d.ry-C.ry);
-
-    // Draw debris shape
-    ctx.save(); ctx.translate(dsx,dsy); ctx.rotate(d.rot);
-    ctx.fillStyle='#cc6622';
-    ctx.beginPath();
-    ctx.moveTo(0,-s*2.2); ctx.lineTo(s*1.5,s*1.2); ctx.lineTo(-s*.5,s*.6); ctx.lineTo(-s*1.5,s*1.2);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle='#ff8844'; ctx.lineWidth=.5; ctx.stroke();
-    ctx.restore();
-
-    // Warning diamond (not circle) when within 150m
-    if(dr<150){
-      const alpha=Math.min(1,(150-dr)/150)*.9;
-      ctx.save(); ctx.translate(dsx,dsy); ctx.rotate(Math.PI/4);
-      ctx.strokeStyle=`rgba(255,100,0,${alpha})`;
-      ctx.lineWidth=1;
-      const ds=14;
-      ctx.strokeRect(-ds/2,-ds/2,ds,ds);
-      ctx.restore();
-      // Line from chaser to debris
-      if(dr<80){
-        ctx.strokeStyle=`rgba(255,80,0,${alpha*.5})`; ctx.lineWidth=.5; ctx.setLineDash([3,4]);
-        ctx.beginPath(); ctx.moveTo(cX,cY); ctx.lineTo(dsx,dsy); ctx.stroke(); ctx.setLineDash([]);
-      }
-    }
-  }
-
-  // ISS — draw first so chaser overlaps it correctly
-  if(!failed||docked){
-    const s=Math.max(.4, Math.min(10, ppm*.18));
-    ctx.save(); ctx.translate(tX,tY); drawISS(ctx,s); ctx.restore();
-  }
-
-  // Chaser
-  if(!failed){
-    const s=Math.max(.4, Math.min(8, ppm*.1));
-    ctx.save(); ctx.translate(cX,cY); ctx.rotate(C.yaw);
-    drawChaser(ctx,s,cX,cY);
-    ctx.restore();
-
-    // Velocity vector
-    if(showVV){
-      const rv=Math.hypot(C.vx,C.vy,C.vz);
-      if(rv>0.02){
-        const vsx=C.vx*ppm*4, vsy=-C.vy*ppm*4;
-        const vl=Math.min(100,Math.hypot(vsx,vsy));
-        const va=Math.atan2(vsy,vsx);
-        const sv=Math.min(.8,Math.hypot(C.rx,C.ry,C.rz)*.0015);
-        const vc2=rv>sv*2?'#ff5533':'#00ffaa';
-        ctx.save(); ctx.translate(cX,cY); ctx.rotate(va);
-        ctx.strokeStyle=vc2+'bb'; ctx.lineWidth=1.5;
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(vl,0);
-        ctx.moveTo(vl-7,-4); ctx.lineTo(vl,0); ctx.lineTo(vl-7,4); ctx.stroke();
-        ctx.rotate(-va);
-        ctx.font='8px Share Tech Mono'; ctx.fillStyle=vc2+'cc';
-        ctx.fillText(rv.toFixed(2)+'m/s', vl*.5-10, -7);
-        ctx.restore();
-      }
-    }
-  } else {
-    // Failure: tumbling debris cloud where chaser was
-    for(let i=0;i<12;i++){
-      const a=simTime*.3+i*TAU/12, r=15+i*4+Math.sin(simTime*2+i)*5;
-      ctx.fillStyle=`rgba(255,${80+i*10},0,${.4+.3*Math.sin(simTime*2+i)})`;
-      ctx.beginPath(); ctx.arc(cX+Math.cos(a)*r,cY+Math.sin(a)*r,1.5+i*.3,0,TAU); ctx.fill();
-    }
-  }
-
-  // Particles and flares
-  for(const f of flares){
-    f.life-=rdt*3.5; f.x+=f.vx*rdt; f.y+=f.vy*rdt; if(f.life<=0) continue;
-    ctx.globalAlpha=f.life*.7;
-    const gr=ctx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.r*4);
-    gr.addColorStop(0,'#fff'); gr.addColorStop(.4,'#ff8800'); gr.addColorStop(1,'transparent');
-    ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(f.x,f.y,f.r*4,0,TAU); ctx.fill();
-  }
-  flares=flares.filter(f=>f.life>0);
-  for(const p of parts){
-    p.life-=rdt*1.2; p.x+=p.vx*rdt; p.y+=p.vy*rdt; if(p.life<=0) continue;
-    ctx.globalAlpha=p.life; ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,TAU); ctx.fill();
-  }
-  parts=parts.filter(p=>p.life>0);
-  ctx.globalAlpha=1;
-
-  drawHUD(ctx,tX,tY,cX,cY,ppm);
-
-  // Failure red flash
-  if(failFlash>0){
-    ctx.fillStyle=`rgba(200,0,0,${failFlash*.5})`;
-    ctx.fillRect(0,0,PW,PH);
-    failFlash=Math.max(0,failFlash-.04);
-  }
-}
-
-// ── DERELICT BACKGROUNDS ──────────────────────────────
-function drawBgDerelict(ctx,type,s){
-  ctx.strokeStyle='#334455'; ctx.fillStyle='#1a2a3a'; ctx.lineWidth=.7;
-  if(type===0){ // dead cube sat
-    ctx.fillRect(-s,-s*.7,s*2,s*1.4); ctx.strokeRect(-s,-s*.7,s*2,s*1.4);
-    ctx.fillStyle='#0d1a2a'; ctx.fillRect(-s*2.4,-s*.5,s*1.2,s); ctx.fillRect(s*1.2,-s*.5,s*1.2,s);
-    ctx.strokeRect(-s*2.4,-s*.5,s*1.2,s); ctx.strokeRect(s*1.2,-s*.5,s*1.2,s);
-  } else if(type===1){ // spent booster
-    ctx.fillStyle='#1a2a1a';
-    ctx.beginPath(); ctx.ellipse(0,0,s*.7,s*2.8,0,0,TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#0d1a0d';
-    ctx.beginPath(); ctx.moveTo(-s*.7,s*2.5); ctx.lineTo(s*.7,s*2.5); ctx.lineTo(s*.3,s*3.5); ctx.lineTo(-s*.3,s*3.5); ctx.closePath(); ctx.fill();
-  } else { // tumbling chunk
-    ctx.fillStyle='#222';
-    ctx.beginPath();
-    const pts=6; for(let i=0;i<pts;i++){ const a=i*TAU/pts; const r=s*(1+Math.sin(i*1.7)*.4); if(i===0) ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r); else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r); }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
-}
-
-// ── ISS DRAW ──────────────────────────────────────────
-// ISS has a specific docking port geometry:
-// Main body center at origin, docking port is at (0, +8*s) in ISS local frame (front face)
-// We'll keep ISS fixed (no rotation in Hill frame; target always faces prograde)
-// The docking port normal points in the -y Hill direction (facing the chaser approach corridor)
-function drawISS(ctx,s){
-  // Main truss
-  ctx.fillStyle='#bbbbcc'; ctx.fillRect(-50*s,-3*s,100*s,6*s);
-  // Solar panel pairs
-  for(const px of[-38,-20,20,38]){
-    const g=ctx.createLinearGradient(px*s,-18*s,px*s,0);
-    g.addColorStop(0,'#1a2e7a'); g.addColorStop(.4,'#2244aa'); g.addColorStop(1,'#1a2e7a');
-    ctx.fillStyle=g;
-    ctx.fillRect((px-5)*s,-18*s,10*s,14*s); ctx.fillRect((px-5)*s,4*s,10*s,14*s);
-    ctx.strokeStyle='#3355aa55'; ctx.lineWidth=.5;
-    for(let l=0;l<4;l++){ const lx=(px-5+l*3.2)*s; ctx.beginPath(); ctx.moveTo(lx,-18*s); ctx.lineTo(lx,-4*s); ctx.stroke(); ctx.beginPath(); ctx.moveTo(lx,4*s); ctx.lineTo(lx,18*s); ctx.stroke(); }
-    ctx.strokeRect((px-5)*s,-18*s,10*s,14*s); ctx.strokeRect((px-5)*s,4*s,10*s,14*s);
-  }
-  // Modules
-  for(const m of [{x:-15,y:-4,w:30,h:8,c:'#ccccee'},{x:-8,y:-12,w:16,h:9,c:'#aaaacc'},{x:5,y:-4,w:18,h:7,c:'#bbbbdd'},{x:-26,y:-4,w:13,h:7,c:'#aaaacc'}]){
-    const g=ctx.createLinearGradient(m.x*s,m.y*s,(m.x+m.w)*s,(m.y+m.h)*s);
-    g.addColorStop(0,'#e0e0ee'); g.addColorStop(.5,m.c); g.addColorStop(1,'#777788');
-    ctx.fillStyle=g; ctx.fillRect(m.x*s,m.y*s,m.w*s,m.h*s);
-    ctx.strokeStyle='#55558855'; ctx.lineWidth=.5; ctx.strokeRect(m.x*s,m.y*s,m.w*s,m.h*s);
-  }
-
-  // ── DOCKING PORT ──
-  // In the proximity view: ISS is at origin, chaser approaches from below (negative I = negative screen Y)
-  // The port faces downward (-y canvas) toward the approaching chaser.
-  // Port is at bottom face of the main module block.
-  const portY = 6*s; // port faces downward toward chaser
-  ctx.strokeStyle='#00ccff'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.arc(0, portY, 4*s, 0, TAU); ctx.stroke();
-  // Guide funnel opening toward chaser
-  ctx.strokeStyle='#00ccff77'; ctx.lineWidth=.8;
-  ctx.beginPath(); ctx.moveTo(-4*s,portY); ctx.lineTo(-5*s,portY+5*s); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo( 4*s,portY); ctx.lineTo( 5*s,portY+5*s); ctx.stroke();
-  ctx.fillStyle='#001833'; ctx.beginPath(); ctx.arc(0,portY,2.5*s,0,TAU); ctx.fill();
-
-  // Nav lights
-  const t1=.5+.5*Math.sin(simTime*3), t2=.5+.5*Math.sin(simTime*3+Math.PI);
-  ctx.fillStyle=`rgba(255,50,0,${t1})`; ctx.beginPath(); ctx.arc(-50*s,0,2,0,TAU); ctx.fill();
-  ctx.fillStyle=`rgba(0,255,80,${t2})`; ctx.beginPath(); ctx.arc(50*s,0,2,0,TAU); ctx.fill();
-}
-
-// ── CHASER DRAW ───────────────────────────────────────
-function drawChaser(ctx,s,wx,wy){
-  // Plume helper
-  function pl(ox,oy,ang,len,col){
-    ctx.save(); ctx.translate(ox*s,oy*s); ctx.rotate(ang);
-    const g=ctx.createLinearGradient(0,0,0,len*s);
-    g.addColorStop(0,col+'dd'); g.addColorStop(1,'transparent');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(-1.8*s,0); ctx.lineTo(1.8*s,0); ctx.lineTo(0,len*s); ctx.closePath(); ctx.fill(); ctx.restore();
-  }
-
-  // Translation thrusters
-  if(thr.fwd)  { pl(0,9,0,26,'#ff7700'); spawnFlares(wx,wy); }
-  if(thr.aft)  { pl(0,-9,Math.PI,20,'#ff7700'); spawnFlares(wx,wy); }
-  if(thr.port) { pl(-6,0,-Math.PI/2,16,'#88aaff'); }
-  if(thr.stbd) { pl(6,0,Math.PI/2,16,'#88aaff'); }
-  if(thr.up)   { pl(0,4,-Math.PI*.25,12,'#aaffaa'); }
-  if(thr.dn)   { pl(0,-4,Math.PI*.75,12,'#aaffaa'); }
-
-  // ── YAW THRUSTERS — proper opposing torque couples ──
-  // In canvas space: body Y axis = vertical (up = bow = -y), body X axis = horizontal (right = stbd = +x)
-  // Plume helper: translate to nozzle position, rotate so exhaust (along +y of plume) points in exhaust dir
-  // pl(ox,oy, angle, len, col) — angle=0 means exhaust goes downward (+y canvas = aft direction)
-  //
-  // Yaw LEFT (CCW rotation): need force pointing +x (stbd) at bow, and -x (port) at stern
-  //   Bow nozzle at (0,-9): exhaust goes +x → rotate = -PI/2 (points right = +x canvas)
-  //   Stern nozzle at (0,+9): exhaust goes -x → rotate = PI/2 (points left = -x canvas)
-  if(thr.yawL){
-    pl( 0,-9, -Math.PI/2, 14,'#88aaff');  // bow fires stbd (rightward exhaust → nose pushed left)
-    pl( 0, 9,  Math.PI/2, 14,'#88aaff');  // stern fires port (leftward exhaust → tail pushed right)
-  }
-  // Yaw RIGHT (CW rotation): force -x at bow, +x at stern
-  if(thr.yawR){
-    pl( 0,-9,  Math.PI/2, 14,'#88aaff');  // bow fires port (leftward exhaust → nose pushed right)
-    pl( 0, 9, -Math.PI/2, 14,'#88aaff');  // stern fires stbd (rightward exhaust → tail pushed left)
-  }
-
-  // Body
-  const bg=ctx.createLinearGradient(-4*s,-9*s,4*s,9*s);
-  bg.addColorStop(0,'#667788'); bg.addColorStop(.5,'#445566'); bg.addColorStop(1,'#334455');
-  ctx.fillStyle=bg;
-  ctx.beginPath();
-  if(ctx.roundRect) ctx.roundRect(-4*s,-9*s,8*s,18*s,1.5*s); else ctx.rect(-4*s,-9*s,8*s,18*s);
-  ctx.fill(); ctx.strokeStyle='#88aacc44'; ctx.lineWidth=.5; ctx.stroke();
-
-  // Blanket lines
-  ctx.strokeStyle='#ffffff10'; ctx.lineWidth=.5;
-  for(let i=-7;i<9;i+=2){ ctx.beginPath(); ctx.moveTo(-4*s,i*s); ctx.lineTo(4*s,i*s); ctx.stroke(); }
-
-  // Solar panels
-  const sg=ctx.createLinearGradient(-20*s,0,20*s,0);
-  sg.addColorStop(0,'#112266'); sg.addColorStop(.5,'#1a3388'); sg.addColorStop(1,'#112266');
-  ctx.fillStyle=sg;
-  ctx.fillRect(-22*s,-2.5*s,14*s,5*s); ctx.fillRect(8*s,-2.5*s,14*s,5*s);
-  ctx.strokeStyle='#3355aa44'; ctx.lineWidth=.5;
-  ctx.strokeRect(-22*s,-2.5*s,14*s,5*s); ctx.strokeRect(8*s,-2.5*s,14*s,5*s);
-  for(let i=0;i<4;i++){ const x1=(-22+i*3.3)*s,x2=(8+i*3.3)*s; ctx.beginPath(); ctx.moveTo(x1,-2.5*s); ctx.lineTo(x1,2.5*s); ctx.moveTo(x2,-2.5*s); ctx.lineTo(x2,2.5*s); ctx.stroke(); }
-
-  // ── DOCKING PROBE — extends from bow (top, -y) toward ISS ──
-  ctx.fillStyle='#aaccee'; ctx.fillRect(-1.2*s,-14*s,2.4*s,5*s);
-  ctx.fillStyle='#cce8ff'; ctx.beginPath(); ctx.arc(0,-14*s,1.8,0,TAU); ctx.fill();
-  ctx.strokeStyle='#00ddffcc'; ctx.lineWidth=1.2;
-  ctx.beginPath(); ctx.arc(0,-14*s,3.2,0,TAU); ctx.stroke();
-
-  // RCS nozzle marks on body
-  ctx.fillStyle='#556677';
-  for(const[nx,ny] of[[-4,-9],[4,-9],[-4,9],[4,9],[-4,0],[4,0]]){ ctx.beginPath(); ctx.arc(nx*s,ny*s,.8,0,TAU); ctx.fill(); }
-  // Yaw nozzle marks at bow and stern centerline
-  ctx.fillStyle='#3a4f60';
-  for(const[nx,ny] of[[-2,-9],[2,-9],[-2,9],[2,9]]){ ctx.beginPath(); ctx.arc(nx*s,ny*s,.7,0,TAU); ctx.fill(); }
-
-  // Nav lights
-  const l1=.4+.6*Math.sin(simTime*2.5), l2=.4+.6*Math.sin(simTime*2.5+Math.PI);
-  ctx.fillStyle=`rgba(255,0,0,${l1})`; ctx.beginPath(); ctx.arc(-4*s,0,1.5,0,TAU); ctx.fill();
-  ctx.fillStyle=`rgba(0,255,0,${l2})`; ctx.beginPath(); ctx.arc(4*s,0,1.5,0,TAU); ctx.fill();
-  if((simTime*1.5)%1<.08){ ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,-9*s,2,0,TAU); ctx.fill(); }
-}
-
-// ── HUD ───────────────────────────────────────────────
-function drawHUD(ctx,tX,tY,cX,cY,ppm){
-  const range=Math.hypot(C.rx,C.ry,C.rz);
-  const rv=Math.hypot(C.vx,C.vy,C.vz);
-  const sv=Math.min(.8,range*.0015);
-
-  // Target reticle
-  ctx.strokeStyle=docked?'#00ffff':'#00ff8855'; ctx.lineWidth=1;
-  const rs=10;
-  ctx.beginPath();
-  ctx.moveTo(tX-rs*2,tY); ctx.lineTo(tX-rs,tY); ctx.moveTo(tX+rs,tY); ctx.lineTo(tX+rs*2,tY);
-  ctx.moveTo(tX,tY-rs*2); ctx.lineTo(tX,tY-rs); ctx.moveTo(tX,tY+rs); ctx.lineTo(tX,tY+rs*2);
-  ctx.stroke(); ctx.beginPath(); ctx.arc(tX,tY,rs*.75,0,TAU); ctx.stroke();
-
-  if(vm!=='chase'&&!failed){ ctx.strokeStyle='#00ff88bb'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cX,cY,7,0,TAU); ctx.stroke(); }
-
-  // HUD box
-  ctx.fillStyle='#00000099'; ctx.fillRect(6,PH-98,240,90);
-  ctx.strokeStyle='#00ff8820'; ctx.lineWidth=.5; ctx.strokeRect(6,PH-98,240,90);
-  ctx.font='10px Share Tech Mono';
-  const vc=rv>sv*2?'#ff5533':'#00ffaa';
-  const rows=[
-    ['#00ffaa', `RNG:     ${range.toFixed(1)} m`],
-    [vc,        `V_REL:   ${rv.toFixed(3)} m/s  [MAX:${sv.toFixed(3)}]`],
-    ['#00ffaa', `R:${C.rx.toFixed(1)}  I:${C.ry.toFixed(1)}  C:${C.rz.toFixed(1)} m`],
-    ['#00cc88', `Vr:${C.vx.toFixed(2)} Vi:${C.vy.toFixed(2)} Vc:${C.vz.toFixed(2)}`],
-    ['#00cc88', `YAW:${(C.yaw/DEG).toFixed(1)}°  FUEL:${C.fuel.toFixed(1)}%  ΔV:${C.dv.toFixed(2)}`],
-  ];
-  rows.forEach(([col,txt],i)=>{ ctx.fillStyle=col; ctx.fillText(txt,12,PH-82+i*14); });
-
-  // Dock guidance when close
-  if(range<60&&!docked&&!failed){
-    const pRx=C.rx - PROBE_LEN*Math.sin(C.yaw);
-    const pRy=C.ry + PROBE_LEN*Math.cos(C.yaw);
-    const portRange=Math.hypot(pRx,pRy,C.rz);
-    const yawNorm=((C.yaw%TAU)+TAU)%TAU;
-    const yawDev=Math.min(yawNorm,TAU-yawNorm);
-    const yawOk=yawDev<0.35;
-    const col=portRange<6&&yawOk?'#00ffff':portRange<15?'#ffcc00':'#ff6600';
-    ctx.font='9px Share Tech Mono'; ctx.fillStyle=col;
-    ctx.fillText(`PROBE:${portRange.toFixed(1)}m  YAW_ERR:${(yawDev/DEG).toFixed(0)}°(${yawOk?'OK':'ALIGN'})  need:<4m,<0.3m/s,yaw<20°`,10,PH-115);
-  }
-
-  if(timeScale!==1){ ctx.font='9px Share Tech Mono'; ctx.fillStyle='#ffaa0077'; ctx.fillText('⏩ '+timeScale+'×',PW-58,16); }
-}
-
-// ── UI UPDATE ─────────────────────────────────────────
-function updateUI(){
-  const range=Math.hypot(C.rx,C.ry,C.rz);
-  const rv=Math.hypot(C.vx,C.vy,C.vz);
-  const sv=Math.min(.8,range*.0015);
-  document.getElementById('hr').textContent=C.rx.toFixed(1)+' m';
-  document.getElementById('hi').textContent=C.ry.toFixed(1)+' m';
-  document.getElementById('hc').textContent=C.rz.toFixed(1)+' m';
-  document.getElementById('vr').textContent=C.vx.toFixed(3);
-  document.getElementById('vi').textContent=C.vy.toFixed(3);
-  document.getElementById('vc').textContent=C.vz.toFixed(3);
-  document.getElementById('dv').textContent=C.dv.toFixed(2)+' m/s';
-  document.getElementById('fl').textContent=C.fuel.toFixed(1)+'%';
-  document.getElementById('fb').style.width=C.fuel+'%';
-
-  let ph,cl;
-  if(failed){ph='MISSION FAILURE';cl='die';}
-  else if(docked){ph='DOCKED';cl='dok';}
-  else if(rv>sv*2.5&&range<150){ph='⚠ HIGH CLOSURE';cl='dan';}
-  else if(range<30){ph='FINAL APPROACH';cl='clo';}
-  else if(range<200){ph='MID RANGE';cl='mid';}
-  else{ph='FAR APPROACH';cl='far';}
-  for(const id of['pd','ptb']){ const el=document.getElementById(id); el.textContent=ph; el.className='pb '+cl; }
-  document.getElementById('cr').textContent=range.toFixed(1)+' m';
-  const ccEl=document.getElementById('cc');
-  ccEl.textContent=rv.toFixed(3)+' m/s'; ccEl.className='val'+(rv>sv*2?' w':' ok');
-  document.getElementById('csv').textContent=sv.toFixed(3)+' m/s';
-  document.getElementById('dm').style.display=docked&&!failed?'block':'none';
-  document.getElementById('wm').style.display=rv>sv*2.5&&range<150&&!docked&&!failed?'block':'none';
-
-  const dm={fwd:'d-fwd',aft:'d-aft',port:'d-port',stbd:'d-stbd',up:'d-up',dn:'d-dn',yawL:'d-yl',yawR:'d-yr'};
-  const km={fwd:'tk-fwd',aft:'tk-aft',port:'tk-port',stbd:'tk-stbd',up:'tk-up',yawL:'tk-yawl',yawR:'tk-yawr'};
-  for(const[k,id] of Object.entries(dm)) document.getElementById(id).classList.toggle('lit',!!thr[k]);
-  for(const[k,id] of Object.entries(km)) document.getElementById(id)?.classList.toggle('lit',!!thr[k]);
-
-  document.getElementById('bb-r').textContent='RNG:'+range.toFixed(0)+'m';
-  document.getElementById('bb-v').textContent='V:'+rv.toFixed(2)+'m/s';
-  document.getElementById('bb-ric').textContent='R:'+C.rx.toFixed(0)+' I:'+C.ry.toFixed(0)+' C:'+C.rz.toFixed(0);
-  document.getElementById('bb-z').textContent=ZM[vm].toFixed(2)+'×';
-  const mt=missionTime;
-  document.getElementById('clk').textContent='MET: '+String(Math.floor(mt/3600)).padStart(2,'0')+':'+String(Math.floor(mt%3600/60)).padStart(2,'0')+':'+String(Math.floor(mt%60)).padStart(2,'0');
-}
-
-// ── INPUT ─────────────────────────────────────────────
-const KM={'ArrowUp':'fwd','w':'fwd','W':'fwd','ArrowDown':'aft','s':'aft','S':'aft','ArrowLeft':'port','a':'port','A':'port','ArrowRight':'stbd','d':'stbd','D':'stbd','z':'up','Z':'up','x':'dn','X':'dn','q':'yawL','Q':'yawL','e':'yawR','E':'yawR'};
-document.addEventListener('keydown',ev=>{
-  if(ev.key==='r'||ev.key==='R'){ resetSim(); return; }
-  if(ev.key==='v'||ev.key==='V'){ toggleVV(); return; }
-  const a=KM[ev.key]; if(a){ ev.preventDefault(); thr[a]=true; }
-});
-document.addEventListener('keyup',ev=>{ const a=KM[ev.key]; if(a) thr[a]=false; });
-function thrOn(k){ initAudio(); if(!failed) thr[k]=true; }
-function thrOff(k){ thr[k]=false; }
-function setTS(v){ timeScale=TS_VALS[parseInt(v)]; document.getElementById('tsl').textContent=timeScale+'×'; }
-
-function resetSim(){
-  const ir=parseFloat(document.getElementById('ir').value)||500;
-  C.rx=0; C.ry=-ir; C.rz=0; C.vx=0; C.vy=0; C.vz=0; C.yaw=0; C.fuel=INIT_FUEL; C.dv=0;
-  docked=false; failed=false; missionTime=0; simTime=0; failFlash=0;
-  Object.keys(thr).forEach(k=>thr[k]=false);
-  parts=[]; flares=[]; debris=[]; debTimer=0; nextDeb=20+Math.random()*30;
-  fc.x=0; fc.y=-ir/2;
-  document.getElementById('xm').style.display='none';
-  document.getElementById('dm').style.display='none';
-  document.getElementById('cl').innerHTML='';
-  genDerelicts();
-  updateOrb();
-  commsLog("MISSION START — RNG:"+ir+"m FUEL:"+INIT_FUEL+"%");
-  commsLog("HOUSTON: GO FOR APPROACH");
-}
-
-// ── DOCKING CHECK ─────────────────────────────────────
-// Probe tip in Hill frame: chaser bow points in +Y body direction
-//   probe_rx = C.rx - PROBE_LEN*sin(C.yaw)
-//   probe_ry = C.ry + PROBE_LEN*cos(C.yaw)
-// ISS dock port is at Hill origin (0,0,0). Chaser starts at (0,-initRange,0).
-// To dock: approach from -Y (ry negative), yaw ≈ 0 so probe points toward +Y (ISS)
-const PROBE_LEN = 8; // meters in Hill frame
-
-function getScreenPos(hillX, hillY){
-  // Returns screen coords of a Hill-frame position
-  const ppm = bPPM()*ZM[vm];
-  let tX, tY;
-  if(vm==='chase'){ tX=PW/2-C.rx*ppm; tY=PH/2+C.ry*ppm; }
-  else if(vm==='ric'){ tX=PW/2; tY=PH/2; }
-  else { tX=PW/2-fc.x*ppm; tY=PH/2+fc.y*ppm; }
-  return { x: tX + hillX*ppm, y: tY - hillY*ppm };
-}
-
-function checkDocking(){
-  if(docked||failed) return;
-  const pRx = C.rx - PROBE_LEN*Math.sin(C.yaw);
-  const pRy = C.ry + PROBE_LEN*Math.cos(C.yaw);
-  const probeRange = Math.hypot(pRx, pRy, C.rz);
-  const rv = Math.hypot(C.vx, C.vy, C.vz);
-
-  // Yaw alignment: yaw=0 means probe points in +Y (toward ISS above).
-  // Allow ±20° (0.35 rad)
-  const yawNorm = ((C.yaw % TAU) + TAU) % TAU; // 0..2π
-  const yawDev = Math.min(yawNorm, TAU - yawNorm); // angular distance from 0
-  const yawOk = yawDev < 0.35;
-
-  if(probeRange < 4){
-    if(rv < 0.3 && yawOk){
-      // Clean dock
-      docked = true; C.vx=0; C.vy=0; C.vz=0;
-      const issScreen = getScreenPos(0, 0);
-      spawnDockSparks(issScreen.x, issScreen.y);
-      playDockSound();
-      commsLog("✓ CAPTURE CONFIRMED — DOCKED");
-      commsLog("MISSION COMPLETE");
-    } else if(rv >= 0.3){
-      // Too fast — collision at ISS port
-      const issScreen = getScreenPos(0, 0);
-      triggerFailure(`HARD DOCK COLLISION ${rv.toFixed(2)} m/s`, issScreen.x, issScreen.y);
-    } else if(!yawOk){
-      // Wrong angle — bounce
-      C.vy = -C.vy * 0.4; C.vx = -C.vx * 0.4;
-      commsLog("MISALIGN — ALIGN YAW TO 0° FOR CAPTURE");
-      playImpact();
-    }
-  }
-
-  // Collision with ISS body (coming in from wrong angle / too fast)
-  const bodyRange = Math.hypot(C.rx, C.ry, C.rz);
-  if(bodyRange < 16 && probeRange >= 6){
-    if(rv > 0.4){
-      const issScreen = getScreenPos(C.rx * 0.5, C.ry * 0.5); // midpoint for impact visual
-      triggerFailure(`ISS COLLISION ${rv.toFixed(2)} m/s`, issScreen.x, issScreen.y);
-    }
-  }
-}
-
-// ── COMMS MILESTONES ─────────────────────────────────
-let lastRangeMile=9999, lastFuelMile=INIT_FUEL+1;
-function checkMilestones(){
-  const r=Math.hypot(C.rx,C.ry,C.rz);
-  if(lastRangeMile>200&&r<=200){ commsLog("RANGE 200m — RATE NOMINAL"); lastRangeMile=200; playCommsBeep(); }
-  if(lastRangeMile>50&&r<=50){ commsLog("RANGE 50m — FINAL APPROACH"); lastRangeMile=50; playCommsBeep(); }
-  if(lastRangeMile>20&&r<=20){ commsLog("RANGE 20m — SLOW TO 0.1 m/s"); lastRangeMile=20; playCommsBeep(); }
-  if(lastFuelMile>20&&C.fuel<=20){ commsLog("FUEL 20% — CONSERVE"); lastFuelMile=20; playCommsBeep(); }
-  if(lastFuelMile>5&&C.fuel<=5){ commsLog("FUEL CRITICAL <5%"); lastFuelMile=5; playCommsBeep(); }
-}
-
-// ── MAIN LOOP ─────────────────────────────────────────
-function loop(ts){
-  if(!lastTS){ lastTS=ts; requestAnimationFrame(loop); return; }
-  let rdt=Math.min((ts-lastTS)/1000,.05); lastTS=ts;
-  const dt=rdt*timeScale;
-  simTime+=rdt;
-  if(!docked&&!failed) missionTime+=rdt;
-  targetAngle+=N_OM*dt;
-  cwStep(dt);
-  stepDebris(dt);
-  checkDocking();
-  checkMilestones();
-  tickComms(rdt);
-
-  const anyThr=Object.values(thr).some(v=>v);
-  if(anyThr){ if(!thrNode) startThrNoise(); setThrVol(.2); }
-  else setThrVol(0);
-
-  drawOrbit();
-  drawProx(rdt);
-  updateUI();
-  requestAnimationFrame(loop);
-}
-
-// ── INIT ──────────────────────────────────────────────
-document.getElementById('tss').value=2; setTS(2);
-commsLog("SYS BOOT — RPO SIM v3.0");
-commsLog("FUEL: "+INIT_FUEL+"% — HARD MODE");
-commsLog("HOUSTON: GO FOR APPROACH");
-
-document.addEventListener('pointerdown',initAudio,{once:true});
-document.addEventListener('keydown',initAudio,{once:true});
-requestAnimationFrame(loop);
+  renderList();
 </script>
+
 </body>
 </html>
