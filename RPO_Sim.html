@@ -2,208 +2,252 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RPO Sim — Rendezvous Proximity Operations</title>
+<title>RPO Sim v3</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100vw;height:100vh;overflow:hidden;background:#000;color:#0f0;font-family:'Share Tech Mono',monospace;font-size:11px}
 #layout{display:flex;width:100vw;height:100vh}
 #left{width:310px;min-width:310px;display:flex;flex-direction:column;background:#020d06;border-right:1px solid #0f422233;overflow:hidden}
-#orbit-wrap{position:relative;flex:0 0 310px}
+#orbit-wrap{flex:0 0 310px;position:relative}
 #orbit-canvas{display:block;width:310px;height:310px}
 #left-telem{flex:1;padding:7px;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
-#center{flex:1;display:flex;flex-direction:column;position:relative;min-width:0}
-#topbar{height:30px;background:#020d06;border-bottom:1px solid #0f422233;display:flex;align-items:center;padding:0 10px;gap:10px;flex-shrink:0;z-index:5}
+#center{flex:1;display:flex;flex-direction:column;min-width:0}
+#topbar{height:30px;background:#020d06;border-bottom:1px solid #0f422233;display:flex;align-items:center;padding:0 8px;gap:6px;flex-shrink:0;overflow:hidden}
 #prox-wrap{flex:1;position:relative;overflow:hidden}
 #prox-canvas{display:block;cursor:crosshair}
-#bottombar{height:22px;background:#020d06;border-top:1px solid #0f422233;display:flex;align-items:center;padding:0 10px;gap:14px;flex-shrink:0}
-#right{width:270px;min-width:270px;background:#020d06;border-left:1px solid #0f422233;display:flex;flex-direction:column;padding:7px;gap:6px;overflow-y:auto}
+#bottombar{height:22px;background:#020d06;border-top:1px solid #0f422233;display:flex;align-items:center;padding:0 10px;gap:12px;flex-shrink:0}
+#right{width:265px;min-width:265px;background:#020d06;border-left:1px solid #0f422233;display:flex;flex-direction:column;padding:7px;gap:5px;overflow-y:auto}
 .sec{border:1px solid #0f422255;border-radius:3px;padding:6px;background:#010a04}
-.sec-title{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:#00ff8899;margin-bottom:4px;text-transform:uppercase}
+.st{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:#00ff8899;margin-bottom:4px;text-transform:uppercase}
 .row{display:flex;justify-content:space-between;align-items:center;margin:2px 0}
-.lbl{color:#00cc6688;font-size:9px}
+.lbl{color:#00cc6677;font-size:9px}
 .val{color:#00ffaa;font-size:11px;font-family:'Orbitron',monospace}
-.val.warn{color:#ff5533}.val.ok{color:#00ffaa}.val.caut{color:#ffaa00}
+.val.w{color:#ff5533}.val.ok{color:#00ffaa}
 input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:#0a2a15;outline:none;border-radius:2px;cursor:pointer}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;background:#00ff88;border-radius:50%;cursor:pointer}
-input[type=number]{background:#010a04;border:1px solid #0f422255;color:#00ffaa;font-family:'Share Tech Mono',monospace;font-size:10px;width:75px;padding:2px 4px;text-align:right;border-radius:2px}
+input[type=number]{background:#010a04;border:1px solid #0f422255;color:#00ffaa;font-family:'Share Tech Mono',monospace;font-size:10px;width:72px;padding:2px 4px;text-align:right;border-radius:2px}
 button{background:#010a04;border:1px solid #0f422266;color:#00ff88;font-family:'Share Tech Mono',monospace;font-size:9px;padding:4px 7px;cursor:pointer;border-radius:2px;letter-spacing:.5px;transition:all .1s;text-transform:uppercase}
 button:hover{background:#0f3322;border-color:#00ff88}
-button.active{background:#00ff8833;border-color:#00ff88;color:#fff;box-shadow:0 0 7px #00ff8833}
-button.danger{border-color:#ff444466;color:#ff8888}button.danger:hover{background:#330a0a;border-color:#ff4444}
-.tgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:4px}
-.tkey{background:#010a04;border:1px solid #0f422266;color:#00cc88;font-family:'Share Tech Mono',monospace;font-size:8px;padding:4px 2px;cursor:pointer;border-radius:2px;text-align:center;user-select:none;transition:all .07s}
-.tkey:active,.tkey.lit{background:#ff660033;border-color:#ff8800;color:#ffaa44;box-shadow:0 0 5px #ff660055}
-.tkey.sp{visibility:hidden}
+button.on{background:#00ff8833;border-color:#00ff88;color:#fff}
+button.doff{background:#22000a;border-color:#ff444466;color:#ff8888}
+button.red{border-color:#ff444466;color:#ff8888}
+button.red:hover{background:#330a0a;border-color:#ff4444}
+button.ora{border-color:#ffaa0066;color:#ffcc88}
+.tg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:4px}
+.tk{background:#010a04;border:1px solid #0f422266;color:#00cc88;font-family:'Share Tech Mono',monospace;font-size:8px;padding:4px 2px;cursor:pointer;border-radius:2px;text-align:center;user-select:none;transition:all .07s}
+.tk.lit{background:#ff660033;border-color:#ff8800;color:#ffaa44}
+.tk.sp{visibility:hidden}
 .dots{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
-.tdot{width:8px;height:8px;border-radius:50%;background:#010a04;border:1px solid #0f422266;display:inline-block;transition:all .07s}
-.tdot.lit{background:#ff7700;border-color:#ffaa00;box-shadow:0 0 5px #ff770088}
-.pbadge{font-family:'Orbitron',monospace;font-size:9px;padding:3px 6px;border-radius:3px;text-align:center;letter-spacing:1px}
-.ph-far{background:#001a10;border:1px solid #00884455;color:#00ff88}
-.ph-mid{background:#141000;border:1px solid #887700;color:#ffcc00}
-.ph-close{background:#0a0022;border:1px solid #0066aa;color:#44aaff}
-.ph-danger{background:#1a0000;border:1px solid #aa2222;color:#ff4444;animation:blink .5s infinite}
-.ph-docked{background:#001422;border:1px solid #00aaff;color:#00ffff}
+.dot{width:8px;height:8px;border-radius:50%;background:#010a04;border:1px solid #0f422266;display:inline-block;transition:all .07s}
+.dot.lit{background:#ff7700;border-color:#ffaa00;box-shadow:0 0 5px #ff770088}
+.pb{font-family:'Orbitron',monospace;font-size:9px;padding:3px 6px;border-radius:3px;text-align:center;letter-spacing:1px}
+.far{background:#001a10;border:1px solid #00884455;color:#00ff88}
+.mid{background:#141000;border:1px solid #887700;color:#ffcc00}
+.clo{background:#0a0022;border:1px solid #0066aa;color:#44aaff}
+.dan{background:#1a0000;border:1px solid #aa2222;color:#ff4444;animation:blink .5s infinite}
+.dok{background:#001422;border:1px solid #00aaff;color:#00ffff}
+.die{background:#2a0000;border:1px solid #ff0000;color:#ff4444;animation:blink .3s infinite}
 @keyframes blink{50%{opacity:.3}}
-.blink{animation:blink .8s infinite}
-.vtabs{display:flex;gap:3px}
-.vtab{font-size:8px;padding:3px 6px}
-.vtab.active{background:#00ff8833;border-color:#00ff88;color:#00ffaa}
+.bk{animation:blink .8s infinite}
+.vt{font-size:8px;padding:3px 5px}
+.vt.on{background:#00ff8833;border-color:#00ff88;color:#00ffaa}
+#cl{height:65px;overflow-y:auto;font-size:8px;color:#00ff8877;line-height:1.6;border:1px solid #0f422233;padding:3px;background:#000a04;border-radius:2px}
+#fail-overlay{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0a000099;border:2px solid #ff2222;border-radius:6px;padding:20px 36px;text-align:center;z-index:100;backdrop-filter:blur(4px)}
+#fail-overlay .ftitle{font-family:'Orbitron',monospace;font-size:16px;color:#ff3333;letter-spacing:3px;margin-bottom:8px}
+#fail-overlay .freason{font-size:11px;color:#ff8888;margin-bottom:10px;letter-spacing:1px;max-width:320px}
+#fail-overlay .fhint{font-size:9px;color:#ff555577;letter-spacing:1px}
+#alt-warn-bar{display:none;position:absolute;bottom:28px;left:50%;transform:translateX(-50%);padding:4px 14px;border-radius:3px;font-size:9px;text-align:center;pointer-events:none;white-space:nowrap;z-index:50}
 </style>
 </head>
 <body>
 <div id="layout">
 
+<div id="fail-overlay">
+  <div class="ftitle">&#10007; MISSION FAILURE</div>
+  <div class="freason" id="fail-reason">&#8212;</div>
+  <div class="fhint">PRESS R TO RESTART</div>
+</div>
+
 <!-- LEFT -->
 <div id="left">
   <div id="orbit-wrap">
     <canvas id="orbit-canvas" width="310" height="310"></canvas>
+    <div style="position:absolute;bottom:4px;right:4px;display:flex;gap:2px;z-index:10">
+      <button onclick="orbitZoomOut()" style="font-size:10px;padding:1px 6px;background:#010a04cc;border-color:#00ff8844;color:#00ff88aa;min-width:22px">-</button>
+      <button onclick="orbitZoomReset()" style="font-size:7px;padding:1px 4px;background:#010a04cc;border-color:#00ff8844;color:#00ff8877;min-width:26px">1:1</button>
+      <button onclick="orbitZoomIn()" style="font-size:10px;padding:1px 6px;background:#010a04cc;border-color:#00ff8844;color:#00ff88aa;min-width:22px">+</button>
+    </div>
   </div>
   <div id="left-telem">
     <div class="sec">
-      <div class="sec-title">Orbital Elements</div>
+      <div class="st">Orbital Elements</div>
       <div class="row"><span class="lbl">Altitude</span><span class="val" id="el-alt">420 km</span></div>
-      <div class="row"><span class="lbl">Inclination</span><span class="val" id="el-inc">51.6°</span></div>
+      <div class="row"><span class="lbl">Inclination</span><span class="val" id="el-inc">51.6&deg;</span></div>
       <div class="row"><span class="lbl">Eccentricity</span><span class="val" id="el-ecc">0.000</span></div>
-      <div class="row"><span class="lbl">Period</span><span class="val" id="el-period">92.7 min</span></div>
-      <div class="row"><span class="lbl">Mean motion n</span><span class="val" id="el-n">0.00113 /s</span></div>
+      <div class="row"><span class="lbl">Period</span><span class="val" id="el-T">92.7 min</span></div>
+      <div class="row"><span class="lbl">Mean motion n</span><span class="val" id="el-n">0.00113/s</span></div>
+      <div class="row"><span class="lbl">Orbital V</span><span class="val" id="el-v">7.66 km/s</span></div>
     </div>
     <div class="sec">
-      <div class="sec-title">Hill Frame State (R/I/C)</div>
-      <div class="row"><span class="lbl">Radial</span><span class="val" id="st-rx">0.0 m</span></div>
-      <div class="row"><span class="lbl">In-Track</span><span class="val" id="st-ry">-500.0 m</span></div>
-      <div class="row"><span class="lbl">Cross-Track</span><span class="val" id="st-rz">0.0 m</span></div>
-      <div class="row"><span class="lbl">Vr</span><span class="val" id="st-vx">0.000 m/s</span></div>
-      <div class="row"><span class="lbl">Vi</span><span class="val" id="st-vy">0.000 m/s</span></div>
-      <div class="row"><span class="lbl">Vc</span><span class="val" id="st-vz">0.000 m/s</span></div>
+      <div class="st">Hill Frame (R/I/C)</div>
+      <div class="row"><span class="lbl">Radial R</span><span class="val" id="hr">0.0 m</span></div>
+      <div class="row"><span class="lbl">In-Track I</span><span class="val" id="hi">-500 m</span></div>
+      <div class="row"><span class="lbl">Cross C</span><span class="val" id="hc">0.0 m</span></div>
+      <div class="row"><span class="lbl">Vr</span><span class="val" id="vr">0.000</span></div>
+      <div class="row"><span class="lbl">Vi</span><span class="val" id="vi">0.000</span></div>
+      <div class="row"><span class="lbl">Vc</span><span class="val" id="vc">0.000</span></div>
     </div>
     <div class="sec">
-      <div class="sec-title">Propulsion</div>
-      <div class="row"><span class="lbl">ΔV Used</span><span class="val" id="el-dv">0.00 m/s</span></div>
-      <div class="row"><span class="lbl">Fuel</span><span class="val" id="el-fuel">100.0%</span></div>
+      <div class="st">Propulsion</div>
+      <div class="row"><span class="lbl">Delta-V Used</span><span class="val" id="dv">0.00 m/s</span></div>
+      <div class="row"><span class="lbl">Fuel</span><span class="val" id="fl">35.0%</span></div>
       <div style="height:5px;background:#010a04;border:1px solid #0f422255;border-radius:2px;margin:3px 0;overflow:hidden">
-        <div id="fuel-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#ff4400,#ffaa00,#00ff88);transition:width .3s"></div>
+        <div id="fb" style="height:100%;width:35%;background:linear-gradient(90deg,#ff4400,#ffaa00,#00ff88);transition:width .3s"></div>
       </div>
     </div>
+    <div class="sec"><div class="st">Comms / Events</div><div id="cl"></div></div>
   </div>
 </div>
 
 <!-- CENTER -->
 <div id="center">
   <div id="topbar">
-    <span style="font-family:Orbitron;font-size:9px;letter-spacing:3px;color:#00ff88cc">RPO SIM</span>
-    <div class="vtabs">
-      <button class="vtab active" id="vt-chase" onclick="setView('chase')">CHASE</button>
-      <button class="vtab" id="vt-ric" onclick="setView('ric')">RIC FRAME</button>
-      <button class="vtab" id="vt-free" onclick="setView('free')">FREE CAM</button>
+    <span style="font-family:Orbitron;font-size:9px;letter-spacing:2px;color:#00ff88cc;white-space:nowrap">RPO SIM v4</span>
+    <div style="display:flex;gap:3px">
+      <button class="vt on" id="vt-chase" onclick="setView('chase')">CHASE</button>
+      <button class="vt" id="vt-ric" onclick="setView('ric')">RIC</button>
+      <button class="vt" id="vt-free" onclick="setView('free')">FREE</button>
     </div>
-    <span id="phase-topbar" class="pbadge ph-far" style="margin:0 4px">FAR APPROACH</span>
-    <span style="margin-left:auto;font-size:10px;color:#00ff8888" id="mission-clock">MET: 00:00:00</span>
+    <span id="ptb" class="pb far">FAR APPROACH</span>
+    <button id="vvb" onclick="toggleVV()" class="on ora" style="font-size:8px;padding:3px 5px">V-VEC ON</button>
+    <button id="debb" onclick="toggleDebris()" class="on" style="font-size:8px;padding:3px 5px;border-color:#ff880066;color:#ffcc88">DEBRIS ON</button>
+    <span style="margin-left:auto;font-size:9px;color:#00ff8877;white-space:nowrap" id="clk">MET: 00:00:00</span>
   </div>
-  <div id="prox-wrap">
+  <div id="prox-wrap" style="position:relative">
     <canvas id="prox-canvas"></canvas>
+    <div id="alt-warn-bar"></div>
   </div>
   <div id="bottombar">
-    <span style="color:#00ff8866;font-size:9px">SCROLL=ZOOM · ALT+DRAG=PAN (free cam: drag)</span>
-    <span id="bb-range" style="color:#00ffaa">RNG:---</span>
-    <span id="bb-relv" style="color:#00ffaa">V:---</span>
-    <span id="bb-ric" style="color:#00ff8877">R:0 I:-500 C:0</span>
-    <span id="bb-zoom" style="margin-left:auto;color:#00ff8866">1.00×</span>
+    <span style="color:#00ff8844;font-size:8px">SCROLL=ZOOM &middot; ALT+DRAG=PAN &middot; CW DRIFT=NORMAL</span>
+    <span id="bb-r" style="color:#00ffaa">RNG:---</span>
+    <span id="bb-v" style="color:#00ffaa">V:---</span>
+    <span id="bb-ric" style="color:#00ff8866">R:0 I:-500 C:0</span>
+    <span id="bb-z" style="margin-left:auto;color:#00ff8844">1.00x</span>
   </div>
 </div>
 
 <!-- RIGHT -->
 <div id="right">
   <div class="sec">
-    <div class="sec-title">Mission Status</div>
-    <div id="phase-display" class="pbadge ph-far" style="margin-bottom:5px">FAR APPROACH</div>
-    <div class="row"><span class="lbl">Range</span><span class="val" id="cp-range">---</span></div>
-    <div class="row"><span class="lbl">Closure Rate</span><span class="val" id="cp-closure">---</span></div>
-    <div class="row"><span class="lbl">Max Safe V</span><span class="val" id="cp-safeV">---</span></div>
-    <div id="dock-msg" class="blink" style="color:#00ffff;text-align:center;display:none;margin-top:3px">✓ DOCKED SUCCESSFULLY</div>
-    <div id="warn-msg" class="blink" style="color:#ff4444;text-align:center;display:none;margin-top:3px">⚠ HIGH CLOSURE RATE</div>
+    <div class="st">Mission Status</div>
+    <div id="pd" class="pb far" style="margin-bottom:4px">FAR APPROACH</div>
+    <div class="row"><span class="lbl">Range</span><span class="val" id="cr">---</span></div>
+    <div class="row"><span class="lbl">Closure</span><span class="val" id="cc">---</span></div>
+    <div class="row"><span class="lbl">Max Safe V</span><span class="val" id="csv">---</span></div>
+    <div id="dm" class="bk" style="color:#00ffff;text-align:center;display:none;margin-top:3px">&#10003; DOCKED</div>
+    <button id="undock-btn" onclick="undock()" class="red" style="display:none;width:100%;margin-top:5px;border-color:#ffaa0066;color:#ffcc44;font-size:9px">&#8679; UNDOCK [U]</button>
+    <div id="wm" class="bk" style="color:#ff4444;text-align:center;display:none;margin-top:3px">&#9888; HIGH CLOSURE</div>
   </div>
 
   <div class="sec">
-    <div class="sec-title">RCS Control  (keyboard or tap)</div>
-    <div style="color:#00ff8855;font-size:8px;margin-bottom:3px">W/S=fwd/aft · A/D=port/stbd · Q/E=yaw · Z/X=up/dn</div>
-    <div class="tgrid">
-      <div class="tkey sp"></div>
-      <div class="tkey" id="tk-fwd" onpointerdown="thrOn('fwd')" onpointerup="thrOff('fwd')" onpointerleave="thrOff('fwd')">▲FWD<br><small>W/↑</small></div>
-      <div class="tkey sp"></div>
-      <div class="tkey" id="tk-port" onpointerdown="thrOn('port')" onpointerup="thrOff('port')" onpointerleave="thrOff('port')">◄PORT<br><small>A/←</small></div>
-      <div class="tkey" id="tk-aft" onpointerdown="thrOn('aft')" onpointerup="thrOff('aft')" onpointerleave="thrOff('aft')">▼AFT<br><small>S/↓</small></div>
-      <div class="tkey" id="tk-stbd" onpointerdown="thrOn('stbd')" onpointerup="thrOff('stbd')" onpointerleave="thrOff('stbd')">►STBD<br><small>D/→</small></div>
-      <div class="tkey" id="tk-yawl" onpointerdown="thrOn('yawL')" onpointerup="thrOff('yawL')" onpointerleave="thrOff('yawL')">↺YAW<br><small>Q</small></div>
-      <div class="tkey" id="tk-up" onpointerdown="thrOn('up')" onpointerup="thrOff('up')" onpointerleave="thrOff('up')">▲UP<br><small>Z</small></div>
-      <div class="tkey" id="tk-yawr" onpointerdown="thrOn('yawR')" onpointerup="thrOff('yawR')" onpointerleave="thrOff('yawR')">↻YAW<br><small>E</small></div>
+    <div class="st">RCS (WASD/Arrows &middot; Q/E=Yaw &middot; Z/X=Up/Dn)</div>
+    <div style="font-size:7px;color:#00ff8833;margin-bottom:3px">CW drift is orbital mechanics &#8212; counter with radial thrusters</div>
+    <div class="row"><span class="lbl">Thrust Scale</span><span class="val" id="thr-scale-val" style="font-size:9px">0.50 m/s²</span></div>
+    <input type="range" id="thr-scale" min="1" max="20" step="1" value="10" oninput="setThrScale(this.value)" style="margin-bottom:4px">
+    <div style="display:flex;justify-content:space-between;font-size:7px;color:#00ff8533;margin-top:-2px;margin-bottom:3px">
+      <span>Fine</span><span>&#9664;&#9664;&#9664;&#9658;&#9658;&#9658;</span><span>Coarse</span>
     </div>
-    <div style="font-size:8px;color:#00ff8555;margin-top:3px">Fire indicators:</div>
+    <div class="tg">
+      <div class="tk sp"></div>
+      <div class="tk" id="tk-fwd" onpointerdown="thrOn('fwd')" onpointerup="thrOff('fwd')" onpointerleave="thrOff('fwd')">&#9650;FWD<br><small>W/&#8593;</small></div>
+      <div class="tk sp"></div>
+      <div class="tk" id="tk-port" onpointerdown="thrOn('port')" onpointerup="thrOff('port')" onpointerleave="thrOff('port')">&#9668;PORT<br><small>A/&#8592;</small></div>
+      <div class="tk" id="tk-aft" onpointerdown="thrOn('aft')" onpointerup="thrOff('aft')" onpointerleave="thrOff('aft')">&#9660;AFT<br><small>S/&#8595;</small></div>
+      <div class="tk" id="tk-stbd" onpointerdown="thrOn('stbd')" onpointerup="thrOff('stbd')" onpointerleave="thrOff('stbd')">&#9658;STBD<br><small>D/&#8594;</small></div>
+      <div class="tk" id="tk-yawl" onpointerdown="thrOn('yawL')" onpointerup="thrOff('yawL')" onpointerleave="thrOff('yawL')">&#8634;YAW<br><small>Q</small></div>
+      <div class="tk" id="tk-up" onpointerdown="thrOn('up')" onpointerup="thrOff('up')" onpointerleave="thrOff('up')">&#9650;UP<br><small>Z</small></div>
+      <div class="tk" id="tk-yawr" onpointerdown="thrOn('yawR')" onpointerup="thrOff('yawR')" onpointerleave="thrOff('yawR')">&#8635;YAW<br><small>E</small></div>
+    </div>
     <div class="dots">
-      <span class="tdot" id="d-fwd" title="FWD"></span><span class="tdot" id="d-aft" title="AFT"></span>
-      <span class="tdot" id="d-port" title="PORT"></span><span class="tdot" id="d-stbd" title="STBD"></span>
-      <span class="tdot" id="d-up" title="UP"></span><span class="tdot" id="d-dn" title="DN"></span>
-      <span class="tdot" id="d-yawl" title="YAWL"></span><span class="tdot" id="d-yawr" title="YAWR"></span>
+      <span class="dot" id="d-fwd"></span><span class="dot" id="d-aft"></span>
+      <span class="dot" id="d-port"></span><span class="dot" id="d-stbd"></span>
+      <span class="dot" id="d-up"></span><span class="dot" id="d-dn"></span>
+      <span class="dot" id="d-yl"></span><span class="dot" id="d-yr"></span>
     </div>
   </div>
 
   <div class="sec">
-    <div class="sec-title">Autopilot</div>
-    <button id="auto-btn" onclick="toggleAuto()" style="width:100%;margin-bottom:4px">ENGAGE AUTOPILOT  [P]</button>
-    <div style="color:#00ff8844;font-size:8px;line-height:1.7">Approaches along −I axis · Nulls R &amp; C offsets · Holds safe closure rate</div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-title">Time Scale</div>
-    <div class="row"><span class="lbl">Multiplier</span><span class="val" id="ts-label">1×</span></div>
-    <input type="range" id="ts-slider" min="0" max="5" step="1" value="2" oninput="setTimeScale(this.value)">
-    <div style="display:flex;justify-content:space-between;font-size:8px;color:#00ff8544;margin-top:2px">
-      <span>0.1×</span><span>0.25×</span><span>1×</span><span>5×</span><span>20×</span><span>100×</span>
+    <div class="st">Time Scale</div>
+    <div class="row"><span class="lbl">Multiplier</span><span class="val" id="tsl">1x</span></div>
+    <input type="range" id="tss" min="0" max="5" step="1" value="2" oninput="setTS(this.value)">
+    <div style="display:flex;justify-content:space-between;font-size:8px;color:#00ff8533;margin-top:1px">
+      <span>0.1x</span><span>0.25x</span><span>1x</span><span>5x</span><span>20x</span><span>100x</span>
     </div>
   </div>
 
   <div class="sec">
-    <div class="sec-title">Orbital Parameters</div>
-    <div class="row"><span class="lbl">Altitude (km)</span>
-      <input type="number" id="inp-alt" value="420" min="200" max="2000" step="10" onchange="updateOrbital()"></div>
-    <div class="row"><span class="lbl">Inclination (°)</span>
-      <input type="number" id="inp-inc" value="51.6" min="0" max="90" step="0.1" onchange="updateOrbital()"></div>
-    <div class="row"><span class="lbl">Eccentricity</span>
-      <input type="number" id="inp-ecc" value="0.000" min="0" max="0.3" step="0.001" onchange="updateOrbital()"></div>
-    <div class="row"><span class="lbl">Init Range (m)</span>
-      <input type="number" id="inp-range" value="500" min="10" max="5000" step="10"></div>
-    <button onclick="resetSim()" class="danger" style="width:100%;margin-top:5px">⟳ RESET  [R]</button>
+    <div class="st">Orbital Parameters</div>
+    <div class="row">
+      <span class="lbl">Altitude (km)</span>
+      <input type="number" id="ia" value="420" min="160" max="2000" step="10" onchange="updateOrb()">
+    </div>
+    <div id="alt-warn-panel" style="display:none;font-size:8px;margin:2px 0;padding:3px 5px;border-radius:2px;line-height:1.5"></div>
+    <div class="row">
+      <span class="lbl">Inclination (&deg;)</span>
+      <input type="number" id="ii" value="51.6" min="0" max="90" step="0.1" onchange="updateOrb()">
+    </div>
+    <div class="row">
+      <span class="lbl">Eccentricity</span>
+      <input type="number" id="ie" value="0.000" min="0" max="0.98" step="0.001" onchange="updateOrb()">
+    </div>
+    <div class="row">
+      <span class="lbl">Init Range (m)</span>
+      <input type="number" id="ir" value="500" min="10" max="5000" step="10">
+    </div>
+    <button onclick="resetSim()" class="red" style="width:100%;margin-top:5px">&#8635; RESET [R]</button>
   </div>
 
   <div class="sec">
-    <div class="sec-title">Keys</div>
-    <div style="color:#00ff8844;font-size:9px;line-height:2">
-      W/↑ Fwd · S/↓ Aft · A/← Port · D/→ Stbd<br>
-      Z Up · X Down · Q YawL · E YawR<br>
-      P Autopilot · R Reset<br>
-      Scroll = Zoom on proximity canvas<br>
-      ALT+Drag = Pan (any mode)<br>
-      Drag = Pan (Free Cam mode)
+    <div class="st">Docking</div>
+    <div style="color:#00ff8844;font-size:8px;line-height:1.8">
+      Approach along -I corridor (&plusmn;15m radial)<br>
+      Fly to docking port (bottom of ISS body)<br>
+      Port at Hill (0, &minus;7m) &mdash; physically touch it<br>
+      Close at &lt;0.3 m/s for soft capture<br>
+      U or UNDOCK button to depart after docking<br>
+      <span style="color:#ffaa0044">CW drift: counter with radial burns</span>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="st">Keys</div>
+    <div style="color:#00ff8844;font-size:8px;line-height:1.9">
+      W/&#8593; Fwd &middot; S/&#8595; Aft &middot; A/&#8592; Port &middot; D/&#8594; Stbd<br>
+      Z Up &middot; X Down &middot; Q YawL &middot; E YawR<br>
+      V Vel-vector &middot; B Debris &middot; U Undock &middot; R Reset<br>
+      Scroll=Prox Zoom &middot; Orbit: scroll or +/- buttons
     </div>
   </div>
 </div>
-
 </div>
 
 <script>
 'use strict';
-// ── MATH ──────────────────────────────────────────
-const TAU=Math.PI*2, DEG=Math.PI/180;
-const MU=3.986004418e14, R_EARTH=6371000;
+const TAU=Math.PI*2,DEG=Math.PI/180;
+const MU=3.986004418e14,R_EARTH=6371000;
+const INIT_FUEL=35;
+const ALT_MIN_STABLE=200,ALT_MIN_SIM=160;
 
-// ── ORBITAL PARAMS ────────────────────────────────
+// ── ORBITAL ELEMENTS ──────────────────────────────────
 let ORB={alt:420e3,inc:51.6,ecc:0};
 let R_ORB,V_ORB,T_ORB,N_OM;
 
-function updateOrbital(){
-  ORB.alt=(parseFloat(document.getElementById('inp-alt').value)||420)*1e3;
-  ORB.inc=parseFloat(document.getElementById('inp-inc').value)||51.6;
-  ORB.ecc=parseFloat(document.getElementById('inp-ecc').value)||0;
+function updateOrb(){
+  const altKm=Math.max(ALT_MIN_SIM,parseFloat(document.getElementById('ia').value)||420);
+  ORB.alt=altKm*1e3;
+  ORB.inc=parseFloat(document.getElementById('ii').value)||51.6;
+  ORB.ecc=Math.min(0.98,Math.max(0,parseFloat(document.getElementById('ie').value)||0));
   R_ORB=R_EARTH+ORB.alt;
   V_ORB=Math.sqrt(MU/R_ORB);
   T_ORB=TAU*Math.sqrt(R_ORB**3/MU);
@@ -211,54 +255,340 @@ function updateOrbital(){
   document.getElementById('el-alt').textContent=(ORB.alt/1000).toFixed(0)+' km';
   document.getElementById('el-inc').textContent=ORB.inc.toFixed(1)+'°';
   document.getElementById('el-ecc').textContent=ORB.ecc.toFixed(3);
-  document.getElementById('el-period').textContent=(T_ORB/60).toFixed(1)+' min';
-  document.getElementById('el-n').textContent=N_OM.toFixed(5)+' /s';
+  document.getElementById('el-T').textContent=(T_ORB/60).toFixed(1)+' min';
+  document.getElementById('el-n').textContent=N_OM.toFixed(5)+'/s';
+  document.getElementById('el-v').textContent=(V_ORB/1000).toFixed(2)+' km/s';
+  const wp=document.getElementById('alt-warn-panel');
+  const wb=document.getElementById('alt-warn-bar');
+  if(altKm<ALT_MIN_SIM){
+    wp.style.display='block';
+    wp.style.cssText+=';background:#2a000a;border:1px solid #ff0044;color:#ff4466;padding:3px 5px;border-radius:2px';
+    wp.textContent='REENTRY ALT — SIM INVALID (<'+ALT_MIN_SIM+'km)';
+    wb.style.display='block';
+    wb.style.cssText='background:#2a000a99;border:1px solid #ff0044;color:#ff4466;bottom:28px;left:50%;transform:translateX(-50%);padding:4px 14px;border-radius:3px;font-size:9px;position:absolute;pointer-events:none;white-space:nowrap;z-index:50';
+    wb.textContent='⛔ REENTRY ALTITUDE — SIM INVALID';
+  } else if(altKm<ALT_MIN_STABLE){
+    wp.style.display='block';
+    wp.style.cssText+=';background:#1a0a00;border:1px solid #ff8800;color:#ffaa44;padding:3px 5px;border-radius:2px';
+    wp.textContent='⚠ DRAG SIGNIFICANT <200km — ORBIT UNSTABLE';
+    wb.style.display='block';
+    wb.style.cssText='background:#1a0a0099;border:1px solid #ff8800;color:#ffaa44;bottom:28px;left:50%;transform:translateX(-50%);padding:4px 14px;border-radius:3px;font-size:9px;position:absolute;pointer-events:none;white-space:nowrap;z-index:50';
+    wb.textContent='⚠ LOW ORBIT: Atmospheric drag will decay orbit rapidly';
+  } else {
+    wp.style.display='none';
+    wb.style.display='none';
+  }
 }
-updateOrbital();
+updateOrb();
 
-// ── STATE ─────────────────────────────────────────
-// Hill frame: x=Radial(+outward), y=In-track(+prograde), z=Cross-track(+normal)
-// Target always at origin. Chaser starts behind target = negative y
-let C={rx:0,ry:-500,rz:0,vx:0,vy:0,vz:0,yaw:0,fuel:100,dv:0};
-let targetAngle=0, simTime=0, missionTime=0, lastTS=null;
-let docked=false, autoMode=false;
+// ── RSOs — each has its own independent orbit ─────────
+// These advance on their own mean motion regardless of ORB settings.
+// Defined by: semi-major axis a_km (from Earth center), own eccentricity, inclination, RAAN, initial phase.
+const RSO_DEFS=[
+  {name:'HST', a_km:6924,  ecc:0.000, inc:28.5, raan:0.0,  phase:1.40, col:'#88aaff'},
+  {name:'GPS', a_km:26559, ecc:0.010, inc:55.0, raan:2.1,  phase:0.90, col:'#aaffaa'},
+  {name:'STA', a_km:6728,  ecc:0.000, inc:97.6, raan:1.2,  phase:0.55, col:'#ffaaaa'},
+  {name:'CRS', a_km:6788,  ecc:0.001, inc:51.6, raan:0.8,  phase:-0.9, col:'#ddaaff'},
+];
+// Precompute each RSO's mean motion from its own a_km
+const RSO_DATA=RSO_DEFS.map(r=>({
+  ...r,
+  n: TAU/( TAU*Math.sqrt((r.a_km*1e3)**3/MU) ),
+  angle: r.phase
+}));
+function stepRSOs(dt){ for(const r of RSO_DATA) r.angle+=r.n*dt; }
+
+// ── SIM STATE ─────────────────────────────────────────
+let C={rx:0,ry:-500,rz:0,vx:0,vy:0,vz:0,yaw:0,fuel:INIT_FUEL,dv:0};
+let targetAngle=0,simTime=0,missionTime=0,lastTS=null;
+let docked=false,failed=false,failReason='';
 const TS_VALS=[0.1,0.25,1,5,20,100];
 let timeScale=1;
-const THRUST_A=0.5, YAW_R=1.5*DEG;
+const THRUST_A=0.5,YAW_R=1.5*DEG;
 let thr={fwd:false,aft:false,port:false,stbd:false,up:false,dn:false,yawL:false,yawR:false};
+let showVV=true,debrisEnabled=true;
+let thrustScale=0.5; // m/s² — controlled by slider
+function setThrScale(v){
+  // slider 1-20 maps to 0.05 - 2.0 m/s²
+  thrustScale=parseFloat(v)*0.1;
+  document.getElementById('thr-scale-val').textContent=thrustScale.toFixed(2)+' m/s²';
+}
 
-// ── STARS ─────────────────────────────────────────
+// ── STARS ─────────────────────────────────────────────
 let stars3d=[];
-for(let i=0;i<600;i++){
+for(let i=0;i<700;i++){
   const th=Math.acos(2*Math.random()-1),ph=Math.random()*TAU,s=Math.sin(th);
-  stars3d.push({x:s*Math.cos(ph),y:s*Math.sin(ph),z:Math.cos(th),r:Math.random()*1.2+0.2,b:Math.random()*.7+0.3,tw:Math.random()*TAU});
+  stars3d.push({x:s*Math.cos(ph),y:s*Math.sin(ph),z:Math.cos(th),r:Math.random()*1.3+.15,b:Math.random()*.8+.2,tw:Math.random()*TAU});
 }
-let starsBG=[];
-for(let i=0;i<180;i++) starsBG.push({x:Math.random(),y:Math.random(),r:Math.random()*1+0.15,b:Math.random()});
+let orbitStars=[];
+for(let i=0;i<200;i++) orbitStars.push({x:Math.random(),y:Math.random(),r:Math.random()*.9+.1,b:Math.random()*.7+.3});
 
-// ── PARTICLES ─────────────────────────────────────
-let particles=[],flares=[];
-function spawnFlares(sx,sy){
-  if(Math.random()>.4) return;
-  flares.push({x:sx,y:sy,ox:(Math.random()-.5)*5,oy:(Math.random()-.5)*5,
-    vx:(Math.random()-.5)*40,vy:(Math.random()-.5)*40-30,life:1,r:Math.random()*2+.5});
+// ── BACKGROUND DERELICTS ──────────────────────────────
+let bgDerelicts=[];
+function genDerelicts(){
+  bgDerelicts=[];
+  for(let i=0;i<5;i++){
+    const a=Math.random()*TAU,d=900+Math.random()*1300;
+    bgDerelicts.push({rx:Math.cos(a)*d,ry:Math.sin(a)*d*.4,rz:0,rot:Math.random()*TAU,rr:(Math.random()-.5)*.04,type:Math.floor(Math.random()*3),sz:6+Math.random()*8});
+  }
 }
-function spawnDock(sx,sy){
+genDerelicts();
+
+// ── DEBRIS ────────────────────────────────────────────
+let debris=[],debTimer=0,nextDeb=20+Math.random()*30;
+
+function spawnDebris(){
+  if(docked||failed||!debrisEnabled) return;
+  const ang=Math.random()*TAU,spd=4+Math.random()*10;
+  const sd=400+Math.random()*300;
+  const rx=C.rx+Math.cos(ang)*sd,ry=C.ry+Math.sin(ang)*sd;
+  const dx=C.rx-rx,dy=C.ry-ry,len=Math.hypot(dx,dy);
+  const sc=(Math.random()-.5)*.3;
+  debris.push({rx,ry,rz:0,vx:(dx/len+sc)*spd,vy:(dy/len+sc)*spd,vz:0,rot:Math.random()*TAU,rr:(Math.random()-.5)*1.2,sz:3+Math.random()*4,hit:false});
+  commsLog('CAUTION: DEBRIS TRACK — REL V '+spd.toFixed(0)+' m/s');
+}
+function stepDebris(dt){
+  if(!debrisEnabled){debris=[];return;}
+  for(const d of debris){
+    d.rx+=d.vx*dt;d.ry+=d.vy*dt;d.rot+=d.rr*dt;
+    if(!d.hit&&!failed&&!docked){
+      const dr=Math.hypot(d.rx-C.rx,d.ry-C.ry);
+      if(dr<9){d.hit=true;const iv=Math.hypot(d.vx-C.vx,d.vy-C.vy);triggerFailure('DEBRIS STRIKE — REL-V '+iv.toFixed(1)+' m/s');}
+    }
+  }
+  debris=debris.filter(d=>Math.hypot(d.rx-C.rx,d.ry-C.ry)<2500&&!d.hit);
+  if(!failed&&!docked){debTimer+=dt;if(debTimer>nextDeb){debTimer=0;nextDeb=20+Math.random()*30;if(Math.random()<.55)spawnDebris();}}
+}
+function toggleDebris(){
+  debrisEnabled=!debrisEnabled;
+  if(!debrisEnabled)debris=[];
+  const b=document.getElementById('debb');
+  if(debrisEnabled){b.textContent='DEBRIS ON';b.className='on';b.style.borderColor='#ff880066';b.style.color='#ffcc88';}
+  else{b.textContent='DEBRIS OFF';b.className='doff';b.style.borderColor='#ff444466';b.style.color='#ff8888';}
+}
+
+// ── PARTICLES ─────────────────────────────────────────
+let parts=[],flares=[];
+function spawnFlares(wx,wy){
+  if(Math.random()>.4)return;
+  flares.push({x:wx,y:wy,vx:(Math.random()-.5)*50,vy:(Math.random()-.5)*50-30,life:1,r:Math.random()*2.5+.5});
+}
+function spawnDockSparks(sx,sy){
   for(let i=0;i<60;i++){
-    const a=Math.random()*TAU,sp=Math.random()*90+20;
-    particles.push({x:sx,y:sy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:Math.random()*3+1,
-      col:`hsl(${180+Math.random()*60},100%,70%)`});
+    const a=Math.random()*TAU,sp=15+Math.random()*80;
+    parts.push({x:sx,y:sy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:Math.random()*2.5+.5,col:'hsl('+(180+Math.random()*60)+',100%,'+(60+Math.random()*30)+'%)'});
+  }
+}
+function spawnExplosionAt(sx,sy){
+  for(let i=0;i<60;i++){
+    const a=Math.random()*TAU,sp=20+Math.random()*110;
+    parts.push({x:sx,y:sy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:Math.random()*3+1,col:'hsl('+(Math.random()*40)+',100%,'+(50+Math.random()*30)+'%)'});
   }
 }
 
-// ── CW PHYSICS ────────────────────────────────────
-// Clohessy-Wiltshire equations (Hill frame)
-// ẍ = 3n²x + 2nẏ + ax
-// ÿ = -2nẋ + ay
-// z̈ = -n²z + az
+// ── AUDIO (significantly improved) ────────────────────
+let AC=null,thrGainMain=null,thrGainHarm=null,thrSrc=null;
+
+function initAudio(){
+  if(AC)return;
+  try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){AC=null;return;}
+  buildAmbient();
+  buildThruster();
+}
+
+function buildAmbient(){
+  if(!AC)return;
+  // Very gentle sub-bass structural hum only — no hiss
+  const sub=AC.createOscillator();sub.type='sine';sub.frequency.value=41;
+  const subG=AC.createGain();subG.gain.value=0.010;
+  sub.connect(subG);subG.connect(AC.destination);sub.start();
+  // Slightly detuned for mild chorus — very quiet
+  const hum=AC.createOscillator();hum.type='triangle';hum.frequency.value=82.3;
+  const humG=AC.createGain();humG.gain.value=0.005;
+  hum.connect(humG);humG.connect(AC.destination);hum.start();
+}
+
+function buildThruster(){
+  if(!AC)return;
+  const masterBus=AC.createGain();masterBus.gain.value=1;masterBus.connect(AC.destination);
+  // Broadband noise layer — main thruster hiss
+  const bufLen=Math.floor(AC.sampleRate*0.35);
+  const nb=AC.createBuffer(1,bufLen,AC.sampleRate);
+  const nd=nb.getChannelData(0);for(let i=0;i<bufLen;i++)nd[i]=Math.random()*2-1;
+  thrSrc=AC.createBufferSource();thrSrc.buffer=nb;thrSrc.loop=true;
+  const hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=100;
+  const bp=AC.createBiquadFilter();bp.type='peaking';bp.frequency.value=380;bp.gain.value=9;bp.Q.value=0.9;
+  thrGainMain=AC.createGain();thrGainMain.gain.value=0;
+  thrSrc.connect(hp);hp.connect(bp);bp.connect(thrGainMain);thrGainMain.connect(masterBus);
+  thrSrc.start();
+  // Harmonic tone layer for metallic character
+  const osc1=AC.createOscillator();osc1.type='sawtooth';osc1.frequency.value=88;
+  const osc2=AC.createOscillator();osc2.type='square';osc2.frequency.value=176.8;
+  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=650;lp.Q.value=2.5;
+  thrGainHarm=AC.createGain();thrGainHarm.gain.value=0;
+  osc1.connect(lp);osc2.connect(lp);lp.connect(thrGainHarm);thrGainHarm.connect(masterBus);
+  osc1.start();osc2.start();
+}
+
+function setThrVol(v){
+  if(!AC||!thrGainMain)return;
+  const t=AC.currentTime,tgt=Math.min(0.18,v);
+  thrGainMain.gain.setTargetAtTime(tgt,t,0.035);
+  thrGainHarm.gain.setTargetAtTime(tgt*0.065,t,0.05);
+}
+
+function playImpact(){
+  if(!AC)return;
+  const t=AC.currentTime;
+  // Metallic clank
+  const cBuf=AC.createBuffer(1,Math.floor(AC.sampleRate*0.7),AC.sampleRate);
+  const cd=cBuf.getChannelData(0);
+  for(let i=0;i<cd.length;i++) cd[i]=(Math.random()*2-1)*Math.exp(-i/(AC.sampleRate*0.12))*1.8;
+  const cs=AC.createBufferSource();cs.buffer=cBuf;
+  const cbp=AC.createBiquadFilter();cbp.type='bandpass';cbp.frequency.value=900;cbp.Q.value=1.8;
+  const cg=AC.createGain();cg.gain.value=0.55;
+  cs.connect(cbp);cbp.connect(cg);cg.connect(AC.destination);cs.start(t);
+  // Thud
+  const to=AC.createOscillator();to.type='sine';to.frequency.setValueAtTime(200,t);to.frequency.exponentialRampToValueAtTime(35,t+0.2);
+  const tg=AC.createGain();tg.gain.setValueAtTime(0.38,t);tg.gain.exponentialRampToValueAtTime(0.001,t+0.22);
+  to.connect(tg);tg.connect(AC.destination);to.start(t);to.stop(t+0.25);
+}
+
+function playDockSound(){
+  if(!AC)return;
+  playImpact();
+  // Rising chord sequence
+  [220,277,330,415,494,659,880].forEach((f,i)=>{
+    const delay=0.1+i*0.06;
+    setTimeout(()=>{
+      if(!AC)return;
+      const now=AC.currentTime;
+      const o=AC.createOscillator();o.type=i%2===0?'sine':'triangle';o.frequency.value=f;
+      const g=AC.createGain();
+      g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.11,now+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001,now+0.65);
+      const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3000;
+      o.connect(lp);lp.connect(g);g.connect(AC.destination);o.start(now);o.stop(now+0.7);
+    },delay*1000);
+  });
+  // Final confirmation tone
+  setTimeout(()=>{
+    if(!AC)return;
+    const now=AC.currentTime;
+    const o=AC.createOscillator();o.type='sine';o.frequency.value=1047;
+    const g=AC.createGain();
+    g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.09,now+0.04);
+    g.gain.setValueAtTime(0.09,now+0.28);g.gain.exponentialRampToValueAtTime(0.001,now+0.85);
+    o.connect(g);g.connect(AC.destination);o.start(now);o.stop(now+0.9);
+  },560);
+}
+
+function playExpSound(){
+  if(!AC)return;
+  const t=AC.currentTime;
+  // Deep boom
+  const dur=2.4;
+  const eBuf=AC.createBuffer(1,Math.floor(AC.sampleRate*dur),AC.sampleRate);
+  const ed=eBuf.getChannelData(0);
+  for(let i=0;i<ed.length;i++){const ti=i/AC.sampleRate;ed[i]=(Math.random()*2-1)*Math.pow(Math.max(0,1-ti/dur),0.75)*Math.exp(-ti*1.2)*2.5;}
+  const es=AC.createBufferSource();es.buffer=eBuf;
+  const elp=AC.createBiquadFilter();elp.type='lowpass';elp.frequency.value=260;
+  const eg=AC.createGain();eg.gain.value=0.9;
+  es.connect(elp);elp.connect(eg);eg.connect(AC.destination);es.start(t);
+  // Mid crackle
+  const cBuf=AC.createBuffer(1,Math.floor(AC.sampleRate*0.6),AC.sampleRate);
+  const crd=cBuf.getChannelData(0);
+  for(let i=0;i<crd.length;i++) crd[i]=(Math.random()*2-1)*Math.exp(-i/(AC.sampleRate*0.1))*1.8;
+  const crs=AC.createBufferSource();crs.buffer=cBuf;
+  const crbp=AC.createBiquadFilter();crbp.type='bandpass';crbp.frequency.value=1400;crbp.Q.value=0.8;
+  const crg=AC.createGain();crg.gain.value=0.45;
+  crs.connect(crbp);crbp.connect(crg);crg.connect(AC.destination);crs.start(t);
+  // Descending pitched sweep
+  const do2=AC.createOscillator();do2.type='sawtooth';
+  do2.frequency.setValueAtTime(240,t);do2.frequency.exponentialRampToValueAtTime(22,t+1.1);
+  const dlp=AC.createBiquadFilter();dlp.type='lowpass';dlp.frequency.value=420;
+  const dg=AC.createGain();dg.gain.setValueAtTime(0.22,t);dg.gain.exponentialRampToValueAtTime(0.001,t+1.2);
+  do2.connect(dlp);dlp.connect(dg);dg.connect(AC.destination);do2.start(t);do2.stop(t+1.25);
+}
+
+function playCommsBeep(){
+  if(!AC)return;
+  const t=AC.currentTime;
+  // Clean two-tone radio beep
+  [[1000,0],[1200,0.09]].forEach(([f,d])=>{
+    const o=AC.createOscillator();o.type='sine';o.frequency.value=f;
+    const g=AC.createGain();
+    g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(0.07,t+d+0.005);
+    g.gain.setValueAtTime(0.07,t+d+0.055);g.gain.exponentialRampToValueAtTime(0.001,t+d+0.1);
+    const hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=700;
+    o.connect(hp);hp.connect(g);g.connect(AC.destination);o.start(t+d);o.stop(t+d+0.12);
+  });
+  // Short static burst
+  const sb=AC.createBuffer(1,Math.floor(AC.sampleRate*0.035),AC.sampleRate);
+  const sd=sb.getChannelData(0);for(let i=0;i<sd.length;i++)sd[i]=(Math.random()*2-1)*0.28;
+  const ss=AC.createBufferSource();ss.buffer=sb;
+  const sbp=AC.createBiquadFilter();sbp.type='bandpass';sbp.frequency.value=3200;sbp.Q.value=2.5;
+  const sg=AC.createGain();sg.gain.value=0.12;
+  ss.connect(sbp);sbp.connect(sg);sg.connect(AC.destination);ss.start(t);
+}
+
+function playAlertBeep(freq){
+  if(!AC)return;
+  const t=AC.currentTime;
+  const o=AC.createOscillator();o.type='square';o.frequency.value=freq||880;
+  const g=AC.createGain();
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.065,t+0.01);
+  g.gain.setValueAtTime(0.065,t+0.07);g.gain.exponentialRampToValueAtTime(0.001,t+0.14);
+  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1400;
+  o.connect(lp);lp.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+0.16);
+}
+
+// ── COMMS LOG ─────────────────────────────────────────
+let commsTimer=0;
+const COMMS=['HOUSTON CHASER — ON CORRIDOR, PROCEEDING','RANGE RATE NOMINAL — COPY','SYSTEMS GREEN — CONTINUE APPROACH','SOLAR ANGLE ADJUSTING — NOMINAL','RCS PRESSURE NOMINAL','TRACKING LOCK CONFIRMED','ATTITUDE NOMINAL — GO FOR APPROACH','CHASE VEHICLE LOOKING GOOD'];
+function commsLog(msg){
+  const el=document.getElementById('cl');
+  const ln=document.createElement('div');
+  const mm=String(Math.floor(missionTime/60)).padStart(2,'0');
+  const ss=String(Math.floor(missionTime%60)).padStart(2,'0');
+  ln.textContent='['+mm+':'+ss+'] '+msg;
+  el.appendChild(ln);el.scrollTop=el.scrollHeight;
+}
+function tickComms(dt){
+  commsTimer+=dt;
+  if(commsTimer>35+Math.random()*25){
+    commsTimer=0;
+    const range=Math.hypot(C.rx,C.ry,C.rz);
+    let msg;
+    if(C.fuel<10)msg='FUEL CRITICAL — CONSERVE PROPELLANT';
+    else if(C.fuel<20)msg='FUEL BELOW 20% — USE SPARINGLY';
+    else if(range<30)msg='RANGE '+range.toFixed(0)+'m — FINAL APPROACH';
+    else if(range<100)msg='RANGE '+range.toFixed(0)+'m — RATE NOMINAL';
+    else msg=COMMS[Math.floor(Math.random()*COMMS.length)];
+    commsLog(msg);playCommsBeep();
+  }
+}
+
+// ── FAILURE / DOCK ────────────────────────────────────
+let failFlash=0;
+function triggerFailure(reason){
+  if(failed||docked)return;
+  failed=true;failReason=reason;
+  Object.keys(thr).forEach(k=>thr[k]=false);
+  failFlash=1;
+  commsLog('** MISSION FAILURE: '+reason+' **');
+  commsLog('PRESS R TO RESTART');
+  playExpSound();
+  const cp=getScreenPos(C.rx,C.ry);
+  spawnExplosionAt(cp.x,cp.y);
+  document.getElementById('fail-reason').textContent=reason;
+  document.getElementById('fail-overlay').style.display='block';
+}
+
+// ── CW PHYSICS ────────────────────────────────────────
 function cwDeriv(s,a){
-  const [rx,ry,rz,vx,vy,vz]=s,[ax,ay,az]=a,n=N_OM;
-  return [vx,vy,vz,3*n*n*rx+2*n*vy+ax,-2*n*vx+ay,-n*n*rz+az];
+  const[rx,ry,rz,vx,vy,vz]=s,[ax,ay,az]=a,n=N_OM;
+  return[vx,vy,vz,3*n*n*rx+2*n*vy+ax,-2*n*vx+ay,-n*n*rz+az];
 }
 function rk4(s,dt,a){
   const k1=cwDeriv(s,a);
@@ -268,592 +598,676 @@ function rk4(s,dt,a){
   return s.map((v,i)=>v+(k1[i]+2*k2[i]+2*k3[i]+k4[i])*dt/6);
 }
 function cwStep(dt){
-  if(docked) return;
-  // Build Hill-frame acceleration from thruster inputs
-  // Body frame: +Yb=forward, +Xb=starboard, +Zb=up
-  // Hill frame: +x=radial, +y=in-track, +z=cross-track
-  // Yaw rotates the vehicle in the x-y (radial/in-track) plane
-  const yaw=C.yaw;
-  const cy=Math.cos(yaw),sy=Math.sin(yaw);
-  // Body +Yb → Hill: (+x_H = -sin(yaw), +y_H = cos(yaw))
-  // Body +Xb → Hill: (+x_H =  cos(yaw), +y_H = sin(yaw))
+  if(docked||failed)return;
+  if(C.fuel<=0){Object.keys(thr).forEach(k=>thr[k]=false);return;}
+  const y=C.yaw,cy=Math.cos(y),sy=Math.sin(y);
+  const TA=thrustScale; // current thrust acceleration
   let ax=0,ay=0,az=0;
-  if(thr.fwd) { ax+=-sy*THRUST_A; ay+=cy*THRUST_A; }
-  if(thr.aft) { ax+= sy*THRUST_A; ay-=cy*THRUST_A; }
-  if(thr.stbd){ ax+= cy*THRUST_A; ay+=sy*THRUST_A; }
-  if(thr.port){ ax+=-cy*THRUST_A; ay-=sy*THRUST_A; }
-  if(thr.up)  az+=THRUST_A;
-  if(thr.dn)  az-=THRUST_A;
+  if(thr.fwd){ax-=sy*TA;ay+=cy*TA;}
+  if(thr.aft){ax+=sy*TA;ay-=cy*TA;}
+  if(thr.stbd){ax+=cy*TA;ay+=sy*TA;}
+  if(thr.port){ax-=cy*TA;ay-=sy*TA;}
+  if(thr.up)az+=TA;
+  if(thr.dn)az-=TA;
   const mag=Math.hypot(ax,ay,az);
-  if(mag>0){ C.fuel=Math.max(0,C.fuel-0.003*dt*mag/THRUST_A); C.dv+=mag*dt; }
-  if(thr.yawL) C.yaw-=YAW_R*dt;
-  if(thr.yawR) C.yaw+=YAW_R*dt;
+  if(mag>0){C.fuel=Math.max(0,C.fuel-0.004*dt*mag/0.5);C.dv+=mag*dt;}
+  if(thr.yawL)C.yaw-=YAW_R*dt;
+  if(thr.yawR)C.yaw+=YAW_R*dt;
   const ns=rk4([C.rx,C.ry,C.rz,C.vx,C.vy,C.vz],dt,[ax,ay,az]);
   [C.rx,C.ry,C.rz,C.vx,C.vy,C.vz]=ns;
 }
 
-// ── AUTOPILOT ─────────────────────────────────────
-function autopilot(){
-  if(!autoMode||docked) return;
-  Object.keys(thr).forEach(k=>thr[k]=false);
-  const range=Math.hypot(C.rx,C.ry,C.rz);
-  // Target position: (0,0,0) i.e. dock at Hill origin
-  // Desired approach: chaser at negative ry → move toward 0 along +y axis
-  const safeVy=range>3?Math.min(0.8,range*0.0015):0;
-  // We want Vi = +safeVy (closing toward target, ry goes from negative toward 0)
-  const desVy=safeVy;           // in-track: approach
-  const desVx=-C.rx*0.1;        // null radial
-  const desVz=-C.rz*0.1;        // null cross-track
-  // Velocity errors in Hill frame
-  const evx=desVx-C.vx,evy=desVy-C.vy,evz=desVz-C.vz;
-  // Project Hill errors to body frame
-  const yaw=C.yaw,cy=Math.cos(yaw),sy=Math.sin(yaw);
-  // Body fwd (+Yb) = Hill (-sin,cos) → body_fwd_err = -sy*evx + cy*evy
-  const bFwd=-sy*evx+cy*evy;
-  // Body stbd (+Xb) = Hill (cos,sin)  → body_stbd_err = cy*evx + sy*evy
-  const bStbd=cy*evx+sy*evy;
-  // Yaw autopilot: point body +Y toward target (ry<0, so desired yaw = atan2(rx,-ry) to face it)
-  // But we want to approach prograde; let autopilot just null errors without forced yaw
-  // unless we're far out, then also point at target
-  const DEAD=0.04;
-  thr.fwd  =bFwd  >  DEAD;
-  thr.aft  =bFwd  < -DEAD;
-  thr.stbd =bStbd >  DEAD;
-  thr.port =bStbd < -DEAD;
-  thr.up   =evz   >  DEAD;
-  thr.dn   =evz   < -DEAD;
-  // Yaw: optionally face target
-  if(range>20){
-    const desYaw=Math.atan2(-C.rx,-C.ry); // face target (0,0) from (rx,ry)
-    let ye=desYaw-C.yaw;
-    while(ye>Math.PI) ye-=TAU; while(ye<-Math.PI) ye+=TAU;
-    thr.yawL=ye<-0.06; thr.yawR=ye>0.06;
-  }
-}
-
-// ── CANVAS SETUP ──────────────────────────────────
-const OC=document.getElementById('orbit-canvas'),OCTX=OC.getContext('2d');
+// ── CANVASES ──────────────────────────────────────────
+const OC=document.getElementById('orbit-canvas'),OCX=OC.getContext('2d');
 const PW_EL=document.getElementById('prox-wrap');
-const PC=document.getElementById('prox-canvas'),PCTX=PC.getContext('2d');
+const PC=document.getElementById('prox-canvas'),PCX=PC.getContext('2d');
 let PW=0,PH=0;
-function resizeProx(){PW=PW_EL.clientWidth;PH=PW_EL.clientHeight;PC.width=PW;PC.height=PH;}
-resizeProx();
-window.addEventListener('resize',resizeProx);
+function resizePC(){PW=PW_EL.clientWidth;PH=PW_EL.clientHeight;PC.width=PW;PC.height=PH;}
+resizePC();window.addEventListener('resize',resizePC);
 
-// ── CAMERA ────────────────────────────────────────
-let viewMode='chase';
-let zoom={chase:2,ric:1.5,free:1.5};
-// Free cam pan center in Hill meters
-let freeCenter={x:0,y:-250};
-
-let dragging=false,dragLast={x:0,y:0};
-
-PC.addEventListener('wheel',e=>{
+// ── ORBIT ZOOM ────────────────────────────────────────
+let orbitZoom=1.0; // separate zoom for orbit world view
+const OC_EL=document.getElementById('orbit-wrap');
+OC.addEventListener('wheel',e=>{
   e.preventDefault();
-  const f=e.deltaY<0?1.18:1/1.18;
-  zoom[viewMode]=Math.max(0.02,Math.min(600,zoom[viewMode]*f));
-  document.getElementById('bb-zoom').textContent=zoom[viewMode].toFixed(2)+'×';
+  const f=e.deltaY<0?1.2:1/1.2;
+  orbitZoom=Math.max(0.25,Math.min(8,orbitZoom*f));
 },{passive:false});
+function orbitZoomIn(){orbitZoom=Math.min(8,orbitZoom*1.35);}
+function orbitZoomOut(){orbitZoom=Math.max(0.25,orbitZoom/1.35);}
+function orbitZoomReset(){orbitZoom=1.0;}
 
-PC.addEventListener('pointerdown',e=>{
-  if(viewMode==='free'||e.altKey){dragging=true;dragLast={x:e.clientX,y:e.clientY};e.preventDefault();}
-});
-PC.addEventListener('pointermove',e=>{
-  if(!dragging) return;
-  const dx=e.clientX-dragLast.x,dy=e.clientY-dragLast.y;
-  dragLast={x:e.clientX,y:e.clientY};
-  const ppm=basePPM()*zoom[viewMode];
-  freeCenter.x-=dx/ppm; freeCenter.y+=dy/ppm;
-});
-PC.addEventListener('pointerup',()=>dragging=false);
-PC.addEventListener('pointerleave',()=>dragging=false);
+// ── CAMERA ────────────────────────────────────────────
+let vm='chase';
+let ZM={chase:2,ric:1.5,free:1.5};
+let fc={x:0,y:-250};
+let drag=false,dl={x:0,y:0};
+PC.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY<0?1.18:1/1.18;ZM[vm]=Math.max(.02,Math.min(600,ZM[vm]*f));},{passive:false});
+PC.addEventListener('pointerdown',e=>{if(vm==='free'||e.altKey){drag=true;dl={x:e.clientX,y:e.clientY};e.preventDefault();}});
+PC.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-dl.x,dy=e.clientY-dl.y;dl={x:e.clientX,y:e.clientY};const p=bPPM()*ZM[vm];fc.x-=dx/p;fc.y+=dy/p;});
+PC.addEventListener('pointerup',()=>drag=false);
+PC.addEventListener('pointerleave',()=>drag=false);
+function bPPM(){return Math.min(PW,PH)/600;}
+function setView(m){vm=m;['chase','ric','free'].forEach(v=>document.getElementById('vt-'+v).classList.toggle('on',v===m));if(m==='free'){fc.x=C.rx;fc.y=C.ry;}}
+function toggleVV(){showVV=!showVV;const b=document.getElementById('vvb');b.textContent=showVV?'V-VEC ON':'V-VEC OFF';b.classList.toggle('on',showVV);}
 
-function basePPM(){ return Math.min(PW,PH)/600; }
+// ── ORBIT DRAW ────────────────────────────────────────
+//
+// FIX: The ellipse shape is ONLY determined by eccentricity.
+//   At e=0 → circle, always, regardless of inclination.
+//   b = a * sqrt(1 - e^2). At e=0, b=a → circle.
+//
+// Inclination is shown as a 2D tilt/rotation of the orbit plane (RAAN-style),
+// NOT as a compression of the b axis. Compressing b with cos(inc) was WRONG —
+// it made every orbit at inc>0 look like an ellipse even at e=0.
+//
+// Earth is at the RIGHT FOCUS of the ellipse.
+//   focus offset from ellipse center = a * e
+//   At e=0: focus offset=0, Earth at ellipse center → circle centered on Earth ✓
+//
+// Earth visual radius scales with altitude:
+//   eR_px = BASE_ER * (R_EARTH / R_EARTH) = BASE_ER (constant visual Earth size)
+//   orbit a_px = eR_px * (R_ORB / R_EARTH)
+//   This means: at low altitude, orbit barely exceeds Earth radius visually.
+//   At high altitude, orbit track is proportionally much larger than Earth.
 
-function setView(mode){
-  viewMode=mode;
-  ['chase','ric','free'].forEach(m=>document.getElementById('vt-'+m).classList.toggle('active',m===mode));
-  if(mode==='free'){freeCenter.x=C.rx;freeCenter.y=C.ry;}
+function drawOrbit(){
+  const ctx=OCX,W=310,H=310,cx=W/2,cy=H/2;
+  ctx.fillStyle='#000508';ctx.fillRect(0,0,W,H);
+  for(const s of orbitStars){ctx.globalAlpha=s.b*.5;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.x*W,s.y*H,s.r,0,TAU);ctx.fill();}
+  ctx.globalAlpha=1;
+
+  const ecc=ORB.ecc;
+  const OZ=orbitZoom; // orbit zoom factor
+
+  // Out of scope at e >= 0.99
+  if(ecc>=0.99){
+    drawEarthAt(ctx,cx,cy,cx*0.3*OZ);
+    ctx.strokeStyle='#ff880055';ctx.lineWidth=1.5;ctx.setLineDash([4,6]);
+    ctx.beginPath();
+    for(let tv=-2.8;tv<=2.8;tv+=0.04){
+      const px=cx+tv*cx*.22*OZ,py=cy-(tv*tv*cx*.1-cx*.28)*OZ;
+      if(Math.abs(tv)<0.04)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    }
+    ctx.stroke();ctx.setLineDash([]);
+    ctx.font='10px Orbitron,monospace';ctx.fillStyle='#ff8800cc';ctx.textAlign='center';
+    ctx.fillText('OUT OF SIM SCOPE',cx,cy+cx*.5);
+    ctx.font='8px Share Tech Mono';ctx.fillStyle='#ff880066';
+    ctx.fillText('e≥0.99 — parabolic/hyperbolic',cx,cy+cx*.5+13);
+    ctx.textAlign='left';
+    ctx.font='7px Share Tech Mono';ctx.fillStyle='#ffffff33';
+    ctx.fillText('e='+ecc.toFixed(3)+'  h='+(ORB.alt/1000).toFixed(0)+'km',4,H-4);
+    return;
+  }
+
+  // === EARTH-SCALED ORBIT LAYOUT ===
+  // Base Earth radius and orbit size — then apply orbitZoom
+  const BASE_ER=52*OZ;
+  const eR=BASE_ER;
+  const ratio=R_ORB/R_EARTH;
+  let a_raw=eR*ratio;
+  const margin=8;
+  const a_px=Math.min(a_raw,(cx-margin));
+  const b_px=a_px*Math.sqrt(1-ecc*ecc);
+  // Earth at focus: earthX = cx + a_px*e (Earth is right of ellipse center when e>0)
+  // Clamp so Earth stays near center when zoomed out, but stays within panel
+  const earthX=Math.max(margin+eR, Math.min(W-margin-eR, cx+a_px*ecc));
+  const earthY=cy;
+  // Ellipse center is at earthX - a_px*ecc = cx (always panel center when earthX=cx+a*e)
+  const ellCX=earthX-a_px*ecc;
+
+  // Inclination: tilt the ENTIRE orbit AND ISS/chaser around Earth position.
+  // incTilt rotates all orbit geometry around the Earth point.
+  // At inc=0: tilt=0, no rotation applied.
+  // The rotation is purely visual — it represents the orbit plane tilt.
+  // We rotate around (earthX, earthY) so Earth stays fixed.
+  const incTilt=ORB.inc*DEG*0.55; // 0.55 gives ~28° tilt at ISS inclination — visually clear
+
+  // Helper: transform ellipse-frame coords to screen coords (rotate around Earth)
+  // In ellipse frame, (ex,ey) is relative to ellipse center.
+  // 1. Translate to Earth-relative: ex - (ellCX-earthX) = ex + a_px*ecc - a_px*ecc? No...
+  // Let's define: earthRelX = ellCX_x + ex - earthX, earthRelY = ey
+  // where ellCX_x = ellCX. So earthRelX = (ellCX + ex) - earthX = ex - a_px*ecc
+  // Then rotate around Earth and translate back.
+  function ellToScreen(ex_ec, ey_ec){
+    // point in screen coords before inclination tilt
+    const sx0 = ellCX + ex_ec; // screen x (no tilt)
+    const sy0 = earthY + ey_ec;
+    // rotate around Earth position
+    const dx = sx0 - earthX;
+    const dy = sy0 - earthY;
+    return {
+      x: earthX + dx*Math.cos(incTilt) - dy*Math.sin(incTilt),
+      y: earthY + dx*Math.sin(incTilt) + dy*Math.cos(incTilt)
+    };
+  }
+
+  // Draw RSOs (each with own orbit, independent)
+  for(const r of RSO_DATA){
+    const rRatio=(r.a_km*1e3)/R_EARTH;
+    const ra_raw=eR*rRatio;
+    const ra_px=Math.min(ra_raw,cx-4);
+    const re=r.ecc;
+    const rb_px=ra_px*Math.sqrt(1-re*re);
+    const rEllCX=earthX-ra_px*re; // RSO ellipse center (Earth at its focus)
+    const rTilt=r.raan; // RSO has its own tilt (RAAN, not inc*0.55)
+
+    ctx.save();
+    // Rotate around Earth
+    ctx.translate(earthX,earthY);ctx.rotate(rTilt);ctx.translate(-earthX+rEllCX,0);
+    ctx.strokeStyle=r.col+'22';ctx.lineWidth=0.5;ctx.setLineDash([2,5]);
+    ctx.beginPath();ctx.ellipse(0,0,ra_px,rb_px,0,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    const rx_ec=ra_px*Math.cos(r.angle),ry_ec=rb_px*Math.sin(r.angle);
+    ctx.fillStyle=r.col;ctx.beginPath();ctx.arc(rx_ec,ry_ec,2.5,0,TAU);ctx.fill();
+    ctx.font='7px Share Tech Mono';ctx.fillStyle=r.col+'99';ctx.fillText(r.name,rx_ec+4,ry_ec+3);
+    ctx.restore();
+  }
+
+  // Draw Earth
+  drawEarthAt(ctx,earthX,earthY,eR);
+  ctx.strokeStyle='#ffffff08';ctx.lineWidth=.5;
+  for(let lat=30;lat<90;lat+=30){ctx.beginPath();ctx.arc(earthX,earthY,eR*Math.cos(lat*DEG),0,TAU);ctx.stroke();}
+
+  // Main orbit ellipse — draw rotated around Earth
+  ctx.save();
+  ctx.translate(earthX,earthY);ctx.rotate(incTilt);ctx.translate(-earthX+ellCX,0);
+  ctx.strokeStyle='#00ff8866';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
+  ctx.beginPath();ctx.ellipse(0,0,a_px,b_px,0,0,TAU);
+  ctx.stroke();ctx.setLineDash([]);
+  if(ecc>0.015){
+    ctx.fillStyle='#ff880077';ctx.beginPath();ctx.arc(a_px,0,3,0,TAU);ctx.fill();
+    ctx.fillStyle='#00aaffaa';ctx.beginPath();ctx.arc(-a_px,0,3,0,TAU);ctx.fill();
+    ctx.font='7px Share Tech Mono';
+    ctx.fillStyle='#ff880099';ctx.fillText('Peri',a_px-16,-5);
+    ctx.fillStyle='#00aaffaa';ctx.fillText('Apo',-a_px+4,-5);
+  }
+  ctx.restore();
+
+  // ISS position — using ellToScreen helper
+  const iss_ec_x=a_px*Math.cos(targetAngle);
+  const iss_ec_y=b_px*Math.sin(targetAngle);
+  const issPos=ellToScreen(iss_ec_x,iss_ec_y);
+  drawMiniISS(OCX,issPos.x,issPos.y,3.2);
+  ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ff8877';ctx.fillText('ISS',issPos.x+5,issPos.y-4);
+
+  // Chaser position
+  if(!failed){
+    const angOff=C.ry/R_ORB,radFrac=C.rx/R_ORB,ca=targetAngle-angOff;
+    const c_ec_x=a_px*(1+radFrac*5)*Math.cos(ca);
+    const c_ec_y=b_px*(1+radFrac*2)*Math.sin(ca);
+    const chaPos=ellToScreen(c_ec_x,c_ec_y);
+    ctx.fillStyle='#00ff88';ctx.beginPath();ctx.arc(chaPos.x,chaPos.y,2.5,0,TAU);ctx.fill();
+    ctx.strokeStyle='#00ff8833';ctx.lineWidth=.5;ctx.setLineDash([2,3]);
+    ctx.beginPath();ctx.moveTo(issPos.x,issPos.y);ctx.lineTo(chaPos.x,chaPos.y);ctx.stroke();ctx.setLineDash([]);
+    ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ff88';ctx.fillText('CHSR',chaPos.x+4,chaPos.y-4);
+  }
+
+  // Debris on orbit
+  if(debrisEnabled){
+    for(const d of debris){
+      const da=targetAngle-d.ry/R_ORB;
+      const d_ec_x=a_px*Math.cos(da),d_ec_y=b_px*Math.sin(da);
+      const dp=ellToScreen(d_ec_x,d_ec_y);
+      ctx.fillStyle='#ff440077';ctx.beginPath();ctx.arc(dp.x,dp.y,1.5,0,TAU);ctx.fill();
+    }
+  }
+
+  ctx.font='7px Share Tech Mono';ctx.fillStyle='#ffffff33';
+  ctx.fillText('h='+(ORB.alt/1000).toFixed(0)+'km  e='+ecc.toFixed(3)+'  i='+ORB.inc.toFixed(0)+'°  Earth@focus  scroll=zoom',4,H-4);
 }
 
-// ── DRAW ORBIT VIEW ───────────────────────────────
-function drawOrbit(){
-  const ctx=OCTX,W=310,H=310,cx=W/2,cy=H/2;
-  ctx.fillStyle='#000508';
-  ctx.fillRect(0,0,W,H);
-  for(const s of starsBG){
-    ctx.globalAlpha=s.b*.55;
-    ctx.fillStyle='#fff';
-    ctx.beginPath();ctx.arc(s.x*W,s.y*H,s.r,0,TAU);ctx.fill();
-  }
-  ctx.globalAlpha=1;
-  const SCALE=.68,eR=cx*SCALE,orbitR=eR*(R_ORB/R_EARTH);
-  // Earth glow
-  const grd=ctx.createRadialGradient(cx,cy,eR*.4,cx,cy,eR*2.3);
-  grd.addColorStop(0,'#0d3a8844');grd.addColorStop(1,'transparent');
-  ctx.fillStyle=grd;ctx.beginPath();ctx.arc(cx,cy,eR*2.3,0,TAU);ctx.fill();
-  // Earth body
-  const erd=ctx.createRadialGradient(cx-eR*.3,cy-eR*.3,0,cx,cy,eR);
+function drawEarthAt(ctx,ex,ey,eR){
+  const eg=ctx.createRadialGradient(ex,ey,eR*.3,ex,ey,eR*1.9);
+  eg.addColorStop(0,'#0d3a8833');eg.addColorStop(1,'transparent');
+  ctx.fillStyle=eg;ctx.beginPath();ctx.arc(ex,ey,eR*1.9,0,TAU);ctx.fill();
+  const erd=ctx.createRadialGradient(ex-eR*.3,ey-eR*.3,0,ex,ey,eR);
   erd.addColorStop(0,'#1e5fc4');erd.addColorStop(.5,'#0c3a88');erd.addColorStop(1,'#041a55');
-  ctx.fillStyle=erd;ctx.beginPath();ctx.arc(cx,cy,eR,0,TAU);ctx.fill();
-  // Atmosphere
-  const atm=ctx.createRadialGradient(cx,cy,eR,cx,cy,eR+7);
-  atm.addColorStop(0,'#2277ff88');atm.addColorStop(1,'transparent');
-  ctx.fillStyle=atm;ctx.beginPath();ctx.arc(cx,cy,eR+5,0,TAU);ctx.fill();
-  // Lat lines on Earth
-  ctx.strokeStyle='#ffffff09';ctx.lineWidth=.5;
-  for(let lat=-60;lat<=60;lat+=30){
-    const xr=eR*Math.cos(lat*DEG);
-    ctx.beginPath();ctx.arc(cx,cy,xr,0,TAU);ctx.stroke();
-  }
-  // Extra sats
-  const sats=[
-    {n:'HST',f:1.01,a:targetAngle+1.3,c:'#88aaff'},
-    {n:'GPS',f:1.45,a:targetAngle+2.2,c:'#aaffaa'},
-    {n:'CRS',f:1.00,a:targetAngle-0.9,c:'#ffaaaa'},
-    {n:'STA',f:0.99,a:targetAngle+0.55,c:'#ffcc88'},
-  ];
-  for(const s of sats){
-    const sr=orbitR*s.f;
-    ctx.strokeStyle=s.c+'22';ctx.lineWidth=.5;ctx.setLineDash([2,5]);
-    ctx.beginPath();ctx.arc(cx,cy,sr,0,TAU);ctx.stroke();ctx.setLineDash([]);
-    const sx=cx+Math.cos(s.a)*sr,sy=cy+Math.sin(s.a)*sr;
-    ctx.fillStyle=s.c;ctx.beginPath();ctx.arc(sx,sy,2.2,0,TAU);ctx.fill();
-    ctx.font='7px Share Tech Mono';ctx.fillStyle=s.c+'99';ctx.fillText(s.n,sx+4,sy+3);
-  }
-  // Main orbit path
-  ctx.strokeStyle='#00ff8844';ctx.lineWidth=1;ctx.setLineDash([4,5]);
-  ctx.beginPath();ctx.arc(cx,cy,orbitR,0,TAU);ctx.stroke();ctx.setLineDash([]);
-  // Target
-  const tx=cx+Math.cos(targetAngle)*orbitR,ty=cy+Math.sin(targetAngle)*orbitR;
-  drawMiniISS(ctx,tx,ty,3.5);
-  // Chaser offset in orbit view
-  const angOff=C.ry/R_ORB;
-  const radOff=C.rx*(orbitR/R_ORB)*20;
-  const ca=targetAngle-angOff,cr=orbitR+radOff;
-  const chx=cx+Math.cos(ca)*cr,chy=cy+Math.sin(ca)*cr;
-  ctx.fillStyle='#00ff88';ctx.beginPath();ctx.arc(chx,chy,3,0,TAU);ctx.fill();
-  ctx.strokeStyle='#00ff8844';ctx.lineWidth=.5;ctx.setLineDash([2,3]);
-  ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(chx,chy);ctx.stroke();ctx.setLineDash([]);
-  ctx.font='8px Share Tech Mono';
-  ctx.fillStyle='#00ff8888';ctx.fillText('ISS',tx+5,ty-4);
-  ctx.fillStyle='#00ff88';ctx.fillText('CHASER',chx+4,chy-4);
-  // Inclination label
-  ctx.font='7px Share Tech Mono';ctx.fillStyle='#ffffff44';
-  ctx.fillText('i='+ORB.inc.toFixed(0)+'°',cx+2,cy-orbitR-4);
+  ctx.fillStyle=erd;ctx.beginPath();ctx.arc(ex,ey,eR,0,TAU);ctx.fill();
+  ctx.strokeStyle='#2277ff55';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(ex,ey,eR+2,0,TAU);ctx.stroke();
 }
 
 function drawMiniISS(ctx,x,y,s){
   ctx.save();ctx.translate(x,y);
-  ctx.fillStyle='#aaaacc';ctx.fillRect(-s*5,-s*.7,s*10,s*1.4);
+  ctx.fillStyle='#aaaacc';ctx.fillRect(-s*5,-.7*s,s*10,1.4*s);
   ctx.fillStyle='#1a3a88';
-  ctx.fillRect(-s*8,-s*.5,s*2.5,s*1);ctx.fillRect(s*5.5,-s*.5,s*2.5,s*1);
+  ctx.fillRect(-s*8,-.5*s,s*2.5,s);ctx.fillRect(s*5.5,-.5*s,s*2.5,s);
   ctx.fillRect(-s*1.5,-s*2.8,s*3,s*2);
   ctx.restore();
 }
 
-// ── DRAW PROXIMITY VIEW ───────────────────────────
+// ── PROX DRAW ─────────────────────────────────────────
 function drawProx(rdt){
-  const ctx=PCTX;
+  const ctx=PCX;
   ctx.fillStyle='#000205';ctx.fillRect(0,0,PW,PH);
 
-  // Starfield (sphere projection with camera yaw)
-  const camYaw=viewMode==='chase'?C.yaw:0;
+  const camY=vm==='chase'?C.yaw:0;
   for(const s of stars3d){
-    const px=s.x*Math.cos(camYaw)+s.y*Math.sin(camYaw);
-    const py=-s.z;
-    const pz=-s.x*Math.sin(camYaw)+s.y*Math.cos(camYaw);
-    if(pz<=0) continue;
-    const sx=PW/2+px/pz*PW*.65,sy=PH/2+py/pz*PH*.65;
-    if(sx<0||sx>PW||sy<0||sy>PH) continue;
-    const tw=.5+.5*Math.sin(simTime*1.1+s.tw);
-    ctx.globalAlpha=s.b*tw;ctx.fillStyle='#fff';
-    ctx.beginPath();ctx.arc(sx,sy,s.r,0,TAU);ctx.fill();
+    const px=s.x*Math.cos(camY)+s.y*Math.sin(camY),py=-s.z,pz=-s.x*Math.sin(camY)+s.y*Math.cos(camY);
+    if(pz<=0)continue;
+    const sx=PW/2+px/pz*PW*.6,sy=PH/2+py/pz*PH*.6;
+    if(sx<-2||sx>PW+2||sy<-2||sy>PH+2)continue;
+    ctx.globalAlpha=s.b*(.5+.5*Math.sin(simTime+s.tw));
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(sx,sy,s.r,0,TAU);ctx.fill();
   }
   ctx.globalAlpha=1;
 
-  // Earth limb
-  {
-    const elx=PW*.88,ely=PH+PH*.08,elR=PH*.8;
-    const g=ctx.createRadialGradient(elx,ely,elR*.25,elx,ely,elR);
-    g.addColorStop(0,'#0a1f6033');g.addColorStop(.7,'#05144499');g.addColorStop(.9,'#041244');g.addColorStop(1,'transparent');
-    ctx.fillStyle=g;ctx.beginPath();ctx.arc(elx,ely,elR,0,TAU);ctx.fill();
-    const ag=ctx.createRadialGradient(elx,ely,elR,elx,ely,elR+50);
-    ag.addColorStop(0,'#3388ff44');ag.addColorStop(1,'transparent');
-    ctx.fillStyle=ag;ctx.beginPath();ctx.arc(elx,ely,elR+40,0,TAU);ctx.fill();
+  {const ex=PW*.87,ey=PH+PH*.06,eR=PH*.88;
+  const g=ctx.createRadialGradient(ex,ey,eR*.2,ex,ey,eR);
+  g.addColorStop(0,'#0a1f6022');g.addColorStop(.65,'#051444aa');g.addColorStop(.9,'#041244');g.addColorStop(1,'transparent');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(ex,ey,eR,0,TAU);ctx.fill();
+  const ag=ctx.createRadialGradient(ex,ey,eR*.9,ex,ey,eR+50);
+  ag.addColorStop(0,'#3388ff44');ag.addColorStop(1,'transparent');
+  ctx.fillStyle=ag;ctx.beginPath();ctx.arc(ex,ey,eR+40,0,TAU);ctx.fill();}
+
+  const ppm=bPPM()*ZM[vm];
+  let tX,tY;
+  if(vm==='chase'){tX=PW/2-C.rx*ppm;tY=PH/2+C.ry*ppm;}
+  else if(vm==='ric'){tX=PW/2;tY=PH/2;}
+  else{tX=PW/2-fc.x*ppm;tY=PH/2+fc.y*ppm;}
+  const cX=vm==='chase'?PW/2:tX+C.rx*ppm;
+  const cY=vm==='chase'?PH/2:tY-C.ry*ppm;
+
+  for(const d of bgDerelicts){
+    d.rot+=d.rr*rdt;
+    const dx=tX+d.rx*ppm,dy=tY-d.ry*ppm;
+    if(dx<-200||dx>PW+200||dy<-200||dy>PH+200)continue;
+    const dist=Math.max(50,Math.hypot(d.rx-C.rx,d.ry-C.ry));
+    ctx.globalAlpha=Math.min(.6,80/dist);
+    ctx.save();ctx.translate(dx,dy);ctx.rotate(d.rot);
+    drawBgDerelict(ctx,d.type,d.sz*.5);
+    ctx.restore();ctx.globalAlpha=1;
   }
 
-  // ── WORLD→SCREEN MAPPING ──
-  // Convention: target at Hill origin (0,0,0)
-  // Screen: right=+Radial(x), UP=+In-track(y), (into-screen ~ +CrossTrack)
-  // Canvas y is inverted: screenY = anchorY - hillY*ppm
-  const ppm=basePPM()*zoom[viewMode];
-
-  // Where is the Hill origin (target) on screen?
-  let tSX,tSY;
-  if(viewMode==='chase'){
-    // Chaser at screen center; target is offset by (C.rx, C.ry) from chaser
-    // screenX(target) = PW/2 + (0-C.rx)*ppm ... wait no:
-    // screenX(obj) = chaserScreenX + (obj_rx - C.rx)*ppm
-    // chaserScreenX = PW/2 → screenX(target) = PW/2 + (0-C.rx)*ppm
-    tSX=PW/2 + (-C.rx)*ppm;
-    tSY=PH/2 - (-C.ry)*ppm; // minus because canvas y inverted
-    // simplified: tSX=PW/2-C.rx*ppm, tSY=PH/2+C.ry*ppm
-    tSX=PW/2-C.rx*ppm;
-    tSY=PH/2+C.ry*ppm; // ry is negative (chaser behind), so tSY > PH/2 → target above chaser? No.
-    // Wait: C.ry is negative (chaser is at -500, target at 0)
-    // tSY = PH/2 + C.ry*ppm = PH/2 + (-500)*ppm → target appears ABOVE chaser (smaller y value) ✓
-  } else if(viewMode==='ric'){
-    tSX=PW/2; tSY=PH/2;
-  } else {
-    // free
-    tSX=PW/2 - freeCenter.x*ppm;
-    tSY=PH/2 + freeCenter.y*ppm;
+  for(const rr of[2000,1000,500,200,100,50,20,5,1]){
+    const rPx=rr*ppm;if(rPx<5||rPx>Math.max(PW,PH)*2.5)continue;
+    ctx.strokeStyle=rr<=20?'#ffaa0030':'#00ff8816';ctx.lineWidth=rr<=20?1:.5;
+    ctx.beginPath();ctx.arc(tX,tY,rPx,0,TAU);ctx.stroke();
+    if(rPx>20){ctx.font='8px Share Tech Mono';ctx.fillStyle=rr<=20?'#ffaa0050':'#00ff8830';ctx.fillText(rr>=1000?(rr/1000)+'km':rr+'m',tX+rPx+2,tY-2);}
   }
 
-  // Chaser screen pos (Hill coords: rx,ry relative to target at origin)
-  let cSX,cSY;
-  if(viewMode==='chase'){
-    cSX=PW/2; cSY=PH/2;
-  } else {
-    cSX=tSX + C.rx*ppm;
-    cSY=tSY - C.ry*ppm; // canvas y inverted
+  {const cw=15*ppm;ctx.strokeStyle='#00ff8813';ctx.lineWidth=1;ctx.setLineDash([6,9]);ctx.beginPath();ctx.moveTo(tX-cw,tY-3000);ctx.lineTo(tX-cw,tY+3000);ctx.moveTo(tX+cw,tY-3000);ctx.lineTo(tX+cw,tY+3000);ctx.stroke();ctx.setLineDash([]);}
+
+  if(vm==='ric'||vm==='free'){
+    const L=Math.min(PW,PH)*.35;
+    ctx.strokeStyle='#ff444418';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(tX,tY);ctx.lineTo(tX+L,tY);ctx.stroke();ctx.fillStyle='#ff4444aa';ctx.font='9px Share Tech Mono';ctx.fillText('R+',tX+L-14,tY-3);
+    ctx.strokeStyle='#00ff8818';ctx.beginPath();ctx.moveTo(tX,tY);ctx.lineTo(tX,tY-L);ctx.stroke();ctx.fillStyle='#00ff88aa';ctx.fillText('I+',tX+3,tY-L+11);
+    ctx.strokeStyle='#4488ff18';ctx.beginPath();ctx.moveTo(tX,tY);ctx.lineTo(tX-L*.65,tY+L*.65);ctx.stroke();ctx.fillStyle='#4488ffaa';ctx.fillText('C',tX-L*.65-8,tY+L*.65+10);
   }
 
-  // ── GRID & APPROACH CORRIDOR ──
-  // Range rings around target
-  for(const rr of [2000,1000,500,200,100,50,20,5,1]){
-    const rPx=rr*ppm;
-    if(rPx<4||rPx>Math.max(PW,PH)*2.5) continue;
-    ctx.strokeStyle=rr<=20?'#ffaa0033':'#00ff8818';
-    ctx.lineWidth=rr<=20?1:.5;
-    ctx.beginPath();ctx.arc(tSX,tSY,rPx,0,TAU);ctx.stroke();
-    if(rPx>18){
-      ctx.font='8px Share Tech Mono';
-      ctx.fillStyle=rr<=20?'#ffaa0055':'#00ff8833';
-      ctx.fillText(rr>=1000?rr/1000+'km':rr+'m',tSX+rPx+2,tSY-2);
+  if(debrisEnabled){
+    for(const d of debris){
+      const dsx=tX+d.rx*ppm,dsy=tY-d.ry*ppm;
+      const s=Math.max(.8,Math.min(5,ppm*.04))*d.sz*.3;
+      const dr=Math.hypot(d.rx-C.rx,d.ry-C.ry);
+      ctx.save();ctx.translate(dsx,dsy);ctx.rotate(d.rot);
+      ctx.fillStyle='#cc6622';
+      ctx.beginPath();ctx.moveTo(0,-s*2.2);ctx.lineTo(s*1.5,s*1.2);ctx.lineTo(-s*.5,s*.6);ctx.lineTo(-s*1.5,s*1.2);
+      ctx.closePath();ctx.fill();ctx.strokeStyle='#ff8844';ctx.lineWidth=.5;ctx.stroke();ctx.restore();
+      if(dr<150){
+        const alpha=Math.min(1,(150-dr)/150)*.9;
+        ctx.save();ctx.translate(dsx,dsy);ctx.rotate(Math.PI/4);
+        ctx.strokeStyle='rgba(255,100,0,'+alpha+')';ctx.lineWidth=1;
+        const ds=14;ctx.strokeRect(-ds/2,-ds/2,ds,ds);ctx.restore();
+        if(dr<80){ctx.strokeStyle='rgba(255,80,0,'+(alpha*.5)+')';ctx.lineWidth=.5;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(cX,cY);ctx.lineTo(dsx,dsy);ctx.stroke();ctx.setLineDash([]);}
+      }
     }
   }
-  // Approach corridor (±15m in radial = ±x, along y)
-  {
-    const cw=15*ppm;
-    ctx.strokeStyle='#00ff8818';ctx.lineWidth=1;ctx.setLineDash([6,9]);
+
+  const issScale=Math.max(.4,Math.min(10,ppm*.18));
+  if(!failed||docked){ctx.save();ctx.translate(tX,tY);drawISS(ctx,issScale);ctx.restore();}
+
+  // Draw docking port marker at actual Hill position (0, DOCK_PORT_Y)
+  if(!failed){
+    const portPos=getScreenPos(0,DOCK_PORT_Y);
+    const dpDist=Math.hypot(C.rx,C.ry-DOCK_PORT_Y,C.rz);
+    const portR=Math.max(6,DOCK_CAPTURE_R*ppm);
+    // Pulsing ring
+    const pulse=0.5+0.5*Math.sin(simTime*4);
+    ctx.strokeStyle=docked?'#00ffff':`rgba(0,${Math.floor(180+75*pulse)},${Math.floor(220+35*pulse)},${0.6+0.3*pulse})`;
+    ctx.lineWidth=docked?2:1.5;
+    ctx.beginPath();ctx.arc(portPos.x,portPos.y,portR,0,TAU);ctx.stroke();
+    // Cross-hair at port
+    const cs2=portR*0.6;
+    ctx.strokeStyle=docked?'#00ffffaa':'#00ccffaa';ctx.lineWidth=1;
     ctx.beginPath();
-    ctx.moveTo(tSX-cw,tSY-3000);ctx.lineTo(tSX-cw,tSY+3000);
-    ctx.moveTo(tSX+cw,tSY-3000);ctx.lineTo(tSX+cw,tSY+3000);
-    ctx.stroke();ctx.setLineDash([]);
-  }
-  // RIC axes (ric/free views)
-  if(viewMode==='ric'||viewMode==='free'){
-    const aLen=Math.min(PW,PH)*.38;
-    ctx.strokeStyle='#ff444422';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(tSX,tSY);ctx.lineTo(tSX+aLen,tSY);ctx.stroke();
-    ctx.fillStyle='#ff4444aa';ctx.font='9px Share Tech Mono';ctx.fillText('R+',tSX+aLen-14,tSY-3);
-    ctx.strokeStyle='#00ff8822';
-    ctx.beginPath();ctx.moveTo(tSX,tSY);ctx.lineTo(tSX,tSY-aLen);ctx.stroke();
-    ctx.fillStyle='#00ff88aa';ctx.fillText('I+',tSX+3,tSY-aLen+11);
-    ctx.strokeStyle='#4488ff22';
-    ctx.beginPath();ctx.moveTo(tSX,tSY);ctx.lineTo(tSX-aLen*.65,tSY+aLen*.65);ctx.stroke();
-    ctx.fillStyle='#4488ffaa';ctx.fillText('C',tSX-aLen*.65-10,tSY+aLen*.65+10);
+    ctx.moveTo(portPos.x-cs2,portPos.y);ctx.lineTo(portPos.x+cs2,portPos.y);
+    ctx.moveTo(portPos.x,portPos.y-cs2);ctx.lineTo(portPos.x,portPos.y+cs2);
+    ctx.stroke();
+    // Label
+    if(dpDist<80&&!docked){
+      ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ccffaa';
+      ctx.fillText('PORT '+dpDist.toFixed(1)+'m',portPos.x+portR+3,portPos.y+3);
+    }
   }
 
-  // ── TARGET (ISS) ──
-  {
-    const s=Math.max(.4,Math.min(10,ppm*.18));
-    ctx.save();ctx.translate(tSX,tSY);drawISS(ctx,s);ctx.restore();
-  }
-  // Docking port reticle
-  {
-    ctx.strokeStyle=docked?'#00ffff':'#0088ff';ctx.lineWidth=1.5;
-    const ds=6;
-    ctx.strokeRect(tSX-ds,tSY-ds,ds*2,ds*2);
-    ctx.beginPath();ctx.moveTo(tSX-ds*2.5,tSY);ctx.lineTo(tSX-ds,tSY);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(tSX+ds*2.5,tSY);ctx.lineTo(tSX+ds,tSY);ctx.stroke();
-  }
-
-  // ── CHASER ──
-  {
+  if(!failed){
     const s=Math.max(.4,Math.min(8,ppm*.1));
-    ctx.save();ctx.translate(cSX,cSY);ctx.rotate(C.yaw);
-    drawChaser(ctx,s,cSX,cSY);
+    ctx.save();ctx.translate(cX,cY);ctx.rotate(C.yaw);
+    drawChaser(ctx,s,cX,cY);
     ctx.restore();
+    if(showVV){
+      const rv=Math.hypot(C.vx,C.vy,C.vz);
+      if(rv>0.02){
+        const vsx=C.vx*ppm*4,vsy=-C.vy*ppm*4;
+        const vl=Math.min(100,Math.hypot(vsx,vsy)),va=Math.atan2(vsy,vsx);
+        const sv=Math.min(.8,Math.hypot(C.rx,C.ry,C.rz)*.0015);
+        const vc2=rv>sv*2?'#ff5533':'#00ffaa';
+        ctx.save();ctx.translate(cX,cY);ctx.rotate(va);
+        ctx.strokeStyle=vc2+'bb';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(vl,0);
+        ctx.moveTo(vl-7,-4);ctx.lineTo(vl,0);ctx.lineTo(vl-7,4);ctx.stroke();
+        ctx.rotate(-va);ctx.font='8px Share Tech Mono';ctx.fillStyle=vc2+'cc';
+        ctx.fillText(rv.toFixed(2)+'m/s',vl*.5-10,-7);ctx.restore();
+      }
+    }
   }
 
-  // Velocity vector
-  const relV=Math.hypot(C.vx,C.vy,C.vz);
-  if(relV>0.02&&!docked){
-    // velocity in Hill, map to screen (x→right, y→up=screen-down)
-    const vsx=C.vx*ppm*4,vsy=-C.vy*ppm*4;
-    const vLen=Math.min(90,Math.hypot(vsx,vsy));
-    const vAng=Math.atan2(vsy,vsx);
-    ctx.save();ctx.translate(cSX,cSY);ctx.rotate(vAng);
-    ctx.strokeStyle='#ffaa0088';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(vLen,0);
-    ctx.moveTo(vLen-6,-4);ctx.lineTo(vLen,0);ctx.lineTo(vLen-6,4);
-    ctx.stroke();ctx.restore();
-    // small label
-    ctx.font='8px Share Tech Mono';ctx.fillStyle='#ffaa0088';
-    ctx.fillText('V='+relV.toFixed(2)+'m/s',cSX+14,cSY-14);
-  }
-
-  // Particles
   for(const f of flares){
-    f.life-=rdt*3.5;f.x+=f.vx*rdt;f.y+=f.vy*rdt;
-    if(f.life<=0) continue;
+    f.life-=rdt*3.5;f.x+=f.vx*rdt;f.y+=f.vy*rdt;if(f.life<=0)continue;
     ctx.globalAlpha=f.life*.7;
     const gr=ctx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.r*4);
     gr.addColorStop(0,'#fff');gr.addColorStop(.4,'#ff8800');gr.addColorStop(1,'transparent');
     ctx.fillStyle=gr;ctx.beginPath();ctx.arc(f.x,f.y,f.r*4,0,TAU);ctx.fill();
   }
   flares=flares.filter(f=>f.life>0);
-  for(const p of particles){
-    p.life-=rdt*1.2;p.x+=p.vx*rdt;p.y+=p.vy*rdt;
-    if(p.life<=0) continue;
-    ctx.globalAlpha=p.life;ctx.fillStyle=p.col;
-    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,TAU);ctx.fill();
+  for(const p of parts){
+    p.life-=rdt*1.2;p.x+=p.vx*rdt;p.y+=p.vy*rdt;if(p.life<=0)continue;
+    ctx.globalAlpha=p.life;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,TAU);ctx.fill();
   }
-  particles=particles.filter(p=>p.life>0);
+  parts=parts.filter(p=>p.life>0);
   ctx.globalAlpha=1;
 
-  drawHUD(ctx,tSX,tSY,cSX,cSY,ppm);
+  drawHUD(ctx,tX,tY,cX,cY,ppm);
+
+  if(failFlash>0){ctx.fillStyle='rgba(200,0,0,'+(failFlash*.5)+')';ctx.fillRect(0,0,PW,PH);failFlash=Math.max(0,failFlash-.04);}
+}
+
+function drawBgDerelict(ctx,type,s){
+  ctx.strokeStyle='#334455';ctx.fillStyle='#1a2a3a';ctx.lineWidth=.7;
+  if(type===0){ctx.fillRect(-s,-s*.7,s*2,s*1.4);ctx.strokeRect(-s,-s*.7,s*2,s*1.4);ctx.fillStyle='#0d1a2a';ctx.fillRect(-s*2.4,-s*.5,s*1.2,s);ctx.fillRect(s*1.2,-s*.5,s*1.2,s);ctx.strokeRect(-s*2.4,-s*.5,s*1.2,s);ctx.strokeRect(s*1.2,-s*.5,s*1.2,s);}
+  else if(type===1){ctx.fillStyle='#1a2a1a';ctx.beginPath();ctx.ellipse(0,0,s*.7,s*2.8,0,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle='#0d1a0d';ctx.beginPath();ctx.moveTo(-s*.7,s*2.5);ctx.lineTo(s*.7,s*2.5);ctx.lineTo(s*.3,s*3.5);ctx.lineTo(-s*.3,s*3.5);ctx.closePath();ctx.fill();}
+  else{ctx.fillStyle='#222';ctx.beginPath();const pts=6;for(let i=0;i<pts;i++){const a=i*TAU/pts,r=s*(1+Math.sin(i*1.7)*.4);if(i===0)ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.closePath();ctx.fill();ctx.stroke();}
 }
 
 function drawISS(ctx,s){
-  // Main truss
   ctx.fillStyle='#bbbbcc';ctx.fillRect(-50*s,-3*s,100*s,6*s);
-  // 4 solar panel pairs
   for(const px of[-38,-20,20,38]){
     const g=ctx.createLinearGradient(px*s,-18*s,px*s,0);
     g.addColorStop(0,'#1a2e7a');g.addColorStop(.4,'#2244aa');g.addColorStop(1,'#1a2e7a');
-    ctx.fillStyle=g;
-    ctx.fillRect((px-5)*s,-18*s,10*s,14*s);ctx.fillRect((px-5)*s,4*s,10*s,14*s);
+    ctx.fillStyle=g;ctx.fillRect((px-5)*s,-18*s,10*s,14*s);ctx.fillRect((px-5)*s,4*s,10*s,14*s);
     ctx.strokeStyle='#3355aa55';ctx.lineWidth=.5;
-    for(let l=0;l<4;l++){
-      const lx=(px-5+l*3.2)*s;
-      ctx.beginPath();ctx.moveTo(lx,-18*s);ctx.lineTo(lx,-4*s);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(lx,4*s);ctx.lineTo(lx,18*s);ctx.stroke();
-    }
+    for(let l=0;l<4;l++){const lx=(px-5+l*3.2)*s;ctx.beginPath();ctx.moveTo(lx,-18*s);ctx.lineTo(lx,-4*s);ctx.stroke();ctx.beginPath();ctx.moveTo(lx,4*s);ctx.lineTo(lx,18*s);ctx.stroke();}
     ctx.strokeRect((px-5)*s,-18*s,10*s,14*s);ctx.strokeRect((px-5)*s,4*s,10*s,14*s);
   }
-  // Modules
-  for(const m of [{x:-15,y:-4,w:30,h:8,c:'#ccccee'},{x:-8,y:-12,w:16,h:9,c:'#aaaacc'},
-                  {x:5,y:-4,w:18,h:7,c:'#bbbbdd'},{x:-26,y:-4,w:13,h:7,c:'#aaaacc'}]){
+  for(const m of[{x:-15,y:-4,w:30,h:8,c:'#ccccee'},{x:-8,y:-12,w:16,h:9,c:'#aaaacc'},{x:5,y:-4,w:18,h:7,c:'#bbbbdd'},{x:-26,y:-4,w:13,h:7,c:'#aaaacc'}]){
     const g=ctx.createLinearGradient(m.x*s,m.y*s,(m.x+m.w)*s,(m.y+m.h)*s);
     g.addColorStop(0,'#e0e0ee');g.addColorStop(.5,m.c);g.addColorStop(1,'#777788');
     ctx.fillStyle=g;ctx.fillRect(m.x*s,m.y*s,m.w*s,m.h*s);
     ctx.strokeStyle='#55558855';ctx.lineWidth=.5;ctx.strokeRect(m.x*s,m.y*s,m.w*s,m.h*s);
   }
-  ctx.strokeStyle='#00aaffaa';ctx.lineWidth=1;ctx.strokeRect(-4*s,-8*s,8*s,6*s);
-  // Nav lights
+  const portY=6*s;
+  ctx.strokeStyle='#00ccff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,portY,4*s,0,TAU);ctx.stroke();
+  ctx.strokeStyle='#00ccff77';ctx.lineWidth=.8;
+  ctx.beginPath();ctx.moveTo(-4*s,portY);ctx.lineTo(-5*s,portY+5*s);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(4*s,portY);ctx.lineTo(5*s,portY+5*s);ctx.stroke();
+  ctx.fillStyle='#001833';ctx.beginPath();ctx.arc(0,portY,2.5*s,0,TAU);ctx.fill();
   const t1=.5+.5*Math.sin(simTime*3),t2=.5+.5*Math.sin(simTime*3+Math.PI);
-  ctx.fillStyle=`rgba(255,50,0,${t1})`;ctx.beginPath();ctx.arc(-50*s,0,2,0,TAU);ctx.fill();
-  ctx.fillStyle=`rgba(0,255,80,${t2})`;ctx.beginPath();ctx.arc(50*s,0,2,0,TAU);ctx.fill();
+  ctx.fillStyle='rgba(255,50,0,'+t1+')';ctx.beginPath();ctx.arc(-50*s,0,2,0,TAU);ctx.fill();
+  ctx.fillStyle='rgba(0,255,80,'+t2+')';ctx.beginPath();ctx.arc(50*s,0,2,0,TAU);ctx.fill();
 }
 
-function drawChaser(ctx,s,worldX,worldY){
-  // Engine plumes (in world space, spawning flares)
-  function plume(ox,oy,ang,len,col){
+function drawChaser(ctx,s,wx,wy){
+  function pl(ox,oy,ang,len,col){
     ctx.save();ctx.translate(ox*s,oy*s);ctx.rotate(ang);
     const g=ctx.createLinearGradient(0,0,0,len*s);
-    g.addColorStop(0,col+'cc');g.addColorStop(1,'transparent');
-    ctx.fillStyle=g;ctx.beginPath();
-    ctx.moveTo(-2.5*s,0);ctx.lineTo(2.5*s,0);ctx.lineTo(0,len*s);
-    ctx.closePath();ctx.fill();ctx.restore();
+    g.addColorStop(0,col+'ee');g.addColorStop(.5,col+'88');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(-2.2*s,0);ctx.lineTo(2.2*s,0);ctx.lineTo(0,len*s);ctx.closePath();ctx.fill();ctx.restore();
   }
-  if(thr.fwd) { plume(0,9,0,28,'#ff7700'); spawnFlares(worldX,worldY); }
-  if(thr.aft) { plume(0,-9,Math.PI,22,'#ff7700'); spawnFlares(worldX,worldY); }
-  if(thr.port){ plume(-7,0,-Math.PI/2,18,'#88aaff'); }
-  if(thr.stbd){ plume(7,0,Math.PI/2,18,'#88aaff'); }
-  if(thr.up)  { plume(0,4,-Math.PI*.3,14,'#aaffaa'); }
-  if(thr.dn)  { plume(0,-4,Math.PI*.7,14,'#aaffaa'); }
-  // Body
-  const bg=ctx.createLinearGradient(-5*s,-10*s,5*s,10*s);
+  if(thr.fwd){pl(0,9,0,28,'#ff6600');spawnFlares(wx,wy);}
+  if(thr.aft){pl(0,-9,Math.PI,22,'#ff6600');spawnFlares(wx,wy);}
+  if(thr.port){pl(-6,0,-Math.PI/2,18,'#7799ff');}
+  if(thr.stbd){pl(6,0,Math.PI/2,18,'#7799ff');}
+  if(thr.up){pl(0,4,-Math.PI*.25,14,'#99ffaa');}
+  if(thr.dn){pl(0,-4,Math.PI*.75,14,'#99ffaa');}
+  if(thr.yawL){pl(0,-9,-Math.PI/2,16,'#7799ff');pl(0,9,Math.PI/2,16,'#7799ff');}
+  if(thr.yawR){pl(0,-9,Math.PI/2,16,'#7799ff');pl(0,9,-Math.PI/2,16,'#7799ff');}
+  const bg=ctx.createLinearGradient(-4*s,-9*s,4*s,9*s);
   bg.addColorStop(0,'#667788');bg.addColorStop(.5,'#445566');bg.addColorStop(1,'#334455');
-  ctx.fillStyle=bg;ctx.beginPath();
-  if(ctx.roundRect) ctx.roundRect(-4*s,-9*s,8*s,18*s,1.5*s);
-  else ctx.rect(-4*s,-9*s,8*s,18*s);
-  ctx.fill();ctx.strokeStyle='#88aacc55';ctx.lineWidth=.5;ctx.stroke();
-  // Thermal blanket
-  ctx.strokeStyle='#ffffff11';ctx.lineWidth=.5;
+  ctx.fillStyle=bg;
+  ctx.beginPath();
+  if(ctx.roundRect)ctx.roundRect(-4*s,-9*s,8*s,18*s,1.5*s);else ctx.rect(-4*s,-9*s,8*s,18*s);
+  ctx.fill();ctx.strokeStyle='#88aacc44';ctx.lineWidth=.5;ctx.stroke();
+  ctx.strokeStyle='#ffffff10';ctx.lineWidth=.5;
   for(let i=-7;i<9;i+=2){ctx.beginPath();ctx.moveTo(-4*s,i*s);ctx.lineTo(4*s,i*s);ctx.stroke();}
-  // Solar panels
   const sg=ctx.createLinearGradient(-20*s,0,20*s,0);
   sg.addColorStop(0,'#112266');sg.addColorStop(.5,'#1a3388');sg.addColorStop(1,'#112266');
   ctx.fillStyle=sg;
   ctx.fillRect(-22*s,-2.5*s,14*s,5*s);ctx.fillRect(8*s,-2.5*s,14*s,5*s);
-  ctx.strokeStyle='#3355aa55';ctx.lineWidth=.5;
+  ctx.strokeStyle='#3355aa44';ctx.lineWidth=.5;
   ctx.strokeRect(-22*s,-2.5*s,14*s,5*s);ctx.strokeRect(8*s,-2.5*s,14*s,5*s);
-  for(let i=0;i<4;i++){
-    const x1=(-22+i*3.3)*s,x2=(8+i*3.3)*s;
-    ctx.beginPath();ctx.moveTo(x1,-2.5*s);ctx.lineTo(x1,2.5*s);
-    ctx.moveTo(x2,-2.5*s);ctx.lineTo(x2,2.5*s);ctx.stroke();
-  }
-  // Docking probe
-  ctx.fillStyle='#99bbdd';ctx.fillRect(-1*s,-13*s,2*s,5*s);
-  ctx.beginPath();ctx.arc(0,-13*s,1.5,0,TAU);ctx.fill();
-  // Nav lights
+  for(let i=0;i<4;i++){const x1=(-22+i*3.3)*s,x2=(8+i*3.3)*s;ctx.beginPath();ctx.moveTo(x1,-2.5*s);ctx.lineTo(x1,2.5*s);ctx.moveTo(x2,-2.5*s);ctx.lineTo(x2,2.5*s);ctx.stroke();}
+  ctx.fillStyle='#aaccee';ctx.fillRect(-1.2*s,-14*s,2.4*s,5*s);
+  ctx.fillStyle='#cce8ff';ctx.beginPath();ctx.arc(0,-14*s,1.8,0,TAU);ctx.fill();
+  ctx.strokeStyle='#00ddffcc';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(0,-14*s,3.2,0,TAU);ctx.stroke();
+  ctx.fillStyle='#556677';
+  for(const[nx,ny] of[[-4,-9],[4,-9],[-4,9],[4,9],[-4,0],[4,0]]){ctx.beginPath();ctx.arc(nx*s,ny*s,.8,0,TAU);ctx.fill();}
+  ctx.fillStyle='#3a4f60';
+  for(const[nx,ny] of[[-2,-9],[2,-9],[-2,9],[2,9]]){ctx.beginPath();ctx.arc(nx*s,ny*s,.7,0,TAU);ctx.fill();}
   const l1=.4+.6*Math.sin(simTime*2.5),l2=.4+.6*Math.sin(simTime*2.5+Math.PI);
-  ctx.fillStyle=`rgba(255,0,0,${l1})`;ctx.beginPath();ctx.arc(-4*s,0,1.5,0,TAU);ctx.fill();
-  ctx.fillStyle=`rgba(0,255,0,${l2})`;ctx.beginPath();ctx.arc(4*s,0,1.5,0,TAU);ctx.fill();
+  ctx.fillStyle='rgba(255,0,0,'+l1+')';ctx.beginPath();ctx.arc(-4*s,0,1.5,0,TAU);ctx.fill();
+  ctx.fillStyle='rgba(0,255,0,'+l2+')';ctx.beginPath();ctx.arc(4*s,0,1.5,0,TAU);ctx.fill();
   if((simTime*1.5)%1<.08){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,-9*s,2,0,TAU);ctx.fill();}
 }
 
-function drawHUD(ctx,tSX,tSY,cSX,cSY,ppm){
+function drawHUD(ctx,tX,tY,cX,cY,ppm){
   const range=Math.hypot(C.rx,C.ry,C.rz);
-  const relV=Math.hypot(C.vx,C.vy,C.vz);
-  const safeV=Math.min(0.8,range*0.0015);
-  // Target reticle
-  const rc=docked?'#00ffff':'#00ff8866';ctx.strokeStyle=rc;ctx.lineWidth=1;
+  const rv=Math.hypot(C.vx,C.vy,C.vz);
+  const sv=Math.min(.8,range*.0015);
+  ctx.strokeStyle=docked?'#00ffff':'#00ff8855';ctx.lineWidth=1;
   const rs=10;
   ctx.beginPath();
-  ctx.moveTo(tSX-rs*2,tSY);ctx.lineTo(tSX-rs,tSY);
-  ctx.moveTo(tSX+rs,tSY);ctx.lineTo(tSX+rs*2,tSY);
-  ctx.moveTo(tSX,tSY-rs*2);ctx.lineTo(tSX,tSY-rs);
-  ctx.moveTo(tSX,tSY+rs);ctx.lineTo(tSX,tSY+rs*2);
-  ctx.stroke();
-  ctx.beginPath();ctx.arc(tSX,tSY,rs*.8,0,TAU);ctx.stroke();
-  // Chaser ring (non-chase views)
-  if(viewMode!=='chase'){
-    ctx.strokeStyle='#00ff88cc';ctx.lineWidth=1;
-    ctx.beginPath();ctx.arc(cSX,cSY,7,0,TAU);ctx.stroke();
-  }
-  // HUD box
-  ctx.fillStyle='#00000099';ctx.fillRect(6,PH-96,230,88);
-  ctx.strokeStyle='#00ff8822';ctx.lineWidth=.5;ctx.strokeRect(6,PH-96,230,88);
+  ctx.moveTo(tX-rs*2,tY);ctx.lineTo(tX-rs,tY);ctx.moveTo(tX+rs,tY);ctx.lineTo(tX+rs*2,tY);
+  ctx.moveTo(tX,tY-rs*2);ctx.lineTo(tX,tY-rs);ctx.moveTo(tX,tY+rs);ctx.lineTo(tX,tY+rs*2);
+  ctx.stroke();ctx.beginPath();ctx.arc(tX,tY,rs*.75,0,TAU);ctx.stroke();
+  if(vm!=='chase'&&!failed){ctx.strokeStyle='#00ff88bb';ctx.lineWidth=1;ctx.beginPath();ctx.arc(cX,cY,7,0,TAU);ctx.stroke();}
+  ctx.fillStyle='#00000099';ctx.fillRect(6,PH-98,240,90);
+  ctx.strokeStyle='#00ff8820';ctx.lineWidth=.5;ctx.strokeRect(6,PH-98,240,90);
   ctx.font='10px Share Tech Mono';
-  const sv=Math.min(0.8,range*0.0015);
-  const vc=relV>sv*2?'#ff5533':'#00ffaa';
+  const vc=rv>sv*2?'#ff5533':'#00ffaa';
   const rows=[
-    ['#00ffaa',`RNG:     ${range.toFixed(1)} m`],
-    [vc,        `V_REL:   ${relV.toFixed(3)} m/s  [MAX: ${sv.toFixed(3)}]`],
-    ['#00ffaa',`R:${C.rx.toFixed(1)}  I:${C.ry.toFixed(1)}  C:${C.rz.toFixed(1)} m`],
-    ['#00cc88',`Vr:${C.vx.toFixed(2)} Vi:${C.vy.toFixed(2)} Vc:${C.vz.toFixed(2)}`],
-    ['#00cc88',`YAW:${(C.yaw/DEG).toFixed(1)}°  FUEL:${C.fuel.toFixed(1)}%  ΔV:${C.dv.toFixed(2)}m/s`],
+    ['#00ffaa','RNG:     '+range.toFixed(1)+' m'],
+    [vc,'V_REL:   '+rv.toFixed(3)+' m/s  [MAX:'+sv.toFixed(3)+']'],
+    ['#00ffaa','R:'+C.rx.toFixed(1)+'  I:'+C.ry.toFixed(1)+'  C:'+C.rz.toFixed(1)+' m'],
+    ['#00cc88','Vr:'+C.vx.toFixed(2)+' Vi:'+C.vy.toFixed(2)+' Vc:'+C.vz.toFixed(2)],
+    ['#00cc88','YAW:'+((C.yaw/DEG).toFixed(1))+'  FUEL:'+C.fuel.toFixed(1)+'%  dV:'+C.dv.toFixed(2)],
   ];
-  rows.forEach(([col,txt],i)=>{ctx.fillStyle=col;ctx.fillText(txt,12,PH-80+i*14);});
-  // Autopilot banner
-  if(autoMode){
-    ctx.fillStyle='#00ff8820';ctx.fillRect(PW/2-85,36,170,18);
-    ctx.strokeStyle='#00ff8844';ctx.lineWidth=.5;ctx.strokeRect(PW/2-85,36,170,18);
-    ctx.font='9px Orbitron';ctx.fillStyle='#00ff88';
-    ctx.fillText('◈ AUTOPILOT ACTIVE',PW/2-73,49);
+  rows.forEach(([col,txt],i)=>{ctx.fillStyle=col;ctx.fillText(txt,12,PH-82+i*14);});
+  if(range<60&&!docked&&!failed){
+    const dpDist=Math.hypot(C.rx,C.ry-DOCK_PORT_Y,C.rz);
+    const col=dpDist<5?'#00ffff':dpDist<12?'#ffcc00':'#ff6600';
+    ctx.font='9px Share Tech Mono';ctx.fillStyle=col;
+    ctx.fillText('PORT:'+dpDist.toFixed(1)+'m  V:'+rv.toFixed(3)+'m/s  [<'+DOCK_CAPTURE_R+'m,<'+DOCK_MAX_V+'m/s=DOCK]',10,PH-115);
   }
-  // Time scale
-  if(timeScale!==1){
-    ctx.font='9px Share Tech Mono';ctx.fillStyle='#ffaa0088';
-    ctx.fillText('⏩ '+timeScale+'×',PW-60,16);
-  }
+  if(timeScale!==1){ctx.font='9px Share Tech Mono';ctx.fillStyle='#ffaa0077';ctx.fillText('x'+timeScale,PW-50,16);}
 }
 
-// ── UI UPDATE ─────────────────────────────────────
+// ── UI UPDATE ─────────────────────────────────────────
 function updateUI(){
   const range=Math.hypot(C.rx,C.ry,C.rz);
-  const relV=Math.hypot(C.vx,C.vy,C.vz);
-  const safeV=Math.min(0.8,range*0.0015);
-  document.getElementById('st-rx').textContent=C.rx.toFixed(1)+' m';
-  document.getElementById('st-ry').textContent=C.ry.toFixed(1)+' m';
-  document.getElementById('st-rz').textContent=C.rz.toFixed(1)+' m';
-  document.getElementById('st-vx').textContent=C.vx.toFixed(3)+' m/s';
-  document.getElementById('st-vy').textContent=C.vy.toFixed(3)+' m/s';
-  document.getElementById('st-vz').textContent=C.vz.toFixed(3)+' m/s';
-  document.getElementById('el-dv').textContent=C.dv.toFixed(2)+' m/s';
-  document.getElementById('el-fuel').textContent=C.fuel.toFixed(1)+'%';
-  document.getElementById('fuel-bar').style.width=C.fuel+'%';
-  let ph,cls;
-  if(docked){ph='DOCKED';cls='ph-docked';}
-  else if(relV>safeV*2.5&&range<150){ph='⚠ HIGH CLOSURE';cls='ph-danger';}
-  else if(range<30){ph='FINAL APPROACH';cls='ph-close';}
-  else if(range<200){ph='MID RANGE';cls='ph-mid';}
-  else{ph='FAR APPROACH';cls='ph-far';}
-  for(const id of['phase-display','phase-topbar']){
-    const el=document.getElementById(id);el.textContent=ph;el.className='pbadge '+cls;
-  }
-  document.getElementById('cp-range').textContent=range.toFixed(1)+' m';
-  const cv=document.getElementById('cp-closure');
-  cv.textContent=relV.toFixed(3)+' m/s';cv.className='val'+(relV>safeV*2?' warn':' ok');
-  document.getElementById('cp-safeV').textContent=safeV.toFixed(3)+' m/s';
-  document.getElementById('dock-msg').style.display=docked?'block':'none';
-  document.getElementById('warn-msg').style.display=(relV>safeV*2.5&&range<150&&!docked)?'block':'none';
-  const dm={fwd:'d-fwd',aft:'d-aft',port:'d-port',stbd:'d-stbd',up:'d-up',dn:'d-dn',yawL:'d-yawl',yawR:'d-yawr'};
+  const rv=Math.hypot(C.vx,C.vy,C.vz);
+  const sv=Math.min(.8,range*.0015);
+  document.getElementById('hr').textContent=C.rx.toFixed(1)+' m';
+  document.getElementById('hi').textContent=C.ry.toFixed(1)+' m';
+  document.getElementById('hc').textContent=C.rz.toFixed(1)+' m';
+  document.getElementById('vr').textContent=C.vx.toFixed(3);
+  document.getElementById('vi').textContent=C.vy.toFixed(3);
+  document.getElementById('vc').textContent=C.vz.toFixed(3);
+  document.getElementById('dv').textContent=C.dv.toFixed(2)+' m/s';
+  document.getElementById('fl').textContent=C.fuel.toFixed(1)+'%';
+  document.getElementById('fb').style.width=C.fuel+'%';
+  let ph,cl;
+  if(failed){ph='MISSION FAILURE';cl='die';}
+  else if(docked){ph='DOCKED';cl='dok';}
+  else if(rv>sv*2.5&&range<150){ph='HIGH CLOSURE';cl='dan';}
+  else if(range<30){ph='FINAL APPROACH';cl='clo';}
+  else if(range<200){ph='MID RANGE';cl='mid';}
+  else{ph='FAR APPROACH';cl='far';}
+  for(const id of['pd','ptb']){const el=document.getElementById(id);el.textContent=ph;el.className='pb '+cl;}
+  document.getElementById('cr').textContent=range.toFixed(1)+' m';
+  const ccEl=document.getElementById('cc');
+  ccEl.textContent=rv.toFixed(3)+' m/s';ccEl.className='val'+(rv>sv*2?' w':' ok');
+  document.getElementById('csv').textContent=sv.toFixed(3)+' m/s';
+  document.getElementById('dm').style.display=docked&&!failed?'block':'none';
+  document.getElementById('undock-btn').style.display=docked&&!failed?'block':'none';
+  document.getElementById('wm').style.display=rv>sv*2.5&&range<150&&!docked&&!failed?'block':'none';
+  const dm={fwd:'d-fwd',aft:'d-aft',port:'d-port',stbd:'d-stbd',up:'d-up',dn:'d-dn',yawL:'d-yl',yawR:'d-yr'};
   const km={fwd:'tk-fwd',aft:'tk-aft',port:'tk-port',stbd:'tk-stbd',up:'tk-up',yawL:'tk-yawl',yawR:'tk-yawr'};
-  for(const[k,id] of Object.entries(dm)) document.getElementById(id).classList.toggle('lit',!!thr[k]);
-  for(const[k,id] of Object.entries(km)) document.getElementById(id)?.classList.toggle('lit',!!thr[k]);
-  document.getElementById('bb-range').textContent='RNG:'+range.toFixed(0)+'m';
-  document.getElementById('bb-relv').textContent='V:'+relV.toFixed(2)+'m/s';
+  for(const[k,id] of Object.entries(dm))document.getElementById(id).classList.toggle('lit',!!thr[k]);
+  for(const[k,id] of Object.entries(km))document.getElementById(id)?.classList.toggle('lit',!!thr[k]);
+  document.getElementById('bb-r').textContent='RNG:'+range.toFixed(0)+'m';
+  document.getElementById('bb-v').textContent='V:'+rv.toFixed(2)+'m/s';
   document.getElementById('bb-ric').textContent='R:'+C.rx.toFixed(0)+' I:'+C.ry.toFixed(0)+' C:'+C.rz.toFixed(0);
-  document.getElementById('bb-zoom').textContent=zoom[viewMode].toFixed(2)+'×';
-  const mt=missionTime,hh=Math.floor(mt/3600),mm=Math.floor(mt%3600/60),ss=Math.floor(mt%60);
-  document.getElementById('mission-clock').textContent=
-    'MET: '+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+  document.getElementById('bb-z').textContent=ZM[vm].toFixed(2)+'x';
+  const mt=missionTime;
+  document.getElementById('clk').textContent='MET: '+String(Math.floor(mt/3600)).padStart(2,'0')+':'+String(Math.floor(mt%3600/60)).padStart(2,'0')+':'+String(Math.floor(mt%60)).padStart(2,'0');
 }
 
-// ── INPUT ─────────────────────────────────────────
-const KM={'ArrowUp':'fwd','w':'fwd','W':'fwd','ArrowDown':'aft','s':'aft','S':'aft',
-  'ArrowLeft':'port','a':'port','A':'port','ArrowRight':'stbd','d':'stbd','D':'stbd',
-  'z':'up','Z':'up','x':'dn','X':'dn','q':'yawL','Q':'yawL','e':'yawR','E':'yawR'};
+// ── INPUT ─────────────────────────────────────────────
+const KM={'ArrowUp':'fwd','w':'fwd','W':'fwd','ArrowDown':'aft','s':'aft','S':'aft','ArrowLeft':'port','a':'port','A':'port','ArrowRight':'stbd','d':'stbd','D':'stbd','z':'up','Z':'up','x':'dn','X':'dn','q':'yawL','Q':'yawL','e':'yawR','E':'yawR'};
 document.addEventListener('keydown',ev=>{
-  if(ev.key==='p'||ev.key==='P'){toggleAuto();return;}
   if(ev.key==='r'||ev.key==='R'){resetSim();return;}
-  const a=KM[ev.key];
-  if(a){ev.preventDefault();if(!autoMode)thr[a]=true;}
+  if(ev.key==='v'||ev.key==='V'){toggleVV();return;}
+  if(ev.key==='b'||ev.key==='B'){toggleDebris();return;}
+  if(ev.key==='u'||ev.key==='U'){undock();return;}
+  const a=KM[ev.key];if(a){ev.preventDefault();thr[a]=true;}
 });
-document.addEventListener('keyup',ev=>{const a=KM[ev.key];if(a&&!autoMode)thr[a]=false;});
-function thrOn(k){if(!autoMode)thr[k]=true;}
-function thrOff(k){if(!autoMode)thr[k]=false;}
-function toggleAuto(){
-  autoMode=!autoMode;
-  const b=document.getElementById('auto-btn');
-  if(!autoMode){Object.keys(thr).forEach(k=>thr[k]=false);b.textContent='ENGAGE AUTOPILOT  [P]';b.classList.remove('active');}
-  else{b.textContent='■ DISENGAGE AUTOPILOT  [P]';b.classList.add('active');}
-}
-function setTimeScale(v){timeScale=TS_VALS[parseInt(v)];document.getElementById('ts-label').textContent=timeScale+'×';}
-// Initialize slider to 1× (index 2)
-document.getElementById('ts-slider').value=2;
-setTimeScale(2);
+document.addEventListener('keyup',ev=>{const a=KM[ev.key];if(a)thr[a]=false;});
+function thrOn(k){initAudio();if(!failed)thr[k]=true;}
+function thrOff(k){thr[k]=false;}
+function setTS(v){timeScale=TS_VALS[parseInt(v)];document.getElementById('tsl').textContent=timeScale+'x';}
 
 function resetSim(){
-  const ir=parseFloat(document.getElementById('inp-range').value)||500;
-  C.rx=0;C.ry=-ir;C.rz=0;C.vx=0;C.vy=0;C.vz=0;C.yaw=0;C.fuel=100;C.dv=0;
-  docked=false;missionTime=0;
-  autoMode=false;Object.keys(thr).forEach(k=>thr[k]=false);
-  document.getElementById('auto-btn').textContent='ENGAGE AUTOPILOT  [P]';
-  document.getElementById('auto-btn').classList.remove('active');
-  particles=[];flares=[];
-  freeCenter.x=0;freeCenter.y=-ir/2;
-  updateOrbital();
+  const ir=parseFloat(document.getElementById('ir').value)||500;
+  C.rx=0;C.ry=-ir;C.rz=0;C.vx=0;C.vy=0;C.vz=0;C.yaw=0;C.fuel=INIT_FUEL;C.dv=0;
+  docked=false;failed=false;failReason='';missionTime=0;simTime=0;failFlash=0;
+  Object.keys(thr).forEach(k=>thr[k]=false);
+  parts=[];flares=[];debris=[];debTimer=0;nextDeb=20+Math.random()*30;
+  fc.x=0;fc.y=-ir/2;
+  document.getElementById('fail-overlay').style.display='none';
+  document.getElementById('dm').style.display='none';
+  document.getElementById('undock-btn').style.display='none';
+  document.getElementById('cl').innerHTML='';
+  lastRangeMile=9999;lastFuelMile=INIT_FUEL+1;
+  genDerelicts();updateOrb();
+  commsLog('MISSION START — RNG:'+ir+'m FUEL:'+INIT_FUEL+'%');
+  commsLog('HOUSTON: GO FOR APPROACH');
 }
 
-// ── MAIN LOOP ─────────────────────────────────────
+// ── DOCKING / COLLISION ───────────────────────────────
+// ISS docking port is at Hill coords (0, DOCK_PORT_Y) — extends toward approaching chaser.
+// Chaser approaches from negative Y (behind ISS). Port faces chaser at y = -DOCK_PORT_DIST.
+// Dock when chaser center is within DOCK_CAPTURE_R meters of the port AND slow enough.
+const ISS_BODY_RX=5.0,ISS_BODY_RY=2.5;
+const DOCK_PORT_Y=-7.0;   // Hill meters — port location below ISS center toward chaser
+const DOCK_CAPTURE_R=3.5; // meters — physical contact radius
+const DOCK_MAX_V=0.3;     // m/s max closure speed for capture
+
+function getScreenPos(hillX,hillY){
+  const ppm=bPPM()*ZM[vm];
+  let tX,tY;
+  if(vm==='chase'){tX=PW/2-C.rx*ppm;tY=PH/2+C.ry*ppm;}
+  else if(vm==='ric'){tX=PW/2;tY=PH/2;}
+  else{tX=PW/2-fc.x*ppm;tY=PH/2+fc.y*ppm;}
+  return{x:tX+hillX*ppm,y:tY-hillY*ppm};
+}
+
+function checkDocking(){
+  if(docked||failed)return;
+  const rv=Math.hypot(C.vx,C.vy,C.vz);
+
+  // Distance from chaser center to docking port Hill position (0, DOCK_PORT_Y)
+  const dpDist=Math.hypot(C.rx-0, C.ry-DOCK_PORT_Y, C.rz);
+
+  // ── DOCK: physically touch the port ──
+  if(dpDist<DOCK_CAPTURE_R){
+    if(rv<=DOCK_MAX_V){
+      // Soft capture
+      docked=true;C.vx=0;C.vy=0;C.vz=0;
+      const is=getScreenPos(0,DOCK_PORT_Y);
+      spawnDockSparks(is.x,is.y);playDockSound();
+      commsLog('CAPTURE CONFIRMED — DOCKED AT PORT');
+      commsLog('PRESS [U] OR UNDOCK BUTTON TO DEPART');
+      document.getElementById('undock-btn').style.display='block';
+    }else{
+      // Hard impact on port
+      triggerFailure('HARD DOCK — CLOSURE '+rv.toFixed(2)+' m/s (MAX '+DOCK_MAX_V.toFixed(2)+')');
+    }
+    return;
+  }
+
+  // ── BODY COLLISION: chaser hits ISS structure ──
+  // Exclude approach corridor — only collide if not coming in cleanly from below
+  const ellTest=(C.rx/ISS_BODY_RX)**2+(C.ry/ISS_BODY_RY)**2;
+  if(ellTest<1.0){
+    if(rv>DOCK_MAX_V){
+      triggerFailure('ISS BODY COLLISION — IMPACT '+rv.toFixed(2)+' m/s');
+    }else{
+      C.vy=-C.vy*0.5;C.vx=-C.vx*0.5;
+      commsLog('BODY CONTACT — BACKING OFF');playImpact();
+    }
+  }
+}
+
+function undock(){
+  if(!docked)return;
+  docked=false;
+  // Eject with gentle -Y velocity (away from ISS, back down corridor)
+  C.vx=0;C.vy=-0.25;C.vz=0;
+  document.getElementById('undock-btn').style.display='none';
+  commsLog('UNDOCK CONFIRMED — DEPARTING PORT');
+  playImpact();
+}
+
+// ── COMMS MILESTONES ─────────────────────────────────
+let lastRangeMile=9999,lastFuelMile=INIT_FUEL+1;
+function checkMilestones(){
+  const r=Math.hypot(C.rx,C.ry,C.rz);
+  if(lastRangeMile>200&&r<=200){commsLog('RANGE 200m — RATE NOMINAL');lastRangeMile=200;playAlertBeep(660);}
+  if(lastRangeMile>50&&r<=50){commsLog('RANGE 50m — FINAL APPROACH');lastRangeMile=50;playAlertBeep(880);}
+  if(lastRangeMile>20&&r<=20){commsLog('RANGE 20m — SLOW TO 0.1 m/s');lastRangeMile=20;playAlertBeep(1100);}
+  if(lastFuelMile>20&&C.fuel<=20){commsLog('FUEL 20% — CONSERVE');lastFuelMile=20;playAlertBeep(440);}
+  if(lastFuelMile>5&&C.fuel<=5){commsLog('FUEL CRITICAL <5%');lastFuelMile=5;playAlertBeep(330);}
+}
+
+// ── MAIN LOOP ─────────────────────────────────────────
 function loop(ts){
   if(!lastTS){lastTS=ts;requestAnimationFrame(loop);return;}
-  let rdt=Math.min((ts-lastTS)/1000,0.05);lastTS=ts;
+  let rdt=Math.min((ts-lastTS)/1000,.05);lastTS=ts;
   const dt=rdt*timeScale;
   simTime+=rdt;
-  if(!docked) missionTime+=rdt;
+  if(!docked&&!failed)missionTime+=rdt;
   targetAngle+=N_OM*dt;
-  autopilot();
+  stepRSOs(dt);
   cwStep(dt);
-  // Docking check: probe tip in body frame is ~13m ahead in body +Y
-  // In Hill frame: probe = (rx - 13*sin(yaw), ry + 13*cos(yaw))
-  const pRx=C.rx-13*Math.sin(C.yaw);
-  const pRy=C.ry+13*Math.cos(C.yaw);
-  const probeRange=Math.hypot(pRx,pRy,C.rz);
-  const relV=Math.hypot(C.vx,C.vy,C.vz);
-  if(!docked&&probeRange<3&&relV<0.5){
-    docked=true;
-    C.vx=0;C.vy=0;C.vz=0;
-    // Snap probe to dock port: rx - 13*sin(yaw)=0, ry+13*cos(yaw)=0
-    spawnDock(PW/2,PH/2);
-    Object.keys(thr).forEach(k=>thr[k]=false);
-    autoMode=false;
-    document.getElementById('auto-btn').textContent='ENGAGE AUTOPILOT  [P]';
-    document.getElementById('auto-btn').classList.remove('active');
-  }
+  stepDebris(dt);
+  checkDocking();
+  checkMilestones();
+  tickComms(rdt);
+  const anyThr=Object.values(thr).some(v=>v)&&!failed;
+  setThrVol(anyThr?0.2:0);
   drawOrbit();
   drawProx(rdt);
   updateUI();
   requestAnimationFrame(loop);
 }
+
+// ── INIT ──────────────────────────────────────────────
+document.getElementById('tss').value=2;setTS(2);
+commsLog('SYS BOOT — RPO SIM v4.0');
+commsLog('FUEL: '+INIT_FUEL+'% — HARD MODE');
+commsLog('HOUSTON: GO FOR APPROACH');
+document.addEventListener('pointerdown',initAudio,{once:true});
+document.addEventListener('keydown',initAudio,{once:true});
 requestAnimationFrame(loop);
 </script>
 </body>
