@@ -331,15 +331,7 @@ function stepDockTargets(dt){
       t.ry += t.dvy * dt;
       t.vx = t.dvx; t.vy = t.dvy;
     }
-    const nowMs = performance.now();
-    if(!t._nNext) t._nNext = nowMs;
-    if(nowMs >= t._nNext){
-      const tdistN = Math.hypot(C.rx - t.rx, C.ry - t.ry);
-      const noiseScale = Math.max(0, 1 - tdistN / 500) * 3;
-      t.nx = (Math.random()-0.5) * 2 * noiseScale;
-      t.ny = (Math.random()-0.5) * 2 * noiseScale;
-      t._nNext = nowMs + 160 + Math.random()*80;
-    }
+    t.nx = 0; t.ny = 0;
   }
 }
 
