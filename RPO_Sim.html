@@ -122,6 +122,7 @@ button.ora{border-color:#ffaa0066;color:#ffcc88}
     <span id="ptb" class="pb far">FAR APPROACH</span>
     <button id="vvb" onclick="toggleVV()" class="on ora" style="font-size:8px;padding:3px 5px">V-VEC ON</button>
     <button id="debb" onclick="toggleDebris()" class="on" style="font-size:8px;padding:3px 5px;border-color:#ff880066;color:#ffcc88">DEBRIS ON</button>
+    <button id="arrb" onclick="toggleArrows()" class="on" style="font-size:8px;padding:3px 5px;border-color:#ffaa4466;color:#ffdd88">TARGETS ON</button>
     <span style="margin-left:auto;font-size:9px;color:#00ff8877;white-space:nowrap" id="clk">MET: 00:00:00</span>
   </div>
   <div id="prox-wrap" style="position:relative">
@@ -225,7 +226,7 @@ button.ora{border-color:#ffaa0066;color:#ffcc88}
     <div style="color:#00ff8844;font-size:8px;line-height:1.9">
       W/&#8593; Fwd &middot; S/&#8595; Aft &middot; A/&#8592; Port &middot; D/&#8594; Stbd<br>
       Z Up &middot; X Down &middot; Q YawL &middot; E YawR<br>
-      V Vel-vector &middot; B Debris &middot; U Undock &middot; R Reset<br>
+      V Vel-vector &middot; B Debris &middot; T Targets &middot; U Undock &middot; R Reset<br>
       Scroll=Prox Zoom &middot; Orbit: scroll or +/- buttons
     </div>
   </div>
@@ -295,6 +296,43 @@ const RSO_DATA=RSO_DEFS.map(r=>({
 }));
 function stepRSOs(dt){ for(const r of RSO_DATA) r.angle+=r.n*dt; }
 
+// ── EXTRA DOCKABLE TARGETS ────────────────────────────
+// These exist in the Hill frame at fixed offsets, drifting slowly
+const DOCK_TARGETS = [
+  { id:'DEPOT-1', rx: 2400, ry:  800, rz: 0, vx:-0.002, vy: 0.001, vz:0, col:'#ffaa00', docked:false, label:'DEPOT-1' },
+  { id:'DEPOT-2', rx:-1800, ry: 2200, rz: 0, vx: 0.003, vy:-0.001, vz:0, col:'#ff44aa', docked:false, label:'DEPOT-2' },
+  { id:'MODULE', rx:  300, ry:-3500, rz: 0, vx:-0.001, vy: 0.002, vz:0, col:'#44ffaa', docked:false, label:'MODULE'  },
+  { id:'RELAY',  rx:-2800, ry:-1200, rz: 0, vx: 0.002, vy: 0.001, vz:0, col:'#aaaaff', docked:false, label:'RELAY'   },
+];
+const DOCK_TARGET_CAPTURE_R = 4.0; // meters
+function stepDockTargets(dt){
+  for(const t of DOCK_TARGETS){
+    if(t.docked) continue;
+    t.rx += t.vx * dt;
+    t.ry += t.vy * dt;
+  }
+}
+function checkDockTargets(){
+  if(failed) return;
+  for(const t of DOCK_TARGETS){
+    if(t.docked) continue;
+    const rv = Math.hypot(C.vx, C.vy, C.vz);
+    const dist = Math.hypot(C.rx - t.rx, C.ry - t.ry, C.rz - t.rz);
+    if(dist < DOCK_TARGET_CAPTURE_R){
+      if(rv <= DOCK_MAX_V){
+        t.docked = true;
+        C.vx=0; C.vy=0; C.vz=0;
+        const sp = getScreenPos(t.rx, t.ry);
+        spawnDockSparks(sp.x, sp.y);
+        playDockSound();
+        commsLog('CAPTURE — '+t.label+' SECURED');
+      } else {
+        triggerFailure('HARD DOCK '+t.label+' — '+rv.toFixed(2)+' m/s');
+      }
+    }
+  }
+}
+
 // ── SIM STATE ─────────────────────────────────────────
 let C={rx:0,ry:-500,rz:0,vx:0,vy:0,vz:0,yaw:0,fuel:INIT_FUEL,dv:0};
 let targetAngle=0,simTime=0,missionTime=0,lastTS=null;
@@ -303,7 +341,7 @@ const TS_VALS=[0.1,0.25,1,5,20,100];
 let timeScale=1;
 const YAW_R=1.5*DEG;
 let thr={fwd:false,aft:false,port:false,stbd:false,up:false,dn:false,yawL:false,yawR:false};
-let showVV=true,debrisEnabled=true;
+let showVV=true,debrisEnabled=true,showArrows=true;
 let thrustScale=0.5;
 function setThrScale(v){
   thrustScale=parseFloat(v)*0.1;
@@ -361,6 +399,12 @@ function toggleDebris(){
   const b=document.getElementById('debb');
   if(debrisEnabled){b.textContent='DEBRIS ON';b.className='on';b.style.borderColor='#ff880066';b.style.color='#ffcc88';}
   else{b.textContent='DEBRIS OFF';b.className='doff';b.style.borderColor='#ff444466';b.style.color='#ff8888';}
+}
+function toggleArrows(){
+  showArrows=!showArrows;
+  const b=document.getElementById('arrb');
+  if(showArrows){b.textContent='TARGETS ON';b.className='on';b.style.borderColor='#ffaa4466';b.style.color='#ffdd88';}
+  else{b.textContent='TARGETS OFF';b.className='doff';b.style.borderColor='#ff444466';b.style.color='#ff8888';}
 }
 
 // ── PARTICLES ─────────────────────────────────────────
@@ -647,32 +691,30 @@ function drawOrbit(){
   }
 
   // Inclination foreshortening: |cos(inc)| compresses the Y dimension of the orbit
-  // This simulates viewing the tilted orbit plane from above
+  // At inc=0 → cos=1 → full circle (e=0). At inc=90 → cos=0 → straight line.
   const incRad = ORB.inc * DEG;
-  const incFore = Math.abs(Math.cos(incRad)); // 1.0 at 0°/180°, 0.0 at 90°
+  const incFore = Math.abs(Math.cos(incRad));
 
-  // Earth-scaled layout
-  const BASE_ER = 52 * OZ;
-  const eR = BASE_ER;
-  const ratio = R_ORB / R_EARTH;
-  const a_raw = eR * ratio;
-  const margin = 8;
-  const a_px = Math.min(a_raw, cx - margin);
+  // Layout: orbit fills the panel. Earth size scales with altitude so orbit always visible.
+  // a_px = fixed fraction of panel half-width, scaled by zoom.
+  // Earth visual radius = a_px * (R_EARTH / R_ORB)  ← proportional to actual ratio.
+  const margin = 10;
+  const a_px = Math.min((cx - margin) * OZ, cx - margin); // orbit semi-major fills panel
+  const eR = a_px * (R_EARTH / R_ORB);                    // Earth shrinks at higher altitudes
 
-  // Semi-minor axis: shape from eccentricity only, then foreshorten by cos(inc)
-  const b_kepler = a_px * Math.sqrt(1 - ecc * ecc); // true semi-minor from shape
-  const b_px = b_kepler * incFore;                   // visual semi-minor after inclination tilt
+  // Semi-minor axis: pure Kepler shape, then foreshorten by |cos(inc)|
+  const b_kepler = a_px * Math.sqrt(1 - ecc * ecc);
+  const b_px = b_kepler * incFore;  // at inc=0, b_px=b_kepler; at inc=90, b_px=0
 
-  // Earth at right focus: earthX = cx + a_px*ecc
+  // Earth at right focus (periapsis side). At e=0, focus=center, Earth at panel center.
   const earthX = Math.max(margin + eR, Math.min(W - margin - eR, cx + a_px * ecc));
   const earthY = cy;
-  const ellCX = earthX - a_px * ecc; // ellipse center
+  const ellCX = earthX - a_px * ecc;
 
-  // RSOs
+  // RSOs — scale relative to same a_px baseline
   for(const r of RSO_DATA){
-    const rRatio=(r.a_km*1e3)/R_EARTH;
-    const ra_raw=eR*rRatio;
-    const ra_px=Math.min(ra_raw,cx-4);
+    const rRatio=(r.a_km*1e3)/R_ORB; // RSO orbit vs reference orbit
+    const ra_px=Math.min(a_px*rRatio, cx-4);
     const re=r.ecc;
     const rFore=Math.abs(Math.cos(r.inc*DEG));
     const rb_px=ra_px*Math.sqrt(1-re*re)*rFore;
@@ -861,6 +903,35 @@ function drawProx(rdt){
 
   const issScale=Math.max(.4,Math.min(10,ppm*.18));
   if(!failed||docked){ctx.save();ctx.translate(tX,tY);drawISS(ctx,issScale);ctx.restore();}
+
+  // ── EXTRA DOCKABLE TARGETS ────────────────────────
+  for(const t of DOCK_TARGETS){
+    if(t.docked) continue;
+    const tsx = tX + t.rx * ppm;
+    const tsy = tY - t.ry * ppm;
+    const tdist = Math.hypot(C.rx - t.rx, C.ry - t.ry);
+    // Only draw if on screen
+    if(tsx > -40 && tsx < PW+40 && tsy > -40 && tsy < PH+40){
+      ctx.save();
+      ctx.translate(tsx, tsy);
+      drawDockTarget(ctx, t, tdist, ppm);
+      ctx.restore();
+    }
+  }
+
+  // ── EDGE ARROW INDICATORS ─────────────────────────
+  if(showArrows){
+    // ISS arrow (always show when ISS is off-screen)
+    drawEdgeArrow(ctx, tX, tY, cX, cY, '#00ccff', 'ISS', Math.hypot(C.rx, C.ry), false);
+    // Dock targets
+    for(const t of DOCK_TARGETS){
+      if(t.docked) continue;
+      const tsx = tX + t.rx * ppm;
+      const tsy = tY - t.ry * ppm;
+      const tdist = Math.hypot(C.rx - t.rx, C.ry - t.ry);
+      drawEdgeArrow(ctx, tsx, tsy, cX, cY, t.col, t.label, tdist, false);
+    }
+  }
 
   // Docking port marker — just a subtle highlight on the port itself, no large circle
   if(!failed&&!docked){
@@ -1122,6 +1193,156 @@ function drawChaser(ctx,s,wx,wy,ppm){
   if((simTime*1.5)%1<.08){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,-9*s,2,0,TAU);ctx.fill();}
 }
 
+function drawDockTarget(ctx, t, dist, ppm){
+  const s = Math.max(0.5, Math.min(6, ppm * 0.12));
+  const col = t.col;
+  const pulse = 0.5 + 0.5 * Math.sin(simTime * 2.5);
+
+  // Octagonal body
+  ctx.save();
+  ctx.rotate(simTime * 0.3);
+  ctx.strokeStyle = col + 'cc';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  for(let i = 0; i < 8; i++){
+    const a = i * TAU / 8;
+    const r = 6 * s;
+    if(i===0) ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r);
+    else ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+  }
+  ctx.closePath();
+  ctx.fillStyle = col + '22';
+  ctx.fill();
+  ctx.stroke();
+  // Inner cross
+  ctx.strokeStyle = col + '88';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(-4*s, 0); ctx.lineTo(4*s, 0);
+  ctx.moveTo(0, -4*s); ctx.lineTo(0, 4*s);
+  ctx.stroke();
+  // Docking port circle
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(0, 0, 2.2*s, 0, TAU); ctx.stroke();
+  ctx.restore();
+
+  // Solar panels
+  ctx.fillStyle = '#1a2a66';
+  ctx.strokeStyle = col + '66';
+  ctx.lineWidth = 0.5;
+  ctx.fillRect(-16*s, -2*s, 9*s, 4*s);
+  ctx.strokeRect(-16*s, -2*s, 9*s, 4*s);
+  ctx.fillRect(7*s, -2*s, 9*s, 4*s);
+  ctx.strokeRect(7*s, -2*s, 9*s, 4*s);
+
+  // Nav light
+  ctx.fillStyle = `rgba(${col==='#ffaa00'?'255,170,0':'255,68,170'},${0.4+0.6*pulse})`;
+  ctx.beginPath(); ctx.arc(0, -7*s, 1.5, 0, TAU); ctx.fill();
+
+  // Label + distance
+  if(dist < 600){
+    ctx.font = '8px Share Tech Mono';
+    ctx.fillStyle = col + 'cc';
+    ctx.textAlign = 'center';
+    ctx.fillText(t.label, 0, -10*s - 3);
+    if(dist < 200){
+      ctx.fillStyle = col + '88';
+      ctx.fillText(dist.toFixed(0)+'m', 0, -10*s - 13);
+    }
+    ctx.textAlign = 'left';
+  }
+}
+
+// Draw an edge arrow pointing from cX,cY toward targetSx,targetSy
+// Only draws when target is outside viewport
+function drawEdgeArrow(ctx, targetSx, targetSy, cX, cY, col, label, dist, alwaysShow){
+  const margin = 28;
+  // Vector from chaser screen pos to target screen pos
+  const dx = targetSx - cX;
+  const dy = targetSy - cY;
+  const ang = Math.atan2(dy, dx);
+
+  // Check if target is visible on screen
+  const onScreen = targetSx > margin && targetSx < PW - margin &&
+                   targetSy > margin && targetSy < PH - margin;
+  if(onScreen && !alwaysShow) return;
+
+  // Clamp arrow to screen edge
+  const edgeMargin = 22;
+  const hw = PW / 2 - edgeMargin;
+  const hh = PH / 2 - edgeMargin;
+  // Arrow origin at chaser screen position, clamped to visible area
+  const ox = Math.max(edgeMargin, Math.min(PW - edgeMargin, cX));
+  const oy = Math.max(edgeMargin, Math.min(PH - edgeMargin, cY));
+
+  // Find intersection of ray from (ox,oy) in direction ang with screen rect
+  let ax, ay;
+  const cosA = Math.cos(ang), sinA = Math.sin(ang);
+  // Candidate intersections with 4 edges
+  const candidates = [];
+  if(cosA !== 0){
+    const tx1 = (edgeMargin - ox) / cosA;
+    const tx2 = (PW - edgeMargin - ox) / cosA;
+    for(const t of [tx1, tx2]) if(t > 0){
+      const iy = oy + sinA * t;
+      if(iy >= edgeMargin && iy <= PH - edgeMargin) candidates.push({x: ox + cosA*t, y: iy, t});
+    }
+  }
+  if(sinA !== 0){
+    const ty1 = (edgeMargin - oy) / sinA;
+    const ty2 = (PH - edgeMargin - oy) / sinA;
+    for(const t of [ty1, ty2]) if(t > 0){
+      const ix = ox + cosA * t;
+      if(ix >= edgeMargin && ix <= PW - edgeMargin) candidates.push({x: ix, y: oy + sinA*t, t});
+    }
+  }
+  if(candidates.length === 0) return;
+  candidates.sort((a,b) => a.t - b.t);
+  ax = candidates[0].x;
+  ay = candidates[0].y;
+
+  // Draw arrow
+  const pulse = 0.6 + 0.4 * Math.sin(simTime * 3);
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.rotate(ang);
+
+  // Arrow body
+  const asz = 10;
+  ctx.strokeStyle = col + Math.floor(pulse * 220).toString(16).padStart(2,'0');
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-asz * 1.5, 0);
+  ctx.lineTo(asz, 0);
+  ctx.moveTo(asz - 5, -5);
+  ctx.lineTo(asz, 0);
+  ctx.lineTo(asz - 5, 5);
+  ctx.stroke();
+
+  // Box behind label
+  ctx.rotate(-ang); // un-rotate for text
+  const distStr = dist > 1000 ? (dist/1000).toFixed(1)+'km' : dist.toFixed(0)+'m';
+  const lbl = label;
+  ctx.font = '7px Share Tech Mono';
+  const tw = Math.max(ctx.measureText(lbl).width, ctx.measureText(distStr).width) + 6;
+  // Position label on the inward side of arrow
+  const lox = Math.cos(ang + Math.PI) * 14;
+  const loy = Math.sin(ang + Math.PI) * 14;
+  ctx.fillStyle = '#000000bb';
+  ctx.fillRect(lox - tw/2, loy - 18, tw, 22);
+  ctx.strokeStyle = col + '66';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(lox - tw/2, loy - 18, tw, 22);
+  ctx.fillStyle = col + 'ee';
+  ctx.textAlign = 'center';
+  ctx.fillText(lbl, lox, loy - 7);
+  ctx.fillStyle = col + '99';
+  ctx.fillText(distStr, lox, loy + 2);
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
 function drawHUD(ctx,tX,tY,cX,cY,ppm){
   const range=Math.hypot(C.rx,C.ry,C.rz);
   const rv=Math.hypot(C.vx,C.vy,C.vz);
@@ -1201,6 +1422,7 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='r'||ev.key==='R'){resetSim();return;}
   if(ev.key==='v'||ev.key==='V'){toggleVV();return;}
   if(ev.key==='b'||ev.key==='B'){toggleDebris();return;}
+  if(ev.key==='t'||ev.key==='T'){toggleArrows();return;}
   if(ev.key==='u'||ev.key==='U'){undock();return;}
   const a=KM[ev.key];if(a){ev.preventDefault();thr[a]=true;}
 });
@@ -1215,6 +1437,7 @@ function resetSim(){
   docked=false;failed=false;failReason='';missionTime=0;simTime=0;failFlash=0;
   Object.keys(thr).forEach(k=>thr[k]=false);
   parts=[];flares=[];debris=[];debTimer=0;nextDeb=20+Math.random()*30;
+  for(const t of DOCK_TARGETS) t.docked=false;
   fc.x=0;fc.y=-ir/2;
   document.getElementById('fail-overlay').style.display='none';
   document.getElementById('dm').style.display='none';
@@ -1248,7 +1471,9 @@ function loop(ts){
   stepRSOs(dt);
   cwStep(dt);
   stepDebris(dt);
+  stepDockTargets(dt);
   checkDocking();
+  checkDockTargets();
   checkMilestones();
   tickComms(rdt);
   const anyThr=Object.values(thr).some(v=>v)&&!failed;
