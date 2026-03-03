@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RPO Sim v5</title>
+<title>RPO Sim v6</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -113,7 +113,7 @@ button.ora{border-color:#ffaa0066;color:#ffcc88}
 <!-- CENTER -->
 <div id="center">
   <div id="topbar">
-    <span style="font-family:Orbitron;font-size:9px;letter-spacing:2px;color:#00ff88cc;white-space:nowrap">RPO SIM v5</span>
+    <span style="font-family:Orbitron;font-size:9px;letter-spacing:2px;color:#00ff88cc;white-space:nowrap">RPO SIM v6</span>
     <div style="display:flex;gap:3px">
       <button class="vt on" id="vt-chase" onclick="setView('chase')">CHASE</button>
       <button class="vt" id="vt-ric" onclick="setView('ric')">RIC</button>
@@ -298,7 +298,6 @@ const RSO_DATA=RSO_DEFS.map(r=>({
 function stepRSOs(dt){ for(const r of RSO_DATA) r.angle+=r.n*dt; }
 
 // ── EXTRA DOCKABLE TARGETS ────────────────────────────
-// Movement types: 'drift' = slow linear, 'oscillate' = back-and-forth, 'orbit' = circles ISS
 const DOCK_TARGETS = [
   { id:'DEPOT-1', rx: 2400, ry:  800, rz:0, vx:0, vy:0, col:'#ffaa00', docked:false, label:'DEPOT-1',
     move:'oscillate', ox:2400, oy:800, ampX:600, ampY:0,   period:180, phase:0, nx:0, ny:0, nTimer:0 },
@@ -332,7 +331,6 @@ function stepDockTargets(dt){
       t.ry += t.dvy * dt;
       t.vx = t.dvx; t.vy = t.dvy;
     }
-    // Tracking noise uses real wall-clock time so high time-warp never causes jitter
     const nowMs = performance.now();
     if(!t._nNext) t._nNext = nowMs;
     if(nowMs >= t._nNext){
@@ -349,14 +347,12 @@ function checkDockTargets(){
   if(failed) return;
   for(const t of DOCK_TARGETS){
     if(t.docked) continue;
-    // Relative velocity to target (what matters for docking impact)
     const relVx = C.vx - t.vx, relVy = C.vy - t.vy, relVz = C.vz;
     const relV = Math.hypot(relVx, relVy, relVz);
     const dist = Math.hypot(C.rx - t.rx, C.ry - t.ry, C.rz);
     if(dist < DOCK_TARGET_CAPTURE_R){
       if(relV <= DOCK_MAX_V){
         t.docked = true;
-        // Match velocity to target on dock
         C.vx = t.vx; C.vy = t.vy; C.vz = 0;
         const sp = getScreenPos(t.rx, t.ry);
         spawnDockSparks(sp.x, sp.y);
@@ -633,26 +629,47 @@ function rk4(s,dt,a){
   const k4=cwDeriv(s.map((v,i)=>v+k3[i]*dt),a);
   return s.map((v,i)=>v+(k1[i]+2*k2[i]+2*k3[i]+k4[i])*dt/6);
 }
+
+// ── BODY-FRAME THRUST → HILL FRAME ────────────────────
+// The chaser has a yaw angle C.yaw (radians, canvas convention: positive = clockwise).
+// At yaw=0: bow points in +I (screen up), starboard points in +R (screen right).
+//
+// Canvas ctx.rotate(θ) is clockwise for positive θ.
+// After yawR (clockwise rotation by θ):
+//   bow direction in Hill frame = ( +sin θ,  +cos θ )  [R, I]
+//   stbd direction in Hill frame = ( +cos θ,  -sin θ )  [R, I]
+//
+// So body→Hill rotation:
+//   FWD  (bow,   +body_Y): ax = +sin(yaw), ay = +cos(yaw)
+//   AFT  (stern, -body_Y): ax = -sin(yaw), ay = -cos(yaw)
+//   STBD (+body_X):        ax = +cos(yaw), ay = -sin(yaw)
+//   PORT (-body_X):        ax = -cos(yaw), ay = +sin(yaw)
+
 function cwStep(dt){
   if(docked||failed)return;
   if(C.fuel<=0){Object.keys(thr).forEach(k=>thr[k]=false);return;}
-  const y=C.yaw,cy=Math.cos(y),sy=Math.sin(y);
-  const TA=thrustScale;
-  let ax=0,ay=0,az=0;
-  if(thr.fwd){ax-=sy*TA;ay+=cy*TA;}
-  if(thr.aft){ax+=sy*TA;ay-=cy*TA;}
-  if(thr.stbd){ax+=cy*TA;ay+=sy*TA;}
-  if(thr.port){ax-=cy*TA;ay-=sy*TA;}
-  if(thr.up)az+=TA;
-  if(thr.dn)az-=TA;
-  const mag=Math.hypot(ax,ay,az);
-  if(mag>0){C.fuel=Math.max(0,C.fuel-0.004*dt*mag/0.5);C.dv+=mag*dt;}
-  // Yaw: angular acceleration from RCS, momentum persists with NO damping (space = no friction)
+
+  // Yaw first so thrust uses updated attitude
   const YAW_ACCEL = YAW_R * 3;
   if(thr.yawL) C.yawRate -= YAW_ACCEL * dt;
   if(thr.yawR) C.yawRate += YAW_ACCEL * dt;
-  // No damping — must counter-fire to stop rotation
   C.yaw += C.yawRate * dt;
+
+  const y=C.yaw, cy=Math.cos(y), sy=Math.sin(y);
+  const TA=thrustScale;
+  let ax=0,ay=0,az=0;
+
+  // All thrust in body frame, rotated into Hill frame
+  if(thr.fwd) { ax += sy*TA; ay += cy*TA; }   // bow = +I at yaw=0
+  if(thr.aft) { ax -= sy*TA; ay -= cy*TA; }   // stern
+  if(thr.stbd){ ax += cy*TA; ay -= sy*TA; }   // starboard = +R at yaw=0
+  if(thr.port){ ax -= cy*TA; ay += sy*TA; }   // port
+  if(thr.up)  az += TA;
+  if(thr.dn)  az -= TA;
+
+  const mag=Math.hypot(ax,ay,az);
+  if(mag>0){C.fuel=Math.max(0,C.fuel-0.004*dt*mag/0.5);C.dv+=mag*dt;}
+
   const ns=rk4([C.rx,C.ry,C.rz,C.vx,C.vy,C.vz],dt,[ax,ay,az]);
   [C.rx,C.ry,C.rz,C.vx,C.vy,C.vz]=ns;
 }
@@ -691,17 +708,6 @@ function setView(m){vm=m;['chase','ric','free'].forEach(v=>document.getElementBy
 function toggleVV(){showVV=!showVV;const b=document.getElementById('vvb');b.textContent=showVV?'V-VEC ON':'V-VEC OFF';b.classList.toggle('on',showVV);}
 
 // ── ORBIT DRAW ────────────────────────────────────────
-// INCLINATION: We view the orbit from a fixed "above" perspective.
-// Inclination tilts the orbit plane TOWARD/AWAY from viewer (like tilting a plate).
-// The effect is that the in-plane Y dimension gets foreshortened by cos(inc).
-// At inc=0: full circle (no foreshortening), b = a*sqrt(1-e^2)
-// At inc=45: b compressed by cos(45°)=0.707, looks ellipsoidal even with e=0
-// At inc=90: b compressed to 0, looks like a straight horizontal line
-// At inc=180: same as 0 (back to full circle, orbit reversed)
-// The foreshortening is: b_displayed = a * sqrt(1-e^2) * |cos(inc)|
-//
-// EARTH AT FOCUS: At e=0, Earth is at center of circle. At e>0, Earth shifts to focus.
-
 function drawOrbit(){
   const ctx=OCX,W=310,H=310,cx=W/2,cy=H/2;
   ctx.fillStyle='#000508';ctx.fillRect(0,0,W,H);
@@ -712,28 +718,21 @@ function drawOrbit(){
   const OZ=orbitZoom;
 
   if(ecc>=0.99){
-    // Draw Earth at left-center, parabola/hyperbola opens to the right
     const eR = cx * 0.22 * OZ;
     const earthX = cx * 0.38;
     const earthY = cy;
     drawEarthAt(ctx, earthX, earthY, eR);
 
-    // Determine periapsis distance in display units
-    // For a parabola: r = p/(1+cos θ), p = a(1-e²) but at e=1 use p=alt_ratio
-    // Just draw a nice conic: x = t², y = t (parabola shape), scaled to fill panel
     const isHyperbolic = ecc > 1.0;
     const label = ecc >= 1.0 ? 'HYPERBOLIC TRAJECTORY' : 'PARABOLIC TRAJECTORY';
     const sublabel = ecc >= 1.0 ? 'e=' + ecc.toFixed(3) + ' — ESCAPE TRAJECTORY' : 'e≈1.00 — ESCAPE VELOCITY';
 
-    // Draw the escape trajectory as a conic section
-    // In polar: r = p / (1 + e·cos θ), p = periapsis*(1+e)
-    const periPx = cx * 0.18 * OZ; // periapsis visual distance from Earth
+    const periPx = cx * 0.18 * OZ;
     const p = periPx * (1 + ecc);
     ctx.strokeStyle = '#ff3300';
     ctx.lineWidth = 1.8;
     ctx.setLineDash([]);
 
-    // Draw approach arm (coming from far left/above)
     ctx.beginPath();
     let first = true;
     const thetaMax = isHyperbolic ? Math.acos(-1/ecc) - 0.08 : Math.PI * 0.95;
@@ -747,7 +746,6 @@ function drawOrbit(){
     }
     ctx.stroke();
 
-    // Dashed asymptotes for hyperbolic
     if(isHyperbolic){
       const asymAngle = Math.acos(-1/ecc);
       ctx.strokeStyle = '#ff330044';
@@ -763,14 +761,12 @@ function drawOrbit(){
       ctx.setLineDash([]);
     }
 
-    // Periapsis marker
     const periX = earthX + periPx;
     ctx.fillStyle = '#ff6600';
     ctx.beginPath(); ctx.arc(periX, earthY, 3.5, 0, TAU); ctx.fill();
     ctx.font = '7px Share Tech Mono'; ctx.fillStyle = '#ff8844';
     ctx.fillText('PERI', periX + 5, earthY + 3);
 
-    // Labels
     ctx.font = '9px Orbitron,monospace'; ctx.fillStyle = '#ff4400dd'; ctx.textAlign = 'center';
     ctx.fillText(label, cx, H * 0.15);
     ctx.font = '8px Share Tech Mono'; ctx.fillStyle = '#ff660088';
@@ -784,30 +780,22 @@ function drawOrbit(){
     return;
   }
 
-  // Inclination foreshortening: |cos(inc)| compresses the Y dimension of the orbit
-  // At inc=0 → cos=1 → full circle (e=0). At inc=90 → cos=0 → straight line.
   const incRad = ORB.inc * DEG;
   const incFore = Math.abs(Math.cos(incRad));
 
-  // Layout: orbit fills the panel. Earth size scales with altitude so orbit always visible.
-  // a_px = fixed fraction of panel half-width, scaled by zoom.
-  // Earth visual radius = a_px * (R_EARTH / R_ORB)  ← proportional to actual ratio.
   const margin = 10;
-  const a_px = Math.min((cx - margin) * OZ, cx - margin); // orbit semi-major fills panel
-  const eR = a_px * (R_EARTH / R_ORB);                    // Earth shrinks at higher altitudes
+  const a_px = Math.min((cx - margin) * OZ, cx - margin);
+  const eR = a_px * (R_EARTH / R_ORB);
 
-  // Semi-minor axis: pure Kepler shape, then foreshorten by |cos(inc)|
   const b_kepler = a_px * Math.sqrt(1 - ecc * ecc);
-  const b_px = b_kepler * incFore;  // at inc=0, b_px=b_kepler; at inc=90, b_px=0
+  const b_px = b_kepler * incFore;
 
-  // Earth at right focus (periapsis side). At e=0, focus=center, Earth at panel center.
   const earthX = Math.max(margin + eR, Math.min(W - margin - eR, cx + a_px * ecc));
   const earthY = cy;
   const ellCX = earthX - a_px * ecc;
 
-  // RSOs — scale relative to same a_px baseline
   for(const r of RSO_DATA){
-    const rRatio=(r.a_km*1e3)/R_ORB; // RSO orbit vs reference orbit
+    const rRatio=(r.a_km*1e3)/R_ORB;
     const ra_px=Math.min(a_px*rRatio, cx-4);
     const re=r.ecc;
     const rFore=Math.abs(Math.cos(r.inc*DEG));
@@ -824,12 +812,10 @@ function drawOrbit(){
     ctx.restore();
   }
 
-  // Earth
   drawEarthAt(ctx,earthX,earthY,eR);
   ctx.strokeStyle='#ffffff08';ctx.lineWidth=.5;
   for(let lat=30;lat<90;lat+=30){ctx.beginPath();ctx.arc(earthX,earthY,eR*Math.cos(lat*DEG),0,TAU);ctx.stroke();}
 
-  // Main orbit ellipse
   ctx.save();
   ctx.translate(ellCX,earthY);
   ctx.strokeStyle='#00ff8866';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
@@ -844,7 +830,6 @@ function drawOrbit(){
   }
   ctx.restore();
 
-  // ISS position
   const iss_ec_x = a_px * Math.cos(targetAngle);
   const iss_ec_y = b_px * Math.sin(targetAngle);
   const issX = ellCX + iss_ec_x;
@@ -852,7 +837,6 @@ function drawOrbit(){
   drawMiniISS(OCX,issX,issY,3.2);
   ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ff8877';ctx.fillText('ISS',issX+5,issY-4);
 
-  // Chaser position
   if(!failed){
     const angOff=C.ry/R_ORB,radFrac=C.rx/R_ORB;
     const ca=targetAngle-angOff;
@@ -866,7 +850,6 @@ function drawOrbit(){
     ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ff88';ctx.fillText('CHSR',chaX+4,chaY-4);
   }
 
-  // Debris
   if(debrisEnabled){
     for(const d of debris){
       const da=targetAngle-d.ry/R_ORB;
@@ -876,7 +859,6 @@ function drawOrbit(){
     }
   }
 
-  // Inclination label hint
   let incLabel = '';
   if(Math.abs(incFore) < 0.05) incLabel = ' (edge-on)';
   else if(Math.abs(incFore) > 0.98) incLabel = ' (face-on)';
@@ -904,28 +886,20 @@ function drawMiniISS(ctx,x,y,s){
 }
 
 // ── DOCKING CONSTANTS ────────────────────────────────
-// DOCK_PORT_Y: Hill-frame meters. Negative = behind ISS (toward approaching chaser).
-// Chaser starts at ry=-500, approaches toward 0. Port is at ry = DOCK_PORT_Y = -3m (just past ISS center).
-// In drawISS (ctx translated to ISS Hill center = tX,tY):
-//   Screen y of port = -DOCK_PORT_Y * ppm pixels (positive = downward on screen = toward chaser)
-//   ISS scale s = ppm * 0.18, so port in ISS units = -DOCK_PORT_Y / 0.18 ≈ 16.67 s-units below center.
-//   This places port at the bottom edge of the module block — correct visually.
-const DOCK_PORT_Y = -3.0;     // Hill meters
-const DOCK_PORT_Y_S = 16.67;  // ISS scale units (DOCK_PORT_Y / 0.18, positive = downward in ISS draw coords)
+const DOCK_PORT_Y = -3.0;
+const DOCK_PORT_Y_S = 16.67;
 const ISS_BODY_RX = 5.0;
 const ISS_BODY_RY = 2.5;
-const DOCK_CAPTURE_R = 2.5;   // meters radius for dock capture
-const DOCK_MAX_V = 0.3;       // m/s max closure for soft capture
+const DOCK_CAPTURE_R = 2.5;
+const DOCK_MAX_V = 0.3;
 
 // ── PROX DRAW ─────────────────────────────────────────
 function drawProx(rdt){
   const ctx=PCX;
   ctx.fillStyle='#000205';ctx.fillRect(0,0,PW,PH);
 
-  // Chase mode: rotate entire world so ship always points UP on screen
   const chaseRot = (vm==='chase') ? -C.yaw : 0;
 
-  // Stars — skybox rotates with camera yaw
   const camY=vm==='chase'?C.yaw:0;
   for(const s of stars3d){
     const px=s.x*Math.cos(camY)+s.y*Math.sin(camY),py=-s.z,pz=-s.x*Math.sin(camY)+s.y*Math.cos(camY);
@@ -937,14 +911,9 @@ function drawProx(rdt){
   }
   ctx.globalAlpha=1;
 
-  // Earth limb — parallax: shifts opposite to chaser position vs Hill origin
-  // Small factor so it is a subtle hint of movement, not jarring
   const PARALLAX=0.010;
-  // Offset is opposite to position (move right means Earth drifts left slightly)
-  // Also rotate the parallax offset with the ship in chase mode
   const rawPX = -C.rx * PARALLAX;
   const rawPY =  C.ry * PARALLAX;
-  // Rotate parallax into screen frame for chase mode
   const cosCR=Math.cos(chaseRot), sinCR=Math.sin(chaseRot);
   const parX = rawPX*cosCR - rawPY*sinCR;
   const parY = rawPX*sinCR + rawPY*cosCR;
@@ -958,7 +927,6 @@ function drawProx(rdt){
     ctx.fillStyle=ag;ctx.beginPath();ctx.arc(ex,ey,eR+40,0,TAU);ctx.fill();
   }
 
-  // Rotate world around screen center for chase-cam
   ctx.save();
   ctx.translate(PW/2,PH/2);
   ctx.rotate(chaseRot);
@@ -972,7 +940,6 @@ function drawProx(rdt){
   const cX=vm==='chase'?PW/2:tX+C.rx*ppm;
   const cY=vm==='chase'?PH/2:tY-C.ry*ppm;
 
-  // Background derelicts
   for(const d of bgDerelicts){
     d.rot+=d.rr*rdt;
     const dx=tX+d.rx*ppm,dy=tY-d.ry*ppm;
@@ -984,7 +951,6 @@ function drawProx(rdt){
     ctx.restore();ctx.globalAlpha=1;
   }
 
-  // Range rings
   for(const rr of[2000,1000,500,200,100,50,20,5,1]){
     const rPx=rr*ppm;if(rPx<5||rPx>Math.max(PW,PH)*2.5)continue;
     ctx.strokeStyle=rr<=20?'#ffaa0030':'#00ff8816';ctx.lineWidth=rr<=20?1:.5;
@@ -992,10 +958,8 @@ function drawProx(rdt){
     if(rPx>20){ctx.font='8px Share Tech Mono';ctx.fillStyle=rr<=20?'#ffaa0050':'#00ff8830';ctx.fillText(rr>=1000?(rr/1000)+'km':rr+'m',tX+rPx+2,tY-2);}
   }
 
-  // Approach corridor
   {const cw=15*ppm;ctx.strokeStyle='#00ff8813';ctx.lineWidth=1;ctx.setLineDash([6,9]);ctx.beginPath();ctx.moveTo(tX-cw,tY-3000);ctx.lineTo(tX-cw,tY+3000);ctx.moveTo(tX+cw,tY-3000);ctx.lineTo(tX+cw,tY+3000);ctx.stroke();ctx.setLineDash([]);}
 
-  // RIC axes
   if(vm==='ric'||vm==='free'){
     const L=Math.min(PW,PH)*.35;
     ctx.strokeStyle='#ff444418';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(tX,tY);ctx.lineTo(tX+L,tY);ctx.stroke();ctx.fillStyle='#ff4444aa';ctx.font='9px Share Tech Mono';ctx.fillText('R+',tX+L-14,tY-3);
@@ -1003,7 +967,6 @@ function drawProx(rdt){
     ctx.strokeStyle='#4488ff18';ctx.beginPath();ctx.moveTo(tX,tY);ctx.lineTo(tX-L*.65,tY+L*.65);ctx.stroke();ctx.fillStyle='#4488ffaa';ctx.fillText('C',tX-L*.65-8,tY+L*.65+10);
   }
 
-  // Debris
   if(debrisEnabled){
     for(const d of debris){
       const dsx=tX+d.rx*ppm,dsy=tY-d.ry*ppm;
@@ -1023,11 +986,9 @@ function drawProx(rdt){
     }
   }
 
-  // ISS
   const issScale=Math.max(.4,Math.min(10,ppm*.18));
   if(!failed||docked){ctx.save();ctx.translate(tX,tY);drawISS(ctx,issScale);ctx.restore();}
 
-  // Docking port close-in brackets (no big circle)
   if(!failed&&!docked){
     const portPos=getScreenPos(0,DOCK_PORT_Y);
     const dpDist=Math.hypot(C.rx,C.ry-DOCK_PORT_Y,C.rz);
@@ -1047,7 +1008,6 @@ function drawProx(rdt){
     }
   }
 
-  // Extra dockable targets — use pre-computed slow noise (not per-frame random)
   for(const t of DOCK_TARGETS){
     if(t.docked) continue;
     const tdist=Math.hypot(C.rx-t.rx,C.ry-t.ry);
@@ -1060,7 +1020,6 @@ function drawProx(rdt){
     }
   }
 
-  // Particles and flares (still in world space is fine)
   for(const f of flares){
     f.life-=rdt*3.5;f.x+=f.vx*rdt;f.y+=f.vy*rdt;if(f.life<=0)continue;
     ctx.globalAlpha=f.life*.7;
@@ -1076,38 +1035,30 @@ function drawProx(rdt){
   parts=parts.filter(p=>p.life>0);
   ctx.globalAlpha=1;
 
-  // ── RESTORE WORLD ROTATION ─────────────────────────────
-  // Everything below is in true screen space (no world rotation applied)
   ctx.restore();
 
-  // Convert world-rotated positions back to screen coords
   function rotPt(wx,wy){
     const dx=wx-PW/2,dy=wy-PH/2;
     return{x:PW/2+dx*cosCR-dy*sinCR, y:PH/2+dx*sinCR+dy*cosCR};
   }
   const issScrn=rotPt(tX,tY);
-  const chaScrn=rotPt(cX,cY); // In chase mode this is always PW/2,PH/2
+  const chaScrn=rotPt(cX,cY);
 
-  // ── CHASER — drawn in screen space so it NEVER rotates from pilot's POV ──
-  // In chase mode the pilot IS the chaser — ship is always pointing up on screen.
-  // In other view modes we rotate the sprite by C.yaw manually.
   if(!failed){
     const s=Math.max(.4,Math.min(8,ppm*.1));
     ctx.save();
     ctx.translate(chaScrn.x, chaScrn.y);
-    if(vm!=='chase') ctx.rotate(C.yaw); // non-chase: rotate sprite to match heading
-    // chase mode: no rotation — ship is always "up" from pilot's perspective
+    if(vm!=='chase') ctx.rotate(C.yaw);
     drawChaser(ctx,s,chaScrn.x,chaScrn.y,ppm);
     ctx.restore();
 
-    // Velocity vector — in screen space
     if(showVV){
       const rv=Math.hypot(C.vx,C.vy,C.vz);
       if(rv>0.02){
-        // Hill frame: +vy = in-track = toward ISS = screen UP at yaw=0
-        // atan2(vx, vy): at vx=0,vy>0 → angle=0 → arrow points up (0,-vl). Correct.
         const worldAng=Math.atan2(C.vx, C.vy);
-        const screenAng = vm==='chase' ? worldAng : worldAng + C.yaw;
+        // Chase cam rotates world by -C.yaw, so subtract yaw to get screen-space angle.
+        // RIC/free: world not rotated, screenAng = worldAng.
+        const screenAng = vm==='chase' ? worldAng - C.yaw : worldAng;
         const vl=Math.min(100,Math.max(8,rv*ppm*4));
         const sv2=Math.min(.8,Math.hypot(C.rx,C.ry,C.rz)*.0015);
         const vc2=rv>sv2*2?'#ff5533':'#00ffaa';
@@ -1121,10 +1072,8 @@ function drawProx(rdt){
     }
   }
 
-  // HUD and edge arrows are drawn in unrotated screen space
   drawHUD(ctx,issScrn.x,issScrn.y,chaScrn.x,chaScrn.y,ppm);
 
-  // Edge arrows — drawn in screen space using rotPt defined above
   if(showArrows){
     drawEdgeArrow(ctx,issScrn.x,issScrn.y,chaScrn.x,chaScrn.y,'#00ccff','ISS',Math.hypot(C.rx,C.ry));
     for(const t of DOCK_TARGETS){
@@ -1162,16 +1111,13 @@ function drawISS(ctx,s){
     ctx.fillStyle=g;ctx.fillRect(m.x*s,m.y*s,m.w*s,m.h*s);
     ctx.strokeStyle='#55558855';ctx.lineWidth=.5;ctx.strokeRect(m.x*s,m.y*s,m.w*s,m.h*s);
   }
-  // Docking port — at bottom of ISS body, facing the approaching chaser.
-  // Port is at Hill (0, DOCK_PORT_Y=-3m). Screen y offset = DOCK_PORT_Y_S * s (downward).
-  const portY_s = DOCK_PORT_Y_S * s; // positive = downward in screen = toward chaser
+  const portY_s = DOCK_PORT_Y_S * s;
   ctx.strokeStyle='#00ccff';ctx.lineWidth=1.5;
   ctx.beginPath();ctx.arc(0,portY_s,4*s,0,TAU);ctx.stroke();
   ctx.strokeStyle='#00ccff77';ctx.lineWidth=.8;
   ctx.beginPath();ctx.moveTo(-4*s,portY_s);ctx.lineTo(-5*s,portY_s+5*s);ctx.stroke();
   ctx.beginPath();ctx.moveTo(4*s,portY_s);ctx.lineTo(5*s,portY_s+5*s);ctx.stroke();
   ctx.fillStyle='#001833';ctx.beginPath();ctx.arc(0,portY_s,2.5*s,0,TAU);ctx.fill();
-  // Nav lights
   const t1=.5+.5*Math.sin(simTime*3),t2=.5+.5*Math.sin(simTime*3+Math.PI);
   ctx.fillStyle='rgba(255,50,0,'+t1+')';ctx.beginPath();ctx.arc(-50*s,0,2,0,TAU);ctx.fill();
   ctx.fillStyle='rgba(0,255,80,'+t2+')';ctx.beginPath();ctx.arc(50*s,0,2,0,TAU);ctx.fill();
@@ -1189,8 +1135,6 @@ function getScreenPos(hillX,hillY){
 function checkDocking(){
   if(docked||failed)return;
   const rv=Math.hypot(C.vx,C.vy,C.vz);
-
-  // Distance from chaser center to docking port
   const dpDist=Math.hypot(C.rx-0,C.ry-DOCK_PORT_Y,C.rz);
 
   if(dpDist<DOCK_CAPTURE_R){
@@ -1207,7 +1151,6 @@ function checkDocking(){
     return;
   }
 
-  // Body collision
   const ellTest=(C.rx/ISS_BODY_RX)**2+(C.ry/ISS_BODY_RY)**2;
   if(ellTest<1.0){
     if(rv>DOCK_MAX_V){
@@ -1229,29 +1172,7 @@ function undock(){
 }
 
 // ── CHASER DRAW ───────────────────────────────────────
-// FIX: Thrust plumes must be drawn in WORLD space (before ctx.rotate(C.yaw)),
-// not in body space. The chaser is drawn with ctx rotated by C.yaw.
-// Thruster positions in body frame, then we transform to world/screen for plumes.
-// 
-// Actually the simplest correct approach: draw plumes ALSO in the rotated body frame,
-// but use proper body-frame offsets. The issue in v4 was that port/stbd plumes
-// used ox=±6 which ARE body-frame offsets — that's correct. The rotation angle
-// for the plume itself determines plume direction.
-//
-// Body frame (after ctx.rotate(C.yaw)):
-//   +y = forward (bow direction), -y = aft
-//   +x = starboard, -x = port
-// Thruster positions:
-//   FWD thruster: fires aft, located at aft (y=+9), plume goes in +y direction (aft of body)
-//   AFT thruster: fires forward, located at bow (y=-9), plume goes in -y direction  
-//   PORT thruster: fires port, located at starboard side (x=+6), plume goes in +x direction
-//   STBD thruster: fires starboard, located at port side (x=-6), plume goes in -x direction
-//
-// pl(ox, oy, ang, len): translate to (ox*s, oy*s), rotate by ang, draw plume extending +y
-
 function drawChaser(ctx,s,wx,wy,ppm){
-  // Plume helper: called in body-rotated context
-  // ox,oy = thruster position in body units; ang = plume direction angle in body frame; len = plume length
   function pl(ox,oy,ang,len,col){
     ctx.save();
     ctx.translate(ox*s, oy*s);
@@ -1270,29 +1191,15 @@ function drawChaser(ctx,s,wx,wy,ppm){
     ctx.restore();
   }
 
-  // Thrust plumes — all in body frame (ctx is already rotated by C.yaw)
-  // FWD thrust: reaction is AFT. Engine at rear (oy=+9 in body = aft face). Plume goes down (+y).
   if(thr.fwd){ pl(0,9,0,28,'#ff6600'); spawnFlares(wx,wy); }
-  // AFT thrust: reaction is FWD. Engine at bow (oy=-9). Plume goes up (-y = Math.PI).
   if(thr.aft){ pl(0,-9,Math.PI,22,'#ff6600'); spawnFlares(wx,wy); }
-  // PORT thrust: pushes left, reaction jet fires RIGHT (+x). Engine on left side (ox=-6). Plume angle = -PI/2 (left).
-  // Wait: PORT thruster fires a jet to the PORT side to push the vehicle to PORT.
-  // So jet exits on PORT side (ox = -6), pointing in -x direction (ang = +PI/2 since plume goes down after rotate).
-  // In our body frame: x+ = right (stbd), x- = left (port), y+ = aft, y- = fwd.
-  // pl rotate: after ctx.rotate(ang), plume extends in +y. So:
-  //   to emit left (-x), we rotate ang = -PI/2 (plume goes left = negative x after rotation).
-  //   Thruster is on port side at ox=-6, fires LEFT.
   if(thr.port){ pl(-6,0,-Math.PI/2,18,'#7799ff'); }
-  // STBD thrust: jet exits on STBD side (ox=+6), pointing +x direction (ang = +PI/2).
   if(thr.stbd){ pl(6,0,Math.PI/2,18,'#7799ff'); }
-  // UP: jet fires down. Engine can be at center.
   if(thr.up){ pl(0,4,-Math.PI*.25,14,'#99ffaa'); }
   if(thr.dn){ pl(0,-4,Math.PI*.75,14,'#99ffaa'); }
-  // YAW: counter-rotating pair
   if(thr.yawL){ pl(0,-9,-Math.PI/2,16,'#7799ff'); pl(0,9,Math.PI/2,16,'#7799ff'); }
   if(thr.yawR){ pl(0,-9,Math.PI/2,16,'#7799ff'); pl(0,9,-Math.PI/2,16,'#7799ff'); }
 
-  // Body
   const bg=ctx.createLinearGradient(-4*s,-9*s,4*s,9*s);
   bg.addColorStop(0,'#667788');bg.addColorStop(.5,'#445566');bg.addColorStop(1,'#334455');
   ctx.fillStyle=bg;
@@ -1302,7 +1209,6 @@ function drawChaser(ctx,s,wx,wy,ppm){
   ctx.strokeStyle='#ffffff10';ctx.lineWidth=.5;
   for(let i=-7;i<9;i+=2){ctx.beginPath();ctx.moveTo(-4*s,i*s);ctx.lineTo(4*s,i*s);ctx.stroke();}
 
-  // Solar panels
   const sg=ctx.createLinearGradient(-20*s,0,20*s,0);
   sg.addColorStop(0,'#112266');sg.addColorStop(.5,'#1a3388');sg.addColorStop(1,'#112266');
   ctx.fillStyle=sg;
@@ -1311,18 +1217,15 @@ function drawChaser(ctx,s,wx,wy,ppm){
   ctx.strokeRect(-22*s,-2.5*s,14*s,5*s);ctx.strokeRect(8*s,-2.5*s,14*s,5*s);
   for(let i=0;i<4;i++){const x1=(-22+i*3.3)*s,x2=(8+i*3.3)*s;ctx.beginPath();ctx.moveTo(x1,-2.5*s);ctx.lineTo(x1,2.5*s);ctx.moveTo(x2,-2.5*s);ctx.lineTo(x2,2.5*s);ctx.stroke();}
 
-  // Probe (bow)
   ctx.fillStyle='#aaccee';ctx.fillRect(-1.2*s,-14*s,2.4*s,5*s);
   ctx.fillStyle='#cce8ff';ctx.beginPath();ctx.arc(0,-14*s,1.8,0,TAU);ctx.fill();
   ctx.strokeStyle='#00ddffcc';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(0,-14*s,3.2,0,TAU);ctx.stroke();
 
-  // RCS nozzles
   ctx.fillStyle='#556677';
   for(const[nx,ny] of[[-4,-9],[4,-9],[-4,9],[4,9],[-4,0],[4,0]]){ctx.beginPath();ctx.arc(nx*s,ny*s,.8,0,TAU);ctx.fill();}
   ctx.fillStyle='#3a4f60';
   for(const[nx,ny] of[[-2,-9],[2,-9],[-2,9],[2,9]]){ctx.beginPath();ctx.arc(nx*s,ny*s,.7,0,TAU);ctx.fill();}
 
-  // Nav lights
   const l1=.4+.6*Math.sin(simTime*2.5),l2=.4+.6*Math.sin(simTime*2.5+Math.PI);
   ctx.fillStyle='rgba(255,0,0,'+l1+')';ctx.beginPath();ctx.arc(-4*s,0,1.5,0,TAU);ctx.fill();
   ctx.fillStyle='rgba(0,255,0,'+l2+')';ctx.beginPath();ctx.arc(4*s,0,1.5,0,TAU);ctx.fill();
@@ -1334,7 +1237,6 @@ function drawDockTarget(ctx, t, dist, ppm){
   const col = t.col;
   const pulse = 0.5 + 0.5 * Math.sin(simTime * 2.5);
 
-  // Octagonal body
   ctx.save();
   ctx.rotate(simTime * 0.3);
   ctx.strokeStyle = col + 'cc';
@@ -1350,20 +1252,17 @@ function drawDockTarget(ctx, t, dist, ppm){
   ctx.fillStyle = col + '22';
   ctx.fill();
   ctx.stroke();
-  // Inner cross
   ctx.strokeStyle = col + '88';
   ctx.lineWidth = 0.8;
   ctx.beginPath();
   ctx.moveTo(-4*s, 0); ctx.lineTo(4*s, 0);
   ctx.moveTo(0, -4*s); ctx.lineTo(0, 4*s);
   ctx.stroke();
-  // Docking port circle
   ctx.strokeStyle = col;
   ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.arc(0, 0, 2.2*s, 0, TAU); ctx.stroke();
   ctx.restore();
 
-  // Solar panels
   ctx.fillStyle = '#1a2a66';
   ctx.strokeStyle = col + '66';
   ctx.lineWidth = 0.5;
@@ -1372,11 +1271,9 @@ function drawDockTarget(ctx, t, dist, ppm){
   ctx.fillRect(7*s, -2*s, 9*s, 4*s);
   ctx.strokeRect(7*s, -2*s, 9*s, 4*s);
 
-  // Nav light
   ctx.fillStyle = `rgba(${col==='#ffaa00'?'255,170,0':'255,68,170'},${0.4+0.6*pulse})`;
   ctx.beginPath(); ctx.arc(0, -7*s, 1.5, 0, TAU); ctx.fill();
 
-  // Label + distance
   if(dist < 600){
     ctx.font = '8px Share Tech Mono';
     ctx.fillStyle = col + 'cc';
@@ -1390,32 +1287,22 @@ function drawDockTarget(ctx, t, dist, ppm){
   }
 }
 
-// Draw an edge arrow pointing from cX,cY toward targetSx,targetSy
-// Only draws when target is outside viewport
 function drawEdgeArrow(ctx, targetSx, targetSy, cX, cY, col, label, dist, alwaysShow){
   const margin = 28;
-  // Vector from chaser screen pos to target screen pos
   const dx = targetSx - cX;
   const dy = targetSy - cY;
   const ang = Math.atan2(dy, dx);
 
-  // Check if target is visible on screen
   const onScreen = targetSx > margin && targetSx < PW - margin &&
                    targetSy > margin && targetSy < PH - margin;
   if(onScreen && !alwaysShow) return;
 
-  // Clamp arrow to screen edge
   const edgeMargin = 22;
-  const hw = PW / 2 - edgeMargin;
-  const hh = PH / 2 - edgeMargin;
-  // Arrow origin at chaser screen position, clamped to visible area
   const ox = Math.max(edgeMargin, Math.min(PW - edgeMargin, cX));
   const oy = Math.max(edgeMargin, Math.min(PH - edgeMargin, cY));
 
-  // Find intersection of ray from (ox,oy) in direction ang with screen rect
   let ax, ay;
   const cosA = Math.cos(ang), sinA = Math.sin(ang);
-  // Candidate intersections with 4 edges
   const candidates = [];
   if(cosA !== 0){
     const tx1 = (edgeMargin - ox) / cosA;
@@ -1438,13 +1325,11 @@ function drawEdgeArrow(ctx, targetSx, targetSy, cX, cY, col, label, dist, always
   ax = candidates[0].x;
   ay = candidates[0].y;
 
-  // Draw arrow
   const pulse = 0.6 + 0.4 * Math.sin(simTime * 3);
   ctx.save();
   ctx.translate(ax, ay);
   ctx.rotate(ang);
 
-  // Arrow body
   const asz = 10;
   ctx.strokeStyle = col + Math.floor(pulse * 220).toString(16).padStart(2,'0');
   ctx.lineWidth = 1.5;
@@ -1456,13 +1341,11 @@ function drawEdgeArrow(ctx, targetSx, targetSy, cX, cY, col, label, dist, always
   ctx.lineTo(asz - 5, 5);
   ctx.stroke();
 
-  // Box behind label
-  ctx.rotate(-ang); // un-rotate for text
+  ctx.rotate(-ang);
   const distStr = dist > 1000 ? (dist/1000).toFixed(1)+'km' : dist.toFixed(0)+'m';
   const lbl = label;
   ctx.font = '7px Share Tech Mono';
   const tw = Math.max(ctx.measureText(lbl).width, ctx.measureText(distStr).width) + 6;
-  // Position label on the inward side of arrow
   const lox = Math.cos(ang + Math.PI) * 14;
   const loy = Math.sin(ang + Math.PI) * 14;
   ctx.fillStyle = '#000000bb';
@@ -1622,7 +1505,7 @@ function loop(ts){
 
 // ── INIT ──────────────────────────────────────────────
 document.getElementById('tss').value=2;setTS(2);
-commsLog('SYS BOOT — RPO SIM v5.0');
+commsLog('SYS BOOT — RPO SIM v6.0');
 commsLog('FUEL: '+INIT_FUEL+'% — HARD MODE');
 commsLog('HOUSTON: GO FOR APPROACH');
 document.addEventListener('pointerdown',initAudio,{once:true});
