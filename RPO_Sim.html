@@ -200,7 +200,7 @@ button.ora{border-color:#ffaa0066;color:#ffcc88}
     </div>
     <div class="row">
       <span class="lbl">Eccentricity</span>
-      <input type="number" id="ie" value="0.000" min="0" max="0.98" step="0.001" onchange="updateOrb()">
+      <input type="number" id="ie" value="0.000" min="0" max="1.5" step="0.001" onchange="updateOrb()">
     </div>
     <div class="row">
       <span class="lbl">Init Range (m)</span>
@@ -247,8 +247,9 @@ let R_ORB,V_ORB,T_ORB,N_OM;
 function updateOrb(){
   const altKm=Math.max(ALT_MIN_SIM,parseFloat(document.getElementById('ia').value)||420);
   ORB.alt=altKm*1e3;
-  ORB.inc=parseFloat(document.getElementById('ii').value)||51.6;
-  ORB.ecc=Math.min(0.98,Math.max(0,parseFloat(document.getElementById('ie').value)||0));
+  const _incVal=parseFloat(document.getElementById('ii').value);
+  ORB.inc=isNaN(_incVal)?51.6:_incVal;
+  ORB.ecc=Math.min(1.5,Math.max(0,parseFloat(document.getElementById('ie').value)||0));
   R_ORB=R_EARTH+ORB.alt;
   V_ORB=Math.sqrt(MU/R_ORB);
   T_ORB=TAU*Math.sqrt(R_ORB**3/MU);
@@ -297,44 +298,79 @@ const RSO_DATA=RSO_DEFS.map(r=>({
 function stepRSOs(dt){ for(const r of RSO_DATA) r.angle+=r.n*dt; }
 
 // ── EXTRA DOCKABLE TARGETS ────────────────────────────
-// These exist in the Hill frame at fixed offsets, drifting slowly
+// Movement types: 'drift' = slow linear, 'oscillate' = back-and-forth, 'orbit' = circles ISS
 const DOCK_TARGETS = [
-  { id:'DEPOT-1', rx: 2400, ry:  800, rz: 0, vx:-0.002, vy: 0.001, vz:0, col:'#ffaa00', docked:false, label:'DEPOT-1' },
-  { id:'DEPOT-2', rx:-1800, ry: 2200, rz: 0, vx: 0.003, vy:-0.001, vz:0, col:'#ff44aa', docked:false, label:'DEPOT-2' },
-  { id:'MODULE', rx:  300, ry:-3500, rz: 0, vx:-0.001, vy: 0.002, vz:0, col:'#44ffaa', docked:false, label:'MODULE'  },
-  { id:'RELAY',  rx:-2800, ry:-1200, rz: 0, vx: 0.002, vy: 0.001, vz:0, col:'#aaaaff', docked:false, label:'RELAY'   },
+  { id:'DEPOT-1', rx: 2400, ry:  800, rz:0, vx:0, vy:0, col:'#ffaa00', docked:false, label:'DEPOT-1',
+    move:'oscillate', ox:2400, oy:800, ampX:600, ampY:0,   period:180, phase:0, nx:0, ny:0, nTimer:0 },
+  { id:'DEPOT-2', rx:-1800, ry: 2200, rz:0, vx:0, vy:0, col:'#ff44aa', docked:false, label:'DEPOT-2',
+    move:'oscillate', ox:-1800, oy:2200, ampX:0, ampY:800, period:240, phase:1.2, nx:0, ny:0, nTimer:0 },
+  { id:'MODULE',  rx: 300,  ry:-3500, rz:0, vx:0, vy:0, col:'#44ffaa', docked:false, label:'MODULE',
+    move:'orbit',     ox:0,    oy:0,   radius:500, orbitSpeed: Math.PI*2/120, phase:0, nx:0, ny:0, nTimer:0 },
+  { id:'RELAY',   rx:-2800, ry:-1200, rz:0, vx:0, vy:0, col:'#aaaaff', docked:false, label:'RELAY',
+    move:'drift',     ox:-2800, oy:-1200, ampX:0, ampY:0, period:0, phase:0, dvx:0.15, dvy:0.08, nx:0, ny:0, nTimer:0 },
 ];
-const DOCK_TARGET_CAPTURE_R = 4.0; // meters
+const DOCK_TARGET_CAPTURE_R = 4.0;
+
 function stepDockTargets(dt){
   for(const t of DOCK_TARGETS){
     if(t.docked) continue;
-    t.rx += t.vx * dt;
-    t.ry += t.vy * dt;
+    if(t.move === 'oscillate'){
+      t.phase += dt / t.period * TAU;
+      t.rx = t.ox + Math.sin(t.phase) * t.ampX;
+      t.ry = t.oy + Math.sin(t.phase + 0.5) * t.ampY;
+      t.vx = (t.ampX * Math.cos(t.phase)) * (TAU / t.period);
+      t.vy = (t.ampY * Math.cos(t.phase + 0.5)) * (TAU / t.period);
+    } else if(t.move === 'orbit'){
+      t.phase += t.orbitSpeed * dt;
+      const pr = t.rx, py2 = t.ry;
+      t.rx = Math.cos(t.phase) * t.radius + t.ox;
+      t.ry = Math.sin(t.phase) * t.radius * 0.6 + t.oy;
+      t.vx = (t.rx - pr) / Math.max(dt, 0.001);
+      t.vy = (t.ry - py2) / Math.max(dt, 0.001);
+    } else {
+      t.rx += t.dvx * dt;
+      t.ry += t.dvy * dt;
+      t.vx = t.dvx; t.vy = t.dvy;
+    }
+    // Tracking noise uses real wall-clock time so high time-warp never causes jitter
+    const nowMs = performance.now();
+    if(!t._nNext) t._nNext = nowMs;
+    if(nowMs >= t._nNext){
+      const tdistN = Math.hypot(C.rx - t.rx, C.ry - t.ry);
+      const noiseScale = Math.max(0, 1 - tdistN / 500) * 3;
+      t.nx = (Math.random()-0.5) * 2 * noiseScale;
+      t.ny = (Math.random()-0.5) * 2 * noiseScale;
+      t._nNext = nowMs + 160 + Math.random()*80;
+    }
   }
 }
+
 function checkDockTargets(){
   if(failed) return;
   for(const t of DOCK_TARGETS){
     if(t.docked) continue;
-    const rv = Math.hypot(C.vx, C.vy, C.vz);
-    const dist = Math.hypot(C.rx - t.rx, C.ry - t.ry, C.rz - t.rz);
+    // Relative velocity to target (what matters for docking impact)
+    const relVx = C.vx - t.vx, relVy = C.vy - t.vy, relVz = C.vz;
+    const relV = Math.hypot(relVx, relVy, relVz);
+    const dist = Math.hypot(C.rx - t.rx, C.ry - t.ry, C.rz);
     if(dist < DOCK_TARGET_CAPTURE_R){
-      if(rv <= DOCK_MAX_V){
+      if(relV <= DOCK_MAX_V){
         t.docked = true;
-        C.vx=0; C.vy=0; C.vz=0;
+        // Match velocity to target on dock
+        C.vx = t.vx; C.vy = t.vy; C.vz = 0;
         const sp = getScreenPos(t.rx, t.ry);
         spawnDockSparks(sp.x, sp.y);
         playDockSound();
-        commsLog('CAPTURE — '+t.label+' SECURED');
+        commsLog('CAPTURE — '+t.label+' SECURED (rel-V: '+relV.toFixed(2)+'m/s)');
       } else {
-        triggerFailure('HARD DOCK '+t.label+' — '+rv.toFixed(2)+' m/s');
+        triggerFailure('HARD DOCK '+t.label+' — REL-V '+relV.toFixed(2)+' m/s');
       }
     }
   }
 }
 
 // ── SIM STATE ─────────────────────────────────────────
-let C={rx:0,ry:-500,rz:0,vx:0,vy:0,vz:0,yaw:0,fuel:INIT_FUEL,dv:0};
+let C={rx:0,ry:-500,rz:0,vx:0,vy:0,vz:0,yaw:0,yawRate:0,fuel:INIT_FUEL,dv:0};
 let targetAngle=0,simTime=0,missionTime=0,lastTS=null;
 let docked=false,failed=false,failReason='';
 const TS_VALS=[0.1,0.25,1,5,20,100];
@@ -611,8 +647,13 @@ function cwStep(dt){
   if(thr.dn)az-=TA;
   const mag=Math.hypot(ax,ay,az);
   if(mag>0){C.fuel=Math.max(0,C.fuel-0.004*dt*mag/0.5);C.dv+=mag*dt;}
-  if(thr.yawL)C.yaw-=YAW_R*dt;
-  if(thr.yawR)C.yaw+=YAW_R*dt;
+  // Yaw: thrusters apply angular acceleration; rate persists (momentum) with tiny damping
+  const YAW_ACCEL = YAW_R * 3; // rad/s² per thruster fire
+  if(thr.yawL) C.yawRate -= YAW_ACCEL * dt;
+  if(thr.yawR) C.yawRate += YAW_ACCEL * dt;
+  // Very light damping (attitude control system fighting, realistic for RCS)
+  C.yawRate *= Math.pow(0.985, dt * 60);
+  C.yaw += C.yawRate * dt;
   const ns=rk4([C.rx,C.ry,C.rz,C.vx,C.vy,C.vz],dt,[ax,ay,az]);
   [C.rx,C.ry,C.rz,C.vx,C.vy,C.vz]=ns;
 }
@@ -672,21 +713,75 @@ function drawOrbit(){
   const OZ=orbitZoom;
 
   if(ecc>=0.99){
-    drawEarthAt(ctx,cx,cy,cx*0.3*OZ);
-    ctx.strokeStyle='#ff880055';ctx.lineWidth=1.5;ctx.setLineDash([4,6]);
+    // Draw Earth at left-center, parabola/hyperbola opens to the right
+    const eR = cx * 0.22 * OZ;
+    const earthX = cx * 0.38;
+    const earthY = cy;
+    drawEarthAt(ctx, earthX, earthY, eR);
+
+    // Determine periapsis distance in display units
+    // For a parabola: r = p/(1+cos θ), p = a(1-e²) but at e=1 use p=alt_ratio
+    // Just draw a nice conic: x = t², y = t (parabola shape), scaled to fill panel
+    const isHyperbolic = ecc > 1.0;
+    const label = ecc >= 1.0 ? 'HYPERBOLIC TRAJECTORY' : 'PARABOLIC TRAJECTORY';
+    const sublabel = ecc >= 1.0 ? 'e=' + ecc.toFixed(3) + ' — ESCAPE TRAJECTORY' : 'e≈1.00 — ESCAPE VELOCITY';
+
+    // Draw the escape trajectory as a conic section
+    // In polar: r = p / (1 + e·cos θ), p = periapsis*(1+e)
+    const periPx = cx * 0.18 * OZ; // periapsis visual distance from Earth
+    const p = periPx * (1 + ecc);
+    ctx.strokeStyle = '#ff3300';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([]);
+
+    // Draw approach arm (coming from far left/above)
     ctx.beginPath();
-    for(let tv=-2.8;tv<=2.8;tv+=0.04){
-      const px=cx+tv*cx*.22*OZ,py=cy-(tv*tv*cx*.1-cx*.28)*OZ;
-      if(Math.abs(tv)<0.04)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    let first = true;
+    const thetaMax = isHyperbolic ? Math.acos(-1/ecc) - 0.08 : Math.PI * 0.95;
+    for(let step = 0; step <= 120; step++){
+      const theta = -thetaMax + (step / 120) * thetaMax * 2;
+      const r = p / (1 + ecc * Math.cos(theta));
+      if(r < 0 || r > W * 2) continue;
+      const px = earthX + r * Math.cos(theta);
+      const py = earthY - r * Math.sin(theta);
+      if(first){ ctx.moveTo(px,py); first=false; } else ctx.lineTo(px,py);
     }
-    ctx.stroke();ctx.setLineDash([]);
-    ctx.font='10px Orbitron,monospace';ctx.fillStyle='#ff8800cc';ctx.textAlign='center';
-    ctx.fillText('OUT OF SIM SCOPE',cx,cy+cx*.5);
-    ctx.font='8px Share Tech Mono';ctx.fillStyle='#ff880066';
-    ctx.fillText('e≥0.99 — parabolic/hyperbolic',cx,cy+cx*.55+13);
-    ctx.textAlign='left';
-    ctx.font='7px Share Tech Mono';ctx.fillStyle='#ffffff33';
-    ctx.fillText('e='+ecc.toFixed(3)+'  h='+(ORB.alt/1000).toFixed(0)+'km',4,H-4);
+    ctx.stroke();
+
+    // Dashed asymptotes for hyperbolic
+    if(isHyperbolic){
+      const asymAngle = Math.acos(-1/ecc);
+      ctx.strokeStyle = '#ff330044';
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash([4,6]);
+      const aL = W * 0.85;
+      ctx.beginPath();
+      ctx.moveTo(earthX, earthY);
+      ctx.lineTo(earthX + aL * Math.cos(asymAngle), earthY - aL * Math.sin(asymAngle));
+      ctx.moveTo(earthX, earthY);
+      ctx.lineTo(earthX + aL * Math.cos(-asymAngle), earthY - aL * Math.sin(-asymAngle));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Periapsis marker
+    const periX = earthX + periPx;
+    ctx.fillStyle = '#ff6600';
+    ctx.beginPath(); ctx.arc(periX, earthY, 3.5, 0, TAU); ctx.fill();
+    ctx.font = '7px Share Tech Mono'; ctx.fillStyle = '#ff8844';
+    ctx.fillText('PERI', periX + 5, earthY + 3);
+
+    // Labels
+    ctx.font = '9px Orbitron,monospace'; ctx.fillStyle = '#ff4400dd'; ctx.textAlign = 'center';
+    ctx.fillText(label, cx, H * 0.15);
+    ctx.font = '8px Share Tech Mono'; ctx.fillStyle = '#ff660088';
+    ctx.fillText(sublabel, cx, H * 0.15 + 14);
+    ctx.font = '7px Share Tech Mono'; ctx.fillStyle = '#ff440066';
+    ctx.fillText('OBJECT WILL NOT RETURN — SIM SCOPE EXCEEDED', cx, H * 0.15 + 26);
+
+    ctx.textAlign = 'left';
+    ctx.font = '7px Share Tech Mono'; ctx.fillStyle = '#ffffff33';
+    ctx.fillText('e='+ecc.toFixed(3)+'  h='+(ORB.alt/1000).toFixed(0)+'km', 4, H-4);
     return;
   }
 
@@ -828,6 +923,10 @@ function drawProx(rdt){
   const ctx=PCX;
   ctx.fillStyle='#000205';ctx.fillRect(0,0,PW,PH);
 
+  // Chase mode: rotate entire world so ship always points UP on screen
+  const chaseRot = (vm==='chase') ? -C.yaw : 0;
+
+  // Stars — skybox rotates with camera yaw
   const camY=vm==='chase'?C.yaw:0;
   for(const s of stars3d){
     const px=s.x*Math.cos(camY)+s.y*Math.sin(camY),py=-s.z,pz=-s.x*Math.sin(camY)+s.y*Math.cos(camY);
@@ -839,13 +938,32 @@ function drawProx(rdt){
   }
   ctx.globalAlpha=1;
 
-  {const ex=PW*.87,ey=PH+PH*.06,eR=PH*.88;
-  const g=ctx.createRadialGradient(ex,ey,eR*.2,ex,ey,eR);
-  g.addColorStop(0,'#0a1f6022');g.addColorStop(.65,'#051444aa');g.addColorStop(.9,'#041244');g.addColorStop(1,'transparent');
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(ex,ey,eR,0,TAU);ctx.fill();
-  const ag=ctx.createRadialGradient(ex,ey,eR*.9,ex,ey,eR+50);
-  ag.addColorStop(0,'#3388ff44');ag.addColorStop(1,'transparent');
-  ctx.fillStyle=ag;ctx.beginPath();ctx.arc(ex,ey,eR+40,0,TAU);ctx.fill();}
+  // Earth limb — parallax: shifts opposite to chaser position vs Hill origin
+  // Small factor so it is a subtle hint of movement, not jarring
+  const PARALLAX=0.010;
+  // Offset is opposite to position (move right means Earth drifts left slightly)
+  // Also rotate the parallax offset with the ship in chase mode
+  const rawPX = -C.rx * PARALLAX;
+  const rawPY =  C.ry * PARALLAX;
+  // Rotate parallax into screen frame for chase mode
+  const cosCR=Math.cos(chaseRot), sinCR=Math.sin(chaseRot);
+  const parX = rawPX*cosCR - rawPY*sinCR;
+  const parY = rawPX*sinCR + rawPY*cosCR;
+  {
+    const ex=PW*0.87+parX, ey=PH+PH*0.06+parY, eR=PH*0.88;
+    const g=ctx.createRadialGradient(ex,ey,eR*.2,ex,ey,eR);
+    g.addColorStop(0,'#0a1f6022');g.addColorStop(.65,'#051444aa');g.addColorStop(.9,'#041244');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(ex,ey,eR,0,TAU);ctx.fill();
+    const ag=ctx.createRadialGradient(ex,ey,eR*.9,ex,ey,eR+50);
+    ag.addColorStop(0,'#3388ff44');ag.addColorStop(1,'transparent');
+    ctx.fillStyle=ag;ctx.beginPath();ctx.arc(ex,ey,eR+40,0,TAU);ctx.fill();
+  }
+
+  // Rotate world around screen center for chase-cam
+  ctx.save();
+  ctx.translate(PW/2,PH/2);
+  ctx.rotate(chaseRot);
+  ctx.translate(-PW/2,-PH/2);
 
   const ppm=bPPM()*ZM[vm];
   let tX,tY;
@@ -855,6 +973,7 @@ function drawProx(rdt){
   const cX=vm==='chase'?PW/2:tX+C.rx*ppm;
   const cY=vm==='chase'?PH/2:tY-C.ry*ppm;
 
+  // Background derelicts
   for(const d of bgDerelicts){
     d.rot+=d.rr*rdt;
     const dx=tX+d.rx*ppm,dy=tY-d.ry*ppm;
@@ -866,6 +985,7 @@ function drawProx(rdt){
     ctx.restore();ctx.globalAlpha=1;
   }
 
+  // Range rings
   for(const rr of[2000,1000,500,200,100,50,20,5,1]){
     const rPx=rr*ppm;if(rPx<5||rPx>Math.max(PW,PH)*2.5)continue;
     ctx.strokeStyle=rr<=20?'#ffaa0030':'#00ff8816';ctx.lineWidth=rr<=20?1:.5;
@@ -873,8 +993,10 @@ function drawProx(rdt){
     if(rPx>20){ctx.font='8px Share Tech Mono';ctx.fillStyle=rr<=20?'#ffaa0050':'#00ff8830';ctx.fillText(rr>=1000?(rr/1000)+'km':rr+'m',tX+rPx+2,tY-2);}
   }
 
+  // Approach corridor
   {const cw=15*ppm;ctx.strokeStyle='#00ff8813';ctx.lineWidth=1;ctx.setLineDash([6,9]);ctx.beginPath();ctx.moveTo(tX-cw,tY-3000);ctx.lineTo(tX-cw,tY+3000);ctx.moveTo(tX+cw,tY-3000);ctx.lineTo(tX+cw,tY+3000);ctx.stroke();ctx.setLineDash([]);}
 
+  // RIC axes
   if(vm==='ric'||vm==='free'){
     const L=Math.min(PW,PH)*.35;
     ctx.strokeStyle='#ff444418';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(tX,tY);ctx.lineTo(tX+L,tY);ctx.stroke();ctx.fillStyle='#ff4444aa';ctx.font='9px Share Tech Mono';ctx.fillText('R+',tX+L-14,tY-3);
@@ -882,6 +1004,7 @@ function drawProx(rdt){
     ctx.strokeStyle='#4488ff18';ctx.beginPath();ctx.moveTo(tX,tY);ctx.lineTo(tX-L*.65,tY+L*.65);ctx.stroke();ctx.fillStyle='#4488ffaa';ctx.fillText('C',tX-L*.65-8,tY+L*.65+10);
   }
 
+  // Debris
   if(debrisEnabled){
     for(const d of debris){
       const dsx=tX+d.rx*ppm,dsy=tY-d.ry*ppm;
@@ -901,52 +1024,21 @@ function drawProx(rdt){
     }
   }
 
+  // ISS
   const issScale=Math.max(.4,Math.min(10,ppm*.18));
   if(!failed||docked){ctx.save();ctx.translate(tX,tY);drawISS(ctx,issScale);ctx.restore();}
 
-  // ── EXTRA DOCKABLE TARGETS ────────────────────────
-  for(const t of DOCK_TARGETS){
-    if(t.docked) continue;
-    const tsx = tX + t.rx * ppm;
-    const tsy = tY - t.ry * ppm;
-    const tdist = Math.hypot(C.rx - t.rx, C.ry - t.ry);
-    // Only draw if on screen
-    if(tsx > -40 && tsx < PW+40 && tsy > -40 && tsy < PH+40){
-      ctx.save();
-      ctx.translate(tsx, tsy);
-      drawDockTarget(ctx, t, tdist, ppm);
-      ctx.restore();
-    }
-  }
-
-  // ── EDGE ARROW INDICATORS ─────────────────────────
-  if(showArrows){
-    // ISS arrow (always show when ISS is off-screen)
-    drawEdgeArrow(ctx, tX, tY, cX, cY, '#00ccff', 'ISS', Math.hypot(C.rx, C.ry), false);
-    // Dock targets
-    for(const t of DOCK_TARGETS){
-      if(t.docked) continue;
-      const tsx = tX + t.rx * ppm;
-      const tsy = tY - t.ry * ppm;
-      const tdist = Math.hypot(C.rx - t.rx, C.ry - t.ry);
-      drawEdgeArrow(ctx, tsx, tsy, cX, cY, t.col, t.label, tdist, false);
-    }
-  }
-
-  // Docking port marker — just a subtle highlight on the port itself, no large circle
+  // Docking port close-in brackets (no big circle)
   if(!failed&&!docked){
     const portPos=getScreenPos(0,DOCK_PORT_Y);
     const dpDist=Math.hypot(C.rx,C.ry-DOCK_PORT_Y,C.rz);
-    // Only show a subtle guide when getting close (within 60m)
     if(dpDist<60){
       const pulse=0.5+0.5*Math.sin(simTime*4);
       const alpha=Math.min(1,(60-dpDist)/60)*0.8;
-      // Small targeting brackets, no big circle
       const bs=Math.max(8,Math.min(22,dpDist*ppm*0.5));
       ctx.strokeStyle=`rgba(0,${Math.floor(180+75*pulse)},${Math.floor(220+35*pulse)},${alpha*(0.5+0.4*pulse)})`;
       ctx.lineWidth=1.2;
       const bx=portPos.x,by=portPos.y,bh=bs*0.5;
-      // Corner brackets
       ctx.beginPath();
       ctx.moveTo(bx-bs,by-bh);ctx.lineTo(bx-bs,by-bs);ctx.lineTo(bx-bh,by-bs);
       ctx.moveTo(bx+bh,by-bs);ctx.lineTo(bx+bs,by-bs);ctx.lineTo(bx+bs,by-bh);
@@ -954,35 +1046,22 @@ function drawProx(rdt){
       ctx.moveTo(bx-bh,by+bs);ctx.lineTo(bx-bs,by+bs);ctx.lineTo(bx-bs,by+bh);
       ctx.stroke();
     }
-    if(docked){
-      const portPos2=getScreenPos(0,DOCK_PORT_Y);
-      ctx.strokeStyle='#00ffff';ctx.lineWidth=2;
-      ctx.beginPath();ctx.arc(portPos2.x,portPos2.y,10,0,TAU);ctx.stroke();
+  }
+
+  // Extra dockable targets — use pre-computed slow noise (not per-frame random)
+  for(const t of DOCK_TARGETS){
+    if(t.docked) continue;
+    const tdist=Math.hypot(C.rx-t.rx,C.ry-t.ry);
+    const tsx=tX+t.rx*ppm+t.nx;
+    const tsy=tY-t.ry*ppm+t.ny;
+    if(tsx>-60&&tsx<PW+60&&tsy>-60&&tsy<PH+60){
+      ctx.save();ctx.translate(tsx,tsy);
+      drawDockTarget(ctx,t,tdist,ppm);
+      ctx.restore();
     }
   }
 
-  if(!failed){
-    const s=Math.max(.4,Math.min(8,ppm*.1));
-    ctx.save();ctx.translate(cX,cY);ctx.rotate(C.yaw);
-    drawChaser(ctx,s,cX,cY,ppm);
-    ctx.restore();
-    if(showVV){
-      const rv=Math.hypot(C.vx,C.vy,C.vz);
-      if(rv>0.02){
-        const vsx=C.vx*ppm*4,vsy=-C.vy*ppm*4;
-        const vl=Math.min(100,Math.hypot(vsx,vsy)),va=Math.atan2(vsy,vsx);
-        const sv=Math.min(.8,Math.hypot(C.rx,C.ry,C.rz)*.0015);
-        const vc2=rv>sv*2?'#ff5533':'#00ffaa';
-        ctx.save();ctx.translate(cX,cY);ctx.rotate(va);
-        ctx.strokeStyle=vc2+'bb';ctx.lineWidth=1.5;
-        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(vl,0);
-        ctx.moveTo(vl-7,-4);ctx.lineTo(vl,0);ctx.lineTo(vl-7,4);ctx.stroke();
-        ctx.rotate(-va);ctx.font='8px Share Tech Mono';ctx.fillStyle=vc2+'cc';
-        ctx.fillText(rv.toFixed(2)+'m/s',vl*.5-10,-7);ctx.restore();
-      }
-    }
-  }
-
+  // Particles and flares (still in world space is fine)
   for(const f of flares){
     f.life-=rdt*3.5;f.x+=f.vx*rdt;f.y+=f.vy*rdt;if(f.life<=0)continue;
     ctx.globalAlpha=f.life*.7;
@@ -998,7 +1077,65 @@ function drawProx(rdt){
   parts=parts.filter(p=>p.life>0);
   ctx.globalAlpha=1;
 
-  drawHUD(ctx,tX,tY,cX,cY,ppm);
+  // ── RESTORE WORLD ROTATION ─────────────────────────────
+  // Everything below is in true screen space (no world rotation applied)
+  ctx.restore();
+
+  // Convert world-rotated positions back to screen coords
+  function rotPt(wx,wy){
+    const dx=wx-PW/2,dy=wy-PH/2;
+    return{x:PW/2+dx*cosCR-dy*sinCR, y:PH/2+dx*sinCR+dy*cosCR};
+  }
+  const issScrn=rotPt(tX,tY);
+  const chaScrn=rotPt(cX,cY); // In chase mode this is always PW/2,PH/2
+
+  // ── CHASER — drawn in screen space so it NEVER rotates from pilot's POV ──
+  // In chase mode the pilot IS the chaser — ship is always pointing up on screen.
+  // In other view modes we rotate the sprite by C.yaw manually.
+  if(!failed){
+    const s=Math.max(.4,Math.min(8,ppm*.1));
+    ctx.save();
+    ctx.translate(chaScrn.x, chaScrn.y);
+    if(vm!=='chase') ctx.rotate(C.yaw); // non-chase: rotate sprite to match heading
+    // chase mode: no rotation — ship is always "up" from pilot's perspective
+    drawChaser(ctx,s,chaScrn.x,chaScrn.y,ppm);
+    ctx.restore();
+
+    // Velocity vector — in screen space
+    if(showVV){
+      const rv=Math.hypot(C.vx,C.vy,C.vz);
+      if(rv>0.02){
+        // Hill frame: +vy = in-track (screen up in chase), +vx = radial (screen right in chase)
+        // In chase mode screen is rotated by -C.yaw, so vel vector must account for that
+        const worldAng=Math.atan2(C.vx,-C.vy); // angle in Hill (up=north screen)
+        const screenAng = vm==='chase' ? worldAng : worldAng + C.yaw;
+        const vl=Math.min(100,Math.max(8,rv*ppm*4));
+        const sv2=Math.min(.8,Math.hypot(C.rx,C.ry,C.rz)*.0015);
+        const vc2=rv>sv2*2?'#ff5533':'#00ffaa';
+        ctx.save();ctx.translate(chaScrn.x,chaScrn.y);ctx.rotate(screenAng);
+        ctx.strokeStyle=vc2+'bb';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-vl);
+        ctx.moveTo(-4,-(vl-7));ctx.lineTo(0,-vl);ctx.lineTo(4,-(vl-7));ctx.stroke();
+        ctx.font='8px Share Tech Mono';ctx.fillStyle=vc2+'cc';ctx.textAlign='center';
+        ctx.fillText(rv.toFixed(2)+'m/s',0,-(vl+8));ctx.textAlign='left';ctx.restore();
+      }
+    }
+  }
+
+  // HUD and edge arrows are drawn in unrotated screen space
+  drawHUD(ctx,issScrn.x,issScrn.y,chaScrn.x,chaScrn.y,ppm);
+
+  // Edge arrows — drawn in screen space using rotPt defined above
+  if(showArrows){
+    drawEdgeArrow(ctx,issScrn.x,issScrn.y,chaScrn.x,chaScrn.y,'#00ccff','ISS',Math.hypot(C.rx,C.ry));
+    for(const t of DOCK_TARGETS){
+      if(t.docked) continue;
+      const tsx=tX+t.rx*ppm, tsy=tY-t.ry*ppm;
+      const rpt=rotPt(tsx,tsy);
+      const tdist=Math.hypot(C.rx-t.rx,C.ry-t.ry);
+      drawEdgeArrow(ctx,rpt.x,rpt.y,chaScrn.x,chaScrn.y,t.col,t.label,tdist);
+    }
+  }
 
   if(failFlash>0){ctx.fillStyle='rgba(200,0,0,'+(failFlash*.5)+')';ctx.fillRect(0,0,PW,PH);failFlash=Math.max(0,failFlash-.04);}
 }
@@ -1433,7 +1570,7 @@ function setTS(v){timeScale=TS_VALS[parseInt(v)];document.getElementById('tsl').
 
 function resetSim(){
   const ir=parseFloat(document.getElementById('ir').value)||500;
-  C.rx=0;C.ry=-ir;C.rz=0;C.vx=0;C.vy=0;C.vz=0;C.yaw=0;C.fuel=INIT_FUEL;C.dv=0;
+  C.rx=0;C.ry=-ir;C.rz=0;C.vx=0;C.vy=0;C.vz=0;C.yaw=0;C.yawRate=0;C.fuel=INIT_FUEL;C.dv=0;
   docked=false;failed=false;failReason='';missionTime=0;simTime=0;failFlash=0;
   Object.keys(thr).forEach(k=>thr[k]=false);
   parts=[];flares=[];debris=[];debTimer=0;nextDeb=20+Math.random()*30;
