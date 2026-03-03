@@ -647,12 +647,11 @@ function cwStep(dt){
   if(thr.dn)az-=TA;
   const mag=Math.hypot(ax,ay,az);
   if(mag>0){C.fuel=Math.max(0,C.fuel-0.004*dt*mag/0.5);C.dv+=mag*dt;}
-  // Yaw: thrusters apply angular acceleration; rate persists (momentum) with tiny damping
-  const YAW_ACCEL = YAW_R * 3; // rad/s² per thruster fire
+  // Yaw: angular acceleration from RCS, momentum persists with NO damping (space = no friction)
+  const YAW_ACCEL = YAW_R * 3;
   if(thr.yawL) C.yawRate -= YAW_ACCEL * dt;
   if(thr.yawR) C.yawRate += YAW_ACCEL * dt;
-  // Very light damping (attitude control system fighting, realistic for RCS)
-  C.yawRate *= Math.pow(0.985, dt * 60);
+  // No damping — must counter-fire to stop rotation
   C.yaw += C.yawRate * dt;
   const ns=rk4([C.rx,C.ry,C.rz,C.vx,C.vy,C.vz],dt,[ax,ay,az]);
   [C.rx,C.ry,C.rz,C.vx,C.vy,C.vz]=ns;
@@ -1105,9 +1104,9 @@ function drawProx(rdt){
     if(showVV){
       const rv=Math.hypot(C.vx,C.vy,C.vz);
       if(rv>0.02){
-        // Hill frame: +vy = in-track (screen up in chase), +vx = radial (screen right in chase)
-        // In chase mode screen is rotated by -C.yaw, so vel vector must account for that
-        const worldAng=Math.atan2(C.vx,-C.vy); // angle in Hill (up=north screen)
+        // Hill frame: +vy = in-track = toward ISS = screen UP at yaw=0
+        // atan2(vx, vy): at vx=0,vy>0 → angle=0 → arrow points up (0,-vl). Correct.
+        const worldAng=Math.atan2(C.vx, C.vy);
         const screenAng = vm==='chase' ? worldAng : worldAng + C.yaw;
         const vl=Math.min(100,Math.max(8,rv*ppm*4));
         const sv2=Math.min(.8,Math.hypot(C.rx,C.ry,C.rz)*.0015);
