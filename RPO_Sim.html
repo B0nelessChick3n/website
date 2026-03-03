@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RPO Sim v3</title>
+<title>RPO Sim v5</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -113,7 +113,7 @@ button.ora{border-color:#ffaa0066;color:#ffcc88}
 <!-- CENTER -->
 <div id="center">
   <div id="topbar">
-    <span style="font-family:Orbitron;font-size:9px;letter-spacing:2px;color:#00ff88cc;white-space:nowrap">RPO SIM v4</span>
+    <span style="font-family:Orbitron;font-size:9px;letter-spacing:2px;color:#00ff88cc;white-space:nowrap">RPO SIM v5</span>
     <div style="display:flex;gap:3px">
       <button class="vt on" id="vt-chase" onclick="setView('chase')">CHASE</button>
       <button class="vt" id="vt-ric" onclick="setView('ric')">RIC</button>
@@ -133,7 +133,7 @@ button.ora{border-color:#ffaa0066;color:#ffcc88}
     <span id="bb-r" style="color:#00ffaa">RNG:---</span>
     <span id="bb-v" style="color:#00ffaa">V:---</span>
     <span id="bb-ric" style="color:#00ff8866">R:0 I:-500 C:0</span>
-    <span id="bb-z" style="margin-left:auto;color:#00ff8844">1.00x</span>
+    <span id="bb-z" style="margin-left:auto;color:#00ff8044">1.00x</span>
   </div>
 </div>
 
@@ -153,7 +153,7 @@ button.ora{border-color:#ffaa0066;color:#ffcc88}
   <div class="sec">
     <div class="st">RCS (WASD/Arrows &middot; Q/E=Yaw &middot; Z/X=Up/Dn)</div>
     <div style="font-size:7px;color:#00ff8833;margin-bottom:3px">CW drift is orbital mechanics &#8212; counter with radial thrusters</div>
-    <div class="row"><span class="lbl">Thrust Scale</span><span class="val" id="thr-scale-val" style="font-size:9px">0.50 m/s²</span></div>
+    <div class="row"><span class="lbl">Thrust Scale</span><span class="val" id="thr-scale-val" style="font-size:9px">0.50 m/s&sup2;</span></div>
     <input type="range" id="thr-scale" min="1" max="20" step="1" value="10" oninput="setThrScale(this.value)" style="margin-bottom:4px">
     <div style="display:flex;justify-content:space-between;font-size:7px;color:#00ff8533;margin-top:-2px;margin-bottom:3px">
       <span>Fine</span><span>&#9664;&#9664;&#9664;&#9658;&#9658;&#9658;</span><span>Coarse</span>
@@ -195,7 +195,7 @@ button.ora{border-color:#ffaa0066;color:#ffcc88}
     <div id="alt-warn-panel" style="display:none;font-size:8px;margin:2px 0;padding:3px 5px;border-radius:2px;line-height:1.5"></div>
     <div class="row">
       <span class="lbl">Inclination (&deg;)</span>
-      <input type="number" id="ii" value="51.6" min="0" max="90" step="0.1" onchange="updateOrb()">
+      <input type="number" id="ii" value="51.6" min="0" max="180" step="0.1" onchange="updateOrb()">
     </div>
     <div class="row">
       <span class="lbl">Eccentricity</span>
@@ -281,19 +281,16 @@ function updateOrb(){
 }
 updateOrb();
 
-// ── RSOs — each has its own independent orbit ─────────
-// These advance on their own mean motion regardless of ORB settings.
-// Defined by: semi-major axis a_km (from Earth center), own eccentricity, inclination, RAAN, initial phase.
+// ── RSOs ──────────────────────────────────────────────
 const RSO_DEFS=[
   {name:'HST', a_km:6924,  ecc:0.000, inc:28.5, raan:0.0,  phase:1.40, col:'#88aaff'},
   {name:'GPS', a_km:26559, ecc:0.010, inc:55.0, raan:2.1,  phase:0.90, col:'#aaffaa'},
   {name:'STA', a_km:6728,  ecc:0.000, inc:97.6, raan:1.2,  phase:0.55, col:'#ffaaaa'},
   {name:'CRS', a_km:6788,  ecc:0.001, inc:51.6, raan:0.8,  phase:-0.9, col:'#ddaaff'},
 ];
-// Precompute each RSO's mean motion from its own a_km
 const RSO_DATA=RSO_DEFS.map(r=>({
   ...r,
-  n: TAU/( TAU*Math.sqrt((r.a_km*1e3)**3/MU) ),
+  n: TAU/(TAU*Math.sqrt((r.a_km*1e3)**3/MU)),
   angle: r.phase
 }));
 function stepRSOs(dt){ for(const r of RSO_DATA) r.angle+=r.n*dt; }
@@ -304,12 +301,11 @@ let targetAngle=0,simTime=0,missionTime=0,lastTS=null;
 let docked=false,failed=false,failReason='';
 const TS_VALS=[0.1,0.25,1,5,20,100];
 let timeScale=1;
-const THRUST_A=0.5,YAW_R=1.5*DEG;
+const YAW_R=1.5*DEG;
 let thr={fwd:false,aft:false,port:false,stbd:false,up:false,dn:false,yawL:false,yawR:false};
 let showVV=true,debrisEnabled=true;
-let thrustScale=0.5; // m/s² — controlled by slider
+let thrustScale=0.5;
 function setThrScale(v){
-  // slider 1-20 maps to 0.05 - 2.0 m/s²
   thrustScale=parseFloat(v)*0.1;
   document.getElementById('thr-scale-val').textContent=thrustScale.toFixed(2)+' m/s²';
 }
@@ -386,32 +382,26 @@ function spawnExplosionAt(sx,sy){
   }
 }
 
-// ── AUDIO (significantly improved) ────────────────────
+// ── AUDIO ─────────────────────────────────────────────
 let AC=null,thrGainMain=null,thrGainHarm=null,thrSrc=null;
 
 function initAudio(){
   if(AC)return;
   try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){AC=null;return;}
-  buildAmbient();
-  buildThruster();
+  buildAmbient();buildThruster();
 }
-
 function buildAmbient(){
   if(!AC)return;
-  // Very gentle sub-bass structural hum only — no hiss
   const sub=AC.createOscillator();sub.type='sine';sub.frequency.value=41;
   const subG=AC.createGain();subG.gain.value=0.010;
   sub.connect(subG);subG.connect(AC.destination);sub.start();
-  // Slightly detuned for mild chorus — very quiet
   const hum=AC.createOscillator();hum.type='triangle';hum.frequency.value=82.3;
   const humG=AC.createGain();humG.gain.value=0.005;
   hum.connect(humG);humG.connect(AC.destination);hum.start();
 }
-
 function buildThruster(){
   if(!AC)return;
   const masterBus=AC.createGain();masterBus.gain.value=1;masterBus.connect(AC.destination);
-  // Broadband noise layer — main thruster hiss
   const bufLen=Math.floor(AC.sampleRate*0.35);
   const nb=AC.createBuffer(1,bufLen,AC.sampleRate);
   const nd=nb.getChannelData(0);for(let i=0;i<bufLen;i++)nd[i]=Math.random()*2-1;
@@ -421,7 +411,6 @@ function buildThruster(){
   thrGainMain=AC.createGain();thrGainMain.gain.value=0;
   thrSrc.connect(hp);hp.connect(bp);bp.connect(thrGainMain);thrGainMain.connect(masterBus);
   thrSrc.start();
-  // Harmonic tone layer for metallic character
   const osc1=AC.createOscillator();osc1.type='sawtooth';osc1.frequency.value=88;
   const osc2=AC.createOscillator();osc2.type='square';osc2.frequency.value=176.8;
   const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=650;lp.Q.value=2.5;
@@ -429,18 +418,15 @@ function buildThruster(){
   osc1.connect(lp);osc2.connect(lp);lp.connect(thrGainHarm);thrGainHarm.connect(masterBus);
   osc1.start();osc2.start();
 }
-
 function setThrVol(v){
   if(!AC||!thrGainMain)return;
   const t=AC.currentTime,tgt=Math.min(0.18,v);
   thrGainMain.gain.setTargetAtTime(tgt,t,0.035);
   thrGainHarm.gain.setTargetAtTime(tgt*0.065,t,0.05);
 }
-
 function playImpact(){
   if(!AC)return;
   const t=AC.currentTime;
-  // Metallic clank
   const cBuf=AC.createBuffer(1,Math.floor(AC.sampleRate*0.7),AC.sampleRate);
   const cd=cBuf.getChannelData(0);
   for(let i=0;i<cd.length;i++) cd[i]=(Math.random()*2-1)*Math.exp(-i/(AC.sampleRate*0.12))*1.8;
@@ -448,16 +434,13 @@ function playImpact(){
   const cbp=AC.createBiquadFilter();cbp.type='bandpass';cbp.frequency.value=900;cbp.Q.value=1.8;
   const cg=AC.createGain();cg.gain.value=0.55;
   cs.connect(cbp);cbp.connect(cg);cg.connect(AC.destination);cs.start(t);
-  // Thud
   const to=AC.createOscillator();to.type='sine';to.frequency.setValueAtTime(200,t);to.frequency.exponentialRampToValueAtTime(35,t+0.2);
   const tg=AC.createGain();tg.gain.setValueAtTime(0.38,t);tg.gain.exponentialRampToValueAtTime(0.001,t+0.22);
   to.connect(tg);tg.connect(AC.destination);to.start(t);to.stop(t+0.25);
 }
-
 function playDockSound(){
   if(!AC)return;
   playImpact();
-  // Rising chord sequence
   [220,277,330,415,494,659,880].forEach((f,i)=>{
     const delay=0.1+i*0.06;
     setTimeout(()=>{
@@ -471,7 +454,6 @@ function playDockSound(){
       o.connect(lp);lp.connect(g);g.connect(AC.destination);o.start(now);o.stop(now+0.7);
     },delay*1000);
   });
-  // Final confirmation tone
   setTimeout(()=>{
     if(!AC)return;
     const now=AC.currentTime;
@@ -482,11 +464,9 @@ function playDockSound(){
     o.connect(g);g.connect(AC.destination);o.start(now);o.stop(now+0.9);
   },560);
 }
-
 function playExpSound(){
   if(!AC)return;
   const t=AC.currentTime;
-  // Deep boom
   const dur=2.4;
   const eBuf=AC.createBuffer(1,Math.floor(AC.sampleRate*dur),AC.sampleRate);
   const ed=eBuf.getChannelData(0);
@@ -495,26 +475,10 @@ function playExpSound(){
   const elp=AC.createBiquadFilter();elp.type='lowpass';elp.frequency.value=260;
   const eg=AC.createGain();eg.gain.value=0.9;
   es.connect(elp);elp.connect(eg);eg.connect(AC.destination);es.start(t);
-  // Mid crackle
-  const cBuf=AC.createBuffer(1,Math.floor(AC.sampleRate*0.6),AC.sampleRate);
-  const crd=cBuf.getChannelData(0);
-  for(let i=0;i<crd.length;i++) crd[i]=(Math.random()*2-1)*Math.exp(-i/(AC.sampleRate*0.1))*1.8;
-  const crs=AC.createBufferSource();crs.buffer=cBuf;
-  const crbp=AC.createBiquadFilter();crbp.type='bandpass';crbp.frequency.value=1400;crbp.Q.value=0.8;
-  const crg=AC.createGain();crg.gain.value=0.45;
-  crs.connect(crbp);crbp.connect(crg);crg.connect(AC.destination);crs.start(t);
-  // Descending pitched sweep
-  const do2=AC.createOscillator();do2.type='sawtooth';
-  do2.frequency.setValueAtTime(240,t);do2.frequency.exponentialRampToValueAtTime(22,t+1.1);
-  const dlp=AC.createBiquadFilter();dlp.type='lowpass';dlp.frequency.value=420;
-  const dg=AC.createGain();dg.gain.setValueAtTime(0.22,t);dg.gain.exponentialRampToValueAtTime(0.001,t+1.2);
-  do2.connect(dlp);dlp.connect(dg);dg.connect(AC.destination);do2.start(t);do2.stop(t+1.25);
 }
-
 function playCommsBeep(){
   if(!AC)return;
   const t=AC.currentTime;
-  // Clean two-tone radio beep
   [[1000,0],[1200,0.09]].forEach(([f,d])=>{
     const o=AC.createOscillator();o.type='sine';o.frequency.value=f;
     const g=AC.createGain();
@@ -523,15 +487,7 @@ function playCommsBeep(){
     const hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=700;
     o.connect(hp);hp.connect(g);g.connect(AC.destination);o.start(t+d);o.stop(t+d+0.12);
   });
-  // Short static burst
-  const sb=AC.createBuffer(1,Math.floor(AC.sampleRate*0.035),AC.sampleRate);
-  const sd=sb.getChannelData(0);for(let i=0;i<sd.length;i++)sd[i]=(Math.random()*2-1)*0.28;
-  const ss=AC.createBufferSource();ss.buffer=sb;
-  const sbp=AC.createBiquadFilter();sbp.type='bandpass';sbp.frequency.value=3200;sbp.Q.value=2.5;
-  const sg=AC.createGain();sg.gain.value=0.12;
-  ss.connect(sbp);sbp.connect(sg);sg.connect(AC.destination);ss.start(t);
 }
-
 function playAlertBeep(freq){
   if(!AC)return;
   const t=AC.currentTime;
@@ -601,7 +557,7 @@ function cwStep(dt){
   if(docked||failed)return;
   if(C.fuel<=0){Object.keys(thr).forEach(k=>thr[k]=false);return;}
   const y=C.yaw,cy=Math.cos(y),sy=Math.sin(y);
-  const TA=thrustScale; // current thrust acceleration
+  const TA=thrustScale;
   let ax=0,ay=0,az=0;
   if(thr.fwd){ax-=sy*TA;ay+=cy*TA;}
   if(thr.aft){ax+=sy*TA;ay-=cy*TA;}
@@ -626,8 +582,7 @@ function resizePC(){PW=PW_EL.clientWidth;PH=PW_EL.clientHeight;PC.width=PW;PC.he
 resizePC();window.addEventListener('resize',resizePC);
 
 // ── ORBIT ZOOM ────────────────────────────────────────
-let orbitZoom=1.0; // separate zoom for orbit world view
-const OC_EL=document.getElementById('orbit-wrap');
+let orbitZoom=1.0;
 OC.addEventListener('wheel',e=>{
   e.preventDefault();
   const f=e.deltaY<0?1.2:1/1.2;
@@ -652,24 +607,16 @@ function setView(m){vm=m;['chase','ric','free'].forEach(v=>document.getElementBy
 function toggleVV(){showVV=!showVV;const b=document.getElementById('vvb');b.textContent=showVV?'V-VEC ON':'V-VEC OFF';b.classList.toggle('on',showVV);}
 
 // ── ORBIT DRAW ────────────────────────────────────────
+// INCLINATION: We view the orbit from a fixed "above" perspective.
+// Inclination tilts the orbit plane TOWARD/AWAY from viewer (like tilting a plate).
+// The effect is that the in-plane Y dimension gets foreshortened by cos(inc).
+// At inc=0: full circle (no foreshortening), b = a*sqrt(1-e^2)
+// At inc=45: b compressed by cos(45°)=0.707, looks ellipsoidal even with e=0
+// At inc=90: b compressed to 0, looks like a straight horizontal line
+// At inc=180: same as 0 (back to full circle, orbit reversed)
+// The foreshortening is: b_displayed = a * sqrt(1-e^2) * |cos(inc)|
 //
-// FIX: The ellipse shape is ONLY determined by eccentricity.
-//   At e=0 → circle, always, regardless of inclination.
-//   b = a * sqrt(1 - e^2). At e=0, b=a → circle.
-//
-// Inclination is shown as a 2D tilt/rotation of the orbit plane (RAAN-style),
-// NOT as a compression of the b axis. Compressing b with cos(inc) was WRONG —
-// it made every orbit at inc>0 look like an ellipse even at e=0.
-//
-// Earth is at the RIGHT FOCUS of the ellipse.
-//   focus offset from ellipse center = a * e
-//   At e=0: focus offset=0, Earth at ellipse center → circle centered on Earth ✓
-//
-// Earth visual radius scales with altitude:
-//   eR_px = BASE_ER * (R_EARTH / R_EARTH) = BASE_ER (constant visual Earth size)
-//   orbit a_px = eR_px * (R_ORB / R_EARTH)
-//   This means: at low altitude, orbit barely exceeds Earth radius visually.
-//   At high altitude, orbit track is proportionally much larger than Earth.
+// EARTH AT FOCUS: At e=0, Earth is at center of circle. At e>0, Earth shifts to focus.
 
 function drawOrbit(){
   const ctx=OCX,W=310,H=310,cx=W/2,cy=H/2;
@@ -678,9 +625,8 @@ function drawOrbit(){
   ctx.globalAlpha=1;
 
   const ecc=ORB.ecc;
-  const OZ=orbitZoom; // orbit zoom factor
+  const OZ=orbitZoom;
 
-  // Out of scope at e >= 0.99
   if(ecc>=0.99){
     drawEarthAt(ctx,cx,cy,cx*0.3*OZ);
     ctx.strokeStyle='#ff880055';ctx.lineWidth=1.5;ctx.setLineDash([4,6]);
@@ -693,68 +639,47 @@ function drawOrbit(){
     ctx.font='10px Orbitron,monospace';ctx.fillStyle='#ff8800cc';ctx.textAlign='center';
     ctx.fillText('OUT OF SIM SCOPE',cx,cy+cx*.5);
     ctx.font='8px Share Tech Mono';ctx.fillStyle='#ff880066';
-    ctx.fillText('e≥0.99 — parabolic/hyperbolic',cx,cy+cx*.5+13);
+    ctx.fillText('e≥0.99 — parabolic/hyperbolic',cx,cy+cx*.55+13);
     ctx.textAlign='left';
     ctx.font='7px Share Tech Mono';ctx.fillStyle='#ffffff33';
     ctx.fillText('e='+ecc.toFixed(3)+'  h='+(ORB.alt/1000).toFixed(0)+'km',4,H-4);
     return;
   }
 
-  // === EARTH-SCALED ORBIT LAYOUT ===
-  // Base Earth radius and orbit size — then apply orbitZoom
-  const BASE_ER=52*OZ;
-  const eR=BASE_ER;
-  const ratio=R_ORB/R_EARTH;
-  let a_raw=eR*ratio;
-  const margin=8;
-  const a_px=Math.min(a_raw,(cx-margin));
-  const b_px=a_px*Math.sqrt(1-ecc*ecc);
-  // Earth at focus: earthX = cx + a_px*e (Earth is right of ellipse center when e>0)
-  // Clamp so Earth stays near center when zoomed out, but stays within panel
-  const earthX=Math.max(margin+eR, Math.min(W-margin-eR, cx+a_px*ecc));
-  const earthY=cy;
-  // Ellipse center is at earthX - a_px*ecc = cx (always panel center when earthX=cx+a*e)
-  const ellCX=earthX-a_px*ecc;
+  // Inclination foreshortening: |cos(inc)| compresses the Y dimension of the orbit
+  // This simulates viewing the tilted orbit plane from above
+  const incRad = ORB.inc * DEG;
+  const incFore = Math.abs(Math.cos(incRad)); // 1.0 at 0°/180°, 0.0 at 90°
 
-  // Inclination: tilt the ENTIRE orbit AND ISS/chaser around Earth position.
-  // incTilt rotates all orbit geometry around the Earth point.
-  // At inc=0: tilt=0, no rotation applied.
-  // The rotation is purely visual — it represents the orbit plane tilt.
-  // We rotate around (earthX, earthY) so Earth stays fixed.
-  const incTilt=ORB.inc*DEG*0.55; // 0.55 gives ~28° tilt at ISS inclination — visually clear
+  // Earth-scaled layout
+  const BASE_ER = 52 * OZ;
+  const eR = BASE_ER;
+  const ratio = R_ORB / R_EARTH;
+  const a_raw = eR * ratio;
+  const margin = 8;
+  const a_px = Math.min(a_raw, cx - margin);
 
-  // Helper: transform ellipse-frame coords to screen coords (rotate around Earth)
-  // In ellipse frame, (ex,ey) is relative to ellipse center.
-  // 1. Translate to Earth-relative: ex - (ellCX-earthX) = ex + a_px*ecc - a_px*ecc? No...
-  // Let's define: earthRelX = ellCX_x + ex - earthX, earthRelY = ey
-  // where ellCX_x = ellCX. So earthRelX = (ellCX + ex) - earthX = ex - a_px*ecc
-  // Then rotate around Earth and translate back.
-  function ellToScreen(ex_ec, ey_ec){
-    // point in screen coords before inclination tilt
-    const sx0 = ellCX + ex_ec; // screen x (no tilt)
-    const sy0 = earthY + ey_ec;
-    // rotate around Earth position
-    const dx = sx0 - earthX;
-    const dy = sy0 - earthY;
-    return {
-      x: earthX + dx*Math.cos(incTilt) - dy*Math.sin(incTilt),
-      y: earthY + dx*Math.sin(incTilt) + dy*Math.cos(incTilt)
-    };
-  }
+  // Semi-minor axis: shape from eccentricity only, then foreshorten by cos(inc)
+  const b_kepler = a_px * Math.sqrt(1 - ecc * ecc); // true semi-minor from shape
+  const b_px = b_kepler * incFore;                   // visual semi-minor after inclination tilt
 
-  // Draw RSOs (each with own orbit, independent)
+  // Earth at right focus: earthX = cx + a_px*ecc
+  const earthX = Math.max(margin + eR, Math.min(W - margin - eR, cx + a_px * ecc));
+  const earthY = cy;
+  const ellCX = earthX - a_px * ecc; // ellipse center
+
+  // RSOs
   for(const r of RSO_DATA){
     const rRatio=(r.a_km*1e3)/R_EARTH;
     const ra_raw=eR*rRatio;
     const ra_px=Math.min(ra_raw,cx-4);
     const re=r.ecc;
-    const rb_px=ra_px*Math.sqrt(1-re*re);
-    const rEllCX=earthX-ra_px*re; // RSO ellipse center (Earth at its focus)
-    const rTilt=r.raan; // RSO has its own tilt (RAAN, not inc*0.55)
+    const rFore=Math.abs(Math.cos(r.inc*DEG));
+    const rb_px=ra_px*Math.sqrt(1-re*re)*rFore;
+    const rEllCX=earthX-ra_px*re;
 
     ctx.save();
-    // Rotate around Earth
-    ctx.translate(earthX,earthY);ctx.rotate(rTilt);ctx.translate(-earthX+rEllCX,0);
+    ctx.translate(rEllCX,earthY);
     ctx.strokeStyle=r.col+'22';ctx.lineWidth=0.5;ctx.setLineDash([2,5]);
     ctx.beginPath();ctx.ellipse(0,0,ra_px,rb_px,0,0,TAU);ctx.stroke();ctx.setLineDash([]);
     const rx_ec=ra_px*Math.cos(r.angle),ry_ec=rb_px*Math.sin(r.angle);
@@ -763,14 +688,14 @@ function drawOrbit(){
     ctx.restore();
   }
 
-  // Draw Earth
+  // Earth
   drawEarthAt(ctx,earthX,earthY,eR);
   ctx.strokeStyle='#ffffff08';ctx.lineWidth=.5;
   for(let lat=30;lat<90;lat+=30){ctx.beginPath();ctx.arc(earthX,earthY,eR*Math.cos(lat*DEG),0,TAU);ctx.stroke();}
 
-  // Main orbit ellipse — draw rotated around Earth
+  // Main orbit ellipse
   ctx.save();
-  ctx.translate(earthX,earthY);ctx.rotate(incTilt);ctx.translate(-earthX+ellCX,0);
+  ctx.translate(ellCX,earthY);
   ctx.strokeStyle='#00ff8866';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
   ctx.beginPath();ctx.ellipse(0,0,a_px,b_px,0,0,TAU);
   ctx.stroke();ctx.setLineDash([]);
@@ -783,37 +708,44 @@ function drawOrbit(){
   }
   ctx.restore();
 
-  // ISS position — using ellToScreen helper
-  const iss_ec_x=a_px*Math.cos(targetAngle);
-  const iss_ec_y=b_px*Math.sin(targetAngle);
-  const issPos=ellToScreen(iss_ec_x,iss_ec_y);
-  drawMiniISS(OCX,issPos.x,issPos.y,3.2);
-  ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ff8877';ctx.fillText('ISS',issPos.x+5,issPos.y-4);
+  // ISS position
+  const iss_ec_x = a_px * Math.cos(targetAngle);
+  const iss_ec_y = b_px * Math.sin(targetAngle);
+  const issX = ellCX + iss_ec_x;
+  const issY = earthY + iss_ec_y;
+  drawMiniISS(OCX,issX,issY,3.2);
+  ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ff8877';ctx.fillText('ISS',issX+5,issY-4);
 
   // Chaser position
   if(!failed){
-    const angOff=C.ry/R_ORB,radFrac=C.rx/R_ORB,ca=targetAngle-angOff;
+    const angOff=C.ry/R_ORB,radFrac=C.rx/R_ORB;
+    const ca=targetAngle-angOff;
     const c_ec_x=a_px*(1+radFrac*5)*Math.cos(ca);
     const c_ec_y=b_px*(1+radFrac*2)*Math.sin(ca);
-    const chaPos=ellToScreen(c_ec_x,c_ec_y);
-    ctx.fillStyle='#00ff88';ctx.beginPath();ctx.arc(chaPos.x,chaPos.y,2.5,0,TAU);ctx.fill();
+    const chaX=ellCX+c_ec_x;
+    const chaY=earthY+c_ec_y;
+    ctx.fillStyle='#00ff88';ctx.beginPath();ctx.arc(chaX,chaY,2.5,0,TAU);ctx.fill();
     ctx.strokeStyle='#00ff8833';ctx.lineWidth=.5;ctx.setLineDash([2,3]);
-    ctx.beginPath();ctx.moveTo(issPos.x,issPos.y);ctx.lineTo(chaPos.x,chaPos.y);ctx.stroke();ctx.setLineDash([]);
-    ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ff88';ctx.fillText('CHSR',chaPos.x+4,chaPos.y-4);
+    ctx.beginPath();ctx.moveTo(issX,issY);ctx.lineTo(chaX,chaY);ctx.stroke();ctx.setLineDash([]);
+    ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ff88';ctx.fillText('CHSR',chaX+4,chaY-4);
   }
 
-  // Debris on orbit
+  // Debris
   if(debrisEnabled){
     for(const d of debris){
       const da=targetAngle-d.ry/R_ORB;
       const d_ec_x=a_px*Math.cos(da),d_ec_y=b_px*Math.sin(da);
-      const dp=ellToScreen(d_ec_x,d_ec_y);
+      const dp={x:ellCX+d_ec_x,y:earthY+d_ec_y};
       ctx.fillStyle='#ff440077';ctx.beginPath();ctx.arc(dp.x,dp.y,1.5,0,TAU);ctx.fill();
     }
   }
 
+  // Inclination label hint
+  let incLabel = '';
+  if(Math.abs(incFore) < 0.05) incLabel = ' (edge-on)';
+  else if(Math.abs(incFore) > 0.98) incLabel = ' (face-on)';
   ctx.font='7px Share Tech Mono';ctx.fillStyle='#ffffff33';
-  ctx.fillText('h='+(ORB.alt/1000).toFixed(0)+'km  e='+ecc.toFixed(3)+'  i='+ORB.inc.toFixed(0)+'°  Earth@focus  scroll=zoom',4,H-4);
+  ctx.fillText('h='+(ORB.alt/1000).toFixed(0)+'km  e='+ecc.toFixed(3)+'  i='+ORB.inc.toFixed(0)+'°'+incLabel+'  scroll=zoom',4,H-4);
 }
 
 function drawEarthAt(ctx,ex,ey,eR){
@@ -834,6 +766,20 @@ function drawMiniISS(ctx,x,y,s){
   ctx.fillRect(-s*1.5,-s*2.8,s*3,s*2);
   ctx.restore();
 }
+
+// ── DOCKING CONSTANTS ────────────────────────────────
+// DOCK_PORT_Y: Hill-frame meters. Negative = behind ISS (toward approaching chaser).
+// Chaser starts at ry=-500, approaches toward 0. Port is at ry = DOCK_PORT_Y = -3m (just past ISS center).
+// In drawISS (ctx translated to ISS Hill center = tX,tY):
+//   Screen y of port = -DOCK_PORT_Y * ppm pixels (positive = downward on screen = toward chaser)
+//   ISS scale s = ppm * 0.18, so port in ISS units = -DOCK_PORT_Y / 0.18 ≈ 16.67 s-units below center.
+//   This places port at the bottom edge of the module block — correct visually.
+const DOCK_PORT_Y = -3.0;     // Hill meters
+const DOCK_PORT_Y_S = 16.67;  // ISS scale units (DOCK_PORT_Y / 0.18, positive = downward in ISS draw coords)
+const ISS_BODY_RX = 5.0;
+const ISS_BODY_RY = 2.5;
+const DOCK_CAPTURE_R = 2.5;   // meters radius for dock capture
+const DOCK_MAX_V = 0.3;       // m/s max closure for soft capture
 
 // ── PROX DRAW ─────────────────────────────────────────
 function drawProx(rdt){
@@ -916,34 +862,38 @@ function drawProx(rdt){
   const issScale=Math.max(.4,Math.min(10,ppm*.18));
   if(!failed||docked){ctx.save();ctx.translate(tX,tY);drawISS(ctx,issScale);ctx.restore();}
 
-  // Draw docking port marker at actual Hill position (0, DOCK_PORT_Y)
-  if(!failed){
+  // Docking port marker — just a subtle highlight on the port itself, no large circle
+  if(!failed&&!docked){
     const portPos=getScreenPos(0,DOCK_PORT_Y);
     const dpDist=Math.hypot(C.rx,C.ry-DOCK_PORT_Y,C.rz);
-    const portR=Math.max(6,DOCK_CAPTURE_R*ppm);
-    // Pulsing ring
-    const pulse=0.5+0.5*Math.sin(simTime*4);
-    ctx.strokeStyle=docked?'#00ffff':`rgba(0,${Math.floor(180+75*pulse)},${Math.floor(220+35*pulse)},${0.6+0.3*pulse})`;
-    ctx.lineWidth=docked?2:1.5;
-    ctx.beginPath();ctx.arc(portPos.x,portPos.y,portR,0,TAU);ctx.stroke();
-    // Cross-hair at port
-    const cs2=portR*0.6;
-    ctx.strokeStyle=docked?'#00ffffaa':'#00ccffaa';ctx.lineWidth=1;
-    ctx.beginPath();
-    ctx.moveTo(portPos.x-cs2,portPos.y);ctx.lineTo(portPos.x+cs2,portPos.y);
-    ctx.moveTo(portPos.x,portPos.y-cs2);ctx.lineTo(portPos.x,portPos.y+cs2);
-    ctx.stroke();
-    // Label
-    if(dpDist<80&&!docked){
-      ctx.font='8px Share Tech Mono';ctx.fillStyle='#00ccffaa';
-      ctx.fillText('PORT '+dpDist.toFixed(1)+'m',portPos.x+portR+3,portPos.y+3);
+    // Only show a subtle guide when getting close (within 60m)
+    if(dpDist<60){
+      const pulse=0.5+0.5*Math.sin(simTime*4);
+      const alpha=Math.min(1,(60-dpDist)/60)*0.8;
+      // Small targeting brackets, no big circle
+      const bs=Math.max(8,Math.min(22,dpDist*ppm*0.5));
+      ctx.strokeStyle=`rgba(0,${Math.floor(180+75*pulse)},${Math.floor(220+35*pulse)},${alpha*(0.5+0.4*pulse)})`;
+      ctx.lineWidth=1.2;
+      const bx=portPos.x,by=portPos.y,bh=bs*0.5;
+      // Corner brackets
+      ctx.beginPath();
+      ctx.moveTo(bx-bs,by-bh);ctx.lineTo(bx-bs,by-bs);ctx.lineTo(bx-bh,by-bs);
+      ctx.moveTo(bx+bh,by-bs);ctx.lineTo(bx+bs,by-bs);ctx.lineTo(bx+bs,by-bh);
+      ctx.moveTo(bx+bs,by+bh);ctx.lineTo(bx+bs,by+bs);ctx.lineTo(bx+bh,by+bs);
+      ctx.moveTo(bx-bh,by+bs);ctx.lineTo(bx-bs,by+bs);ctx.lineTo(bx-bs,by+bh);
+      ctx.stroke();
+    }
+    if(docked){
+      const portPos2=getScreenPos(0,DOCK_PORT_Y);
+      ctx.strokeStyle='#00ffff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(portPos2.x,portPos2.y,10,0,TAU);ctx.stroke();
     }
   }
 
   if(!failed){
     const s=Math.max(.4,Math.min(8,ppm*.1));
     ctx.save();ctx.translate(cX,cY);ctx.rotate(C.yaw);
-    drawChaser(ctx,s,cX,cY);
+    drawChaser(ctx,s,cX,cY,ppm);
     ctx.restore();
     if(showVV){
       const rv=Math.hypot(C.vx,C.vy,C.vz);
@@ -1005,32 +955,137 @@ function drawISS(ctx,s){
     ctx.fillStyle=g;ctx.fillRect(m.x*s,m.y*s,m.w*s,m.h*s);
     ctx.strokeStyle='#55558855';ctx.lineWidth=.5;ctx.strokeRect(m.x*s,m.y*s,m.w*s,m.h*s);
   }
-  const portY=6*s;
-  ctx.strokeStyle='#00ccff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,portY,4*s,0,TAU);ctx.stroke();
+  // Docking port — at bottom of ISS body, facing the approaching chaser.
+  // Port is at Hill (0, DOCK_PORT_Y=-3m). Screen y offset = DOCK_PORT_Y_S * s (downward).
+  const portY_s = DOCK_PORT_Y_S * s; // positive = downward in screen = toward chaser
+  ctx.strokeStyle='#00ccff';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(0,portY_s,4*s,0,TAU);ctx.stroke();
   ctx.strokeStyle='#00ccff77';ctx.lineWidth=.8;
-  ctx.beginPath();ctx.moveTo(-4*s,portY);ctx.lineTo(-5*s,portY+5*s);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(4*s,portY);ctx.lineTo(5*s,portY+5*s);ctx.stroke();
-  ctx.fillStyle='#001833';ctx.beginPath();ctx.arc(0,portY,2.5*s,0,TAU);ctx.fill();
+  ctx.beginPath();ctx.moveTo(-4*s,portY_s);ctx.lineTo(-5*s,portY_s+5*s);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(4*s,portY_s);ctx.lineTo(5*s,portY_s+5*s);ctx.stroke();
+  ctx.fillStyle='#001833';ctx.beginPath();ctx.arc(0,portY_s,2.5*s,0,TAU);ctx.fill();
+  // Nav lights
   const t1=.5+.5*Math.sin(simTime*3),t2=.5+.5*Math.sin(simTime*3+Math.PI);
   ctx.fillStyle='rgba(255,50,0,'+t1+')';ctx.beginPath();ctx.arc(-50*s,0,2,0,TAU);ctx.fill();
   ctx.fillStyle='rgba(0,255,80,'+t2+')';ctx.beginPath();ctx.arc(50*s,0,2,0,TAU);ctx.fill();
 }
 
-function drawChaser(ctx,s,wx,wy){
-  function pl(ox,oy,ang,len,col){
-    ctx.save();ctx.translate(ox*s,oy*s);ctx.rotate(ang);
-    const g=ctx.createLinearGradient(0,0,0,len*s);
-    g.addColorStop(0,col+'ee');g.addColorStop(.5,col+'88');g.addColorStop(1,'transparent');
-    ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(-2.2*s,0);ctx.lineTo(2.2*s,0);ctx.lineTo(0,len*s);ctx.closePath();ctx.fill();ctx.restore();
+function getScreenPos(hillX,hillY){
+  const ppm=bPPM()*ZM[vm];
+  let tX,tY;
+  if(vm==='chase'){tX=PW/2-C.rx*ppm;tY=PH/2+C.ry*ppm;}
+  else if(vm==='ric'){tX=PW/2;tY=PH/2;}
+  else{tX=PW/2-fc.x*ppm;tY=PH/2+fc.y*ppm;}
+  return{x:tX+hillX*ppm,y:tY-hillY*ppm};
+}
+
+function checkDocking(){
+  if(docked||failed)return;
+  const rv=Math.hypot(C.vx,C.vy,C.vz);
+
+  // Distance from chaser center to docking port
+  const dpDist=Math.hypot(C.rx-0,C.ry-DOCK_PORT_Y,C.rz);
+
+  if(dpDist<DOCK_CAPTURE_R){
+    if(rv<=DOCK_MAX_V){
+      docked=true;C.vx=0;C.vy=0;C.vz=0;
+      const is=getScreenPos(0,DOCK_PORT_Y);
+      spawnDockSparks(is.x,is.y);playDockSound();
+      commsLog('CAPTURE CONFIRMED — DOCKED AT PORT');
+      commsLog('PRESS [U] OR UNDOCK BUTTON TO DEPART');
+      document.getElementById('undock-btn').style.display='block';
+    }else{
+      triggerFailure('HARD DOCK — CLOSURE '+rv.toFixed(2)+' m/s (MAX '+DOCK_MAX_V.toFixed(2)+')');
+    }
+    return;
   }
-  if(thr.fwd){pl(0,9,0,28,'#ff6600');spawnFlares(wx,wy);}
-  if(thr.aft){pl(0,-9,Math.PI,22,'#ff6600');spawnFlares(wx,wy);}
-  if(thr.port){pl(-6,0,-Math.PI/2,18,'#7799ff');}
-  if(thr.stbd){pl(6,0,Math.PI/2,18,'#7799ff');}
-  if(thr.up){pl(0,4,-Math.PI*.25,14,'#99ffaa');}
-  if(thr.dn){pl(0,-4,Math.PI*.75,14,'#99ffaa');}
-  if(thr.yawL){pl(0,-9,-Math.PI/2,16,'#7799ff');pl(0,9,Math.PI/2,16,'#7799ff');}
-  if(thr.yawR){pl(0,-9,Math.PI/2,16,'#7799ff');pl(0,9,-Math.PI/2,16,'#7799ff');}
+
+  // Body collision
+  const ellTest=(C.rx/ISS_BODY_RX)**2+(C.ry/ISS_BODY_RY)**2;
+  if(ellTest<1.0){
+    if(rv>DOCK_MAX_V){
+      triggerFailure('ISS BODY COLLISION — IMPACT '+rv.toFixed(2)+' m/s');
+    }else{
+      C.vy=-C.vy*0.5;C.vx=-C.vx*0.5;
+      commsLog('BODY CONTACT — BACKING OFF');playImpact();
+    }
+  }
+}
+
+function undock(){
+  if(!docked)return;
+  docked=false;
+  C.vx=0;C.vy=-0.25;C.vz=0;
+  document.getElementById('undock-btn').style.display='none';
+  commsLog('UNDOCK CONFIRMED — DEPARTING PORT');
+  playImpact();
+}
+
+// ── CHASER DRAW ───────────────────────────────────────
+// FIX: Thrust plumes must be drawn in WORLD space (before ctx.rotate(C.yaw)),
+// not in body space. The chaser is drawn with ctx rotated by C.yaw.
+// Thruster positions in body frame, then we transform to world/screen for plumes.
+// 
+// Actually the simplest correct approach: draw plumes ALSO in the rotated body frame,
+// but use proper body-frame offsets. The issue in v4 was that port/stbd plumes
+// used ox=±6 which ARE body-frame offsets — that's correct. The rotation angle
+// for the plume itself determines plume direction.
+//
+// Body frame (after ctx.rotate(C.yaw)):
+//   +y = forward (bow direction), -y = aft
+//   +x = starboard, -x = port
+// Thruster positions:
+//   FWD thruster: fires aft, located at aft (y=+9), plume goes in +y direction (aft of body)
+//   AFT thruster: fires forward, located at bow (y=-9), plume goes in -y direction  
+//   PORT thruster: fires port, located at starboard side (x=+6), plume goes in +x direction
+//   STBD thruster: fires starboard, located at port side (x=-6), plume goes in -x direction
+//
+// pl(ox, oy, ang, len): translate to (ox*s, oy*s), rotate by ang, draw plume extending +y
+
+function drawChaser(ctx,s,wx,wy,ppm){
+  // Plume helper: called in body-rotated context
+  // ox,oy = thruster position in body units; ang = plume direction angle in body frame; len = plume length
+  function pl(ox,oy,ang,len,col){
+    ctx.save();
+    ctx.translate(ox*s, oy*s);
+    ctx.rotate(ang);
+    const g=ctx.createLinearGradient(0,0,0,len*s);
+    g.addColorStop(0,col+'ee');
+    g.addColorStop(.5,col+'88');
+    g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.moveTo(-2.2*s,0);
+    ctx.lineTo(2.2*s,0);
+    ctx.lineTo(0,len*s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Thrust plumes — all in body frame (ctx is already rotated by C.yaw)
+  // FWD thrust: reaction is AFT. Engine at rear (oy=+9 in body = aft face). Plume goes down (+y).
+  if(thr.fwd){ pl(0,9,0,28,'#ff6600'); spawnFlares(wx,wy); }
+  // AFT thrust: reaction is FWD. Engine at bow (oy=-9). Plume goes up (-y = Math.PI).
+  if(thr.aft){ pl(0,-9,Math.PI,22,'#ff6600'); spawnFlares(wx,wy); }
+  // PORT thrust: pushes left, reaction jet fires RIGHT (+x). Engine on left side (ox=-6). Plume angle = -PI/2 (left).
+  // Wait: PORT thruster fires a jet to the PORT side to push the vehicle to PORT.
+  // So jet exits on PORT side (ox = -6), pointing in -x direction (ang = +PI/2 since plume goes down after rotate).
+  // In our body frame: x+ = right (stbd), x- = left (port), y+ = aft, y- = fwd.
+  // pl rotate: after ctx.rotate(ang), plume extends in +y. So:
+  //   to emit left (-x), we rotate ang = -PI/2 (plume goes left = negative x after rotation).
+  //   Thruster is on port side at ox=-6, fires LEFT.
+  if(thr.port){ pl(-6,0,-Math.PI/2,18,'#7799ff'); }
+  // STBD thrust: jet exits on STBD side (ox=+6), pointing +x direction (ang = +PI/2).
+  if(thr.stbd){ pl(6,0,Math.PI/2,18,'#7799ff'); }
+  // UP: jet fires down. Engine can be at center.
+  if(thr.up){ pl(0,4,-Math.PI*.25,14,'#99ffaa'); }
+  if(thr.dn){ pl(0,-4,Math.PI*.75,14,'#99ffaa'); }
+  // YAW: counter-rotating pair
+  if(thr.yawL){ pl(0,-9,-Math.PI/2,16,'#7799ff'); pl(0,9,Math.PI/2,16,'#7799ff'); }
+  if(thr.yawR){ pl(0,-9,Math.PI/2,16,'#7799ff'); pl(0,9,-Math.PI/2,16,'#7799ff'); }
+
+  // Body
   const bg=ctx.createLinearGradient(-4*s,-9*s,4*s,9*s);
   bg.addColorStop(0,'#667788');bg.addColorStop(.5,'#445566');bg.addColorStop(1,'#334455');
   ctx.fillStyle=bg;
@@ -1039,6 +1094,8 @@ function drawChaser(ctx,s,wx,wy){
   ctx.fill();ctx.strokeStyle='#88aacc44';ctx.lineWidth=.5;ctx.stroke();
   ctx.strokeStyle='#ffffff10';ctx.lineWidth=.5;
   for(let i=-7;i<9;i+=2){ctx.beginPath();ctx.moveTo(-4*s,i*s);ctx.lineTo(4*s,i*s);ctx.stroke();}
+
+  // Solar panels
   const sg=ctx.createLinearGradient(-20*s,0,20*s,0);
   sg.addColorStop(0,'#112266');sg.addColorStop(.5,'#1a3388');sg.addColorStop(1,'#112266');
   ctx.fillStyle=sg;
@@ -1046,13 +1103,19 @@ function drawChaser(ctx,s,wx,wy){
   ctx.strokeStyle='#3355aa44';ctx.lineWidth=.5;
   ctx.strokeRect(-22*s,-2.5*s,14*s,5*s);ctx.strokeRect(8*s,-2.5*s,14*s,5*s);
   for(let i=0;i<4;i++){const x1=(-22+i*3.3)*s,x2=(8+i*3.3)*s;ctx.beginPath();ctx.moveTo(x1,-2.5*s);ctx.lineTo(x1,2.5*s);ctx.moveTo(x2,-2.5*s);ctx.lineTo(x2,2.5*s);ctx.stroke();}
+
+  // Probe (bow)
   ctx.fillStyle='#aaccee';ctx.fillRect(-1.2*s,-14*s,2.4*s,5*s);
   ctx.fillStyle='#cce8ff';ctx.beginPath();ctx.arc(0,-14*s,1.8,0,TAU);ctx.fill();
   ctx.strokeStyle='#00ddffcc';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(0,-14*s,3.2,0,TAU);ctx.stroke();
+
+  // RCS nozzles
   ctx.fillStyle='#556677';
   for(const[nx,ny] of[[-4,-9],[4,-9],[-4,9],[4,9],[-4,0],[4,0]]){ctx.beginPath();ctx.arc(nx*s,ny*s,.8,0,TAU);ctx.fill();}
   ctx.fillStyle='#3a4f60';
   for(const[nx,ny] of[[-2,-9],[2,-9],[-2,9],[2,9]]){ctx.beginPath();ctx.arc(nx*s,ny*s,.7,0,TAU);ctx.fill();}
+
+  // Nav lights
   const l1=.4+.6*Math.sin(simTime*2.5),l2=.4+.6*Math.sin(simTime*2.5+Math.PI);
   ctx.fillStyle='rgba(255,0,0,'+l1+')';ctx.beginPath();ctx.arc(-4*s,0,1.5,0,TAU);ctx.fill();
   ctx.fillStyle='rgba(0,255,0,'+l2+')';ctx.beginPath();ctx.arc(4*s,0,1.5,0,TAU);ctx.fill();
@@ -1082,9 +1145,9 @@ function drawHUD(ctx,tX,tY,cX,cY,ppm){
     ['#00cc88','YAW:'+((C.yaw/DEG).toFixed(1))+'  FUEL:'+C.fuel.toFixed(1)+'%  dV:'+C.dv.toFixed(2)],
   ];
   rows.forEach(([col,txt],i)=>{ctx.fillStyle=col;ctx.fillText(txt,12,PH-82+i*14);});
-  if(range<60&&!docked&&!failed){
+  if(range<80&&!docked&&!failed){
     const dpDist=Math.hypot(C.rx,C.ry-DOCK_PORT_Y,C.rz);
-    const col=dpDist<5?'#00ffff':dpDist<12?'#ffcc00':'#ff6600';
+    const col=dpDist<DOCK_CAPTURE_R*1.5?'#00ffff':dpDist<10?'#ffcc00':'#ff6600';
     ctx.font='9px Share Tech Mono';ctx.fillStyle=col;
     ctx.fillText('PORT:'+dpDist.toFixed(1)+'m  V:'+rv.toFixed(3)+'m/s  [<'+DOCK_CAPTURE_R+'m,<'+DOCK_MAX_V+'m/s=DOCK]',10,PH-115);
   }
@@ -1163,71 +1226,6 @@ function resetSim(){
   commsLog('HOUSTON: GO FOR APPROACH');
 }
 
-// ── DOCKING / COLLISION ───────────────────────────────
-// ISS docking port is at Hill coords (0, DOCK_PORT_Y) — extends toward approaching chaser.
-// Chaser approaches from negative Y (behind ISS). Port faces chaser at y = -DOCK_PORT_DIST.
-// Dock when chaser center is within DOCK_CAPTURE_R meters of the port AND slow enough.
-const ISS_BODY_RX=5.0,ISS_BODY_RY=2.5;
-const DOCK_PORT_Y=-7.0;   // Hill meters — port location below ISS center toward chaser
-const DOCK_CAPTURE_R=3.5; // meters — physical contact radius
-const DOCK_MAX_V=0.3;     // m/s max closure speed for capture
-
-function getScreenPos(hillX,hillY){
-  const ppm=bPPM()*ZM[vm];
-  let tX,tY;
-  if(vm==='chase'){tX=PW/2-C.rx*ppm;tY=PH/2+C.ry*ppm;}
-  else if(vm==='ric'){tX=PW/2;tY=PH/2;}
-  else{tX=PW/2-fc.x*ppm;tY=PH/2+fc.y*ppm;}
-  return{x:tX+hillX*ppm,y:tY-hillY*ppm};
-}
-
-function checkDocking(){
-  if(docked||failed)return;
-  const rv=Math.hypot(C.vx,C.vy,C.vz);
-
-  // Distance from chaser center to docking port Hill position (0, DOCK_PORT_Y)
-  const dpDist=Math.hypot(C.rx-0, C.ry-DOCK_PORT_Y, C.rz);
-
-  // ── DOCK: physically touch the port ──
-  if(dpDist<DOCK_CAPTURE_R){
-    if(rv<=DOCK_MAX_V){
-      // Soft capture
-      docked=true;C.vx=0;C.vy=0;C.vz=0;
-      const is=getScreenPos(0,DOCK_PORT_Y);
-      spawnDockSparks(is.x,is.y);playDockSound();
-      commsLog('CAPTURE CONFIRMED — DOCKED AT PORT');
-      commsLog('PRESS [U] OR UNDOCK BUTTON TO DEPART');
-      document.getElementById('undock-btn').style.display='block';
-    }else{
-      // Hard impact on port
-      triggerFailure('HARD DOCK — CLOSURE '+rv.toFixed(2)+' m/s (MAX '+DOCK_MAX_V.toFixed(2)+')');
-    }
-    return;
-  }
-
-  // ── BODY COLLISION: chaser hits ISS structure ──
-  // Exclude approach corridor — only collide if not coming in cleanly from below
-  const ellTest=(C.rx/ISS_BODY_RX)**2+(C.ry/ISS_BODY_RY)**2;
-  if(ellTest<1.0){
-    if(rv>DOCK_MAX_V){
-      triggerFailure('ISS BODY COLLISION — IMPACT '+rv.toFixed(2)+' m/s');
-    }else{
-      C.vy=-C.vy*0.5;C.vx=-C.vx*0.5;
-      commsLog('BODY CONTACT — BACKING OFF');playImpact();
-    }
-  }
-}
-
-function undock(){
-  if(!docked)return;
-  docked=false;
-  // Eject with gentle -Y velocity (away from ISS, back down corridor)
-  C.vx=0;C.vy=-0.25;C.vz=0;
-  document.getElementById('undock-btn').style.display='none';
-  commsLog('UNDOCK CONFIRMED — DEPARTING PORT');
-  playImpact();
-}
-
 // ── COMMS MILESTONES ─────────────────────────────────
 let lastRangeMile=9999,lastFuelMile=INIT_FUEL+1;
 function checkMilestones(){
@@ -1263,7 +1261,7 @@ function loop(ts){
 
 // ── INIT ──────────────────────────────────────────────
 document.getElementById('tss').value=2;setTS(2);
-commsLog('SYS BOOT — RPO SIM v4.0');
+commsLog('SYS BOOT — RPO SIM v5.0');
 commsLog('FUEL: '+INIT_FUEL+'% — HARD MODE');
 commsLog('HOUSTON: GO FOR APPROACH');
 document.addEventListener('pointerdown',initAudio,{once:true});
