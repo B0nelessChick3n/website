@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Space Pirate Simulator</title>
+<title>RPO Sim v6</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -903,21 +903,7 @@ function drawProx(rdt){
   }
   ctx.globalAlpha=1;
 
-  const PARALLAX=0.010;
-  const rawPX = -C.rx * PARALLAX;
-  const rawPY =  C.ry * PARALLAX;
   const cosCR=Math.cos(chaseRot), sinCR=Math.sin(chaseRot);
-  const parX = rawPX*cosCR - rawPY*sinCR;
-  const parY = rawPX*sinCR + rawPY*cosCR;
-  {
-    const ex=PW*0.87+parX, ey=PH+PH*0.06+parY, eR=PH*0.88;
-    const g=ctx.createRadialGradient(ex,ey,eR*.2,ex,ey,eR);
-    g.addColorStop(0,'#0a1f6022');g.addColorStop(.65,'#051444aa');g.addColorStop(.9,'#041244');g.addColorStop(1,'transparent');
-    ctx.fillStyle=g;ctx.beginPath();ctx.arc(ex,ey,eR,0,TAU);ctx.fill();
-    const ag=ctx.createRadialGradient(ex,ey,eR*.9,ex,ey,eR+50);
-    ag.addColorStop(0,'#3388ff44');ag.addColorStop(1,'transparent');
-    ctx.fillStyle=ag;ctx.beginPath();ctx.arc(ex,ey,eR+40,0,TAU);ctx.fill();
-  }
 
   ctx.save();
   ctx.translate(PW/2,PH/2);
@@ -931,6 +917,19 @@ function drawProx(rdt){
   else{tX=PW/2-fc.x*ppm;tY=PH/2+fc.y*ppm;}
   const cX=vm==='chase'?PW/2:tX+C.rx*ppm;
   const cY=vm==='chase'?PH/2:tY-C.ry*ppm;
+
+  // Earth: fixed Hill-frame position with subtle parallax offset by chaser position.
+  // Drawn inside the world-rotation block so it rotates with the ISS frame when yawing.
+  {
+    const PARALLAX=0.010;
+    const ex=PW*0.87 - C.rx*PARALLAX, ey=PH+PH*0.06 + C.ry*PARALLAX, eR=PH*0.88;
+    const g=ctx.createRadialGradient(ex,ey,eR*.2,ex,ey,eR);
+    g.addColorStop(0,'#0a1f6022');g.addColorStop(.65,'#051444aa');g.addColorStop(.9,'#041244');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(ex,ey,eR,0,TAU);ctx.fill();
+    const ag=ctx.createRadialGradient(ex,ey,eR*.9,ex,ey,eR+50);
+    ag.addColorStop(0,'#3388ff44');ag.addColorStop(1,'transparent');
+    ctx.fillStyle=ag;ctx.beginPath();ctx.arc(ex,ey,eR+40,0,TAU);ctx.fill();
+  }
 
   for(const d of bgDerelicts){
     d.rot+=d.rr*rdt;
