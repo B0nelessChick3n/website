@@ -7,1664 +7,1080 @@
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #080c0e;
-    --surface: #0d1418;
-    --surface2: #111c22;
-    --border: #1e3040;
-    --border-bright: #2a4a60;
-    --green: #00ff88;
-    --green-dim: #00aa55;
-    --green-dark: #003322;
-    --amber: #ffaa00;
-    --amber-dim: #bb7700;
-    --red: #ff4455;
-    --blue: #00aaff;
-    --blue-dim: #005588;
-    --text: #c8dde8;
-    --text-dim: #5a7a8a;
-    --text-bright: #eaf4ff;
-    --mono: 'Share Tech Mono', monospace;
-    --display: 'Rajdhani', sans-serif;
+    --bg:#080c0e; --surface:#0d1418; --surface2:#111c22;
+    --border:#1e3040; --border-bright:#2a4a60;
+    --green:#00ff88; --green-dim:#00aa55; --green-dark:#003322;
+    --amber:#ffaa00; --amber-dim:#bb7700;
+    --red:#ff4455; --blue:#00aaff; --blue-dim:#005588;
+    --text:#c8dde8; --text-dim:#5a7a8a; --text-bright:#eaf4ff;
+    --mono:'Share Tech Mono',monospace;
+    --display:'Rajdhani',sans-serif;
   }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--display);
-    font-size: 14px;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Scanline overlay */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
-    pointer-events: none;
-    z-index: 9999;
-  }
-
-  /* Header */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 24px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; z-index: 100;
-  }
-
-  .logo {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 3px;
-    color: var(--green);
-    text-transform: uppercase;
-  }
-
-  .logo span { color: var(--text-dim); margin: 0 6px; }
-
-  .header-title {
-    font-family: var(--display);
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: var(--text-bright);
-    text-transform: uppercase;
-  }
-
-  .status-bar {
-    display: flex; gap: 20px; align-items: center;
-    font-family: var(--mono); font-size: 10px; color: var(--text-dim);
-  }
-
-  .status-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 6px var(--green);
-    display: inline-block; margin-right: 5px;
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-  /* Layout */
-  .app {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    grid-template-rows: 1fr;
-    height: calc(100vh - 49px);
-  }
-
-  /* Sidebar */
-  .sidebar {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-bright) transparent;
-  }
-
-  .panel {
-    border-bottom: 1px solid var(--border);
-  }
-
-  .panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    background: var(--surface2);
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .panel-header:hover { background: #161f28; }
-
-  .panel-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: var(--green);
-    text-transform: uppercase;
-  }
-
-  .panel-toggle {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-dim);
-    transition: transform 0.2s;
-  }
-
-  .panel-toggle.collapsed { transform: rotate(-90deg); }
-
-  .panel-body { padding: 14px 16px; }
-
-  .field-group { margin-bottom: 14px; }
-
-  .field-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--amber-dim);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .field-hint {
-    font-size: 9px;
-    color: var(--text-dim);
-    font-family: var(--mono);
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
-  .tf-input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border-bright);
-    color: var(--green);
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 8px 10px;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-
-  .tf-input:focus {
-    border-color: var(--green);
-    box-shadow: 0 0 8px rgba(0,255,136,0.15);
-  }
-
-  .tf-input.error { border-color: var(--red); color: var(--red); }
-
-  .tf-divider {
-    text-align: center;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    margin: 3px 0;
-    letter-spacing: 1px;
-  }
-
-  .tf-fraction {
-    display: flex; flex-direction: column; gap: 2px;
-  }
-
-  .tf-line {
-    height: 1px;
-    background: var(--border-bright);
-    margin: 2px 0;
-  }
-
-  /* Sliders */
-  .slider-group { margin-bottom: 12px; }
-
-  .slider-row {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 4px;
-  }
-
-  .slider-name {
-    font-family: var(--mono); font-size: 10px;
-    color: var(--text-dim); letter-spacing: 1px;
-    min-width: 24px;
-  }
-
-  .slider-val {
-    font-family: var(--mono); font-size: 12px;
-    color: var(--amber);
-    min-width: 56px; text-align: right;
-  }
-
-  input[type=range] {
-    flex: 1;
-    -webkit-appearance: none;
-    height: 3px;
-    background: var(--border-bright);
-    outline: none;
-    cursor: pointer;
-  }
-
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px; height: 14px;
-    border-radius: 0;
-    background: var(--amber);
-    box-shadow: 0 0 8px rgba(255,170,0,0.5);
-    transition: box-shadow 0.15s;
-  }
-
-  input[type=range]::-webkit-slider-thumb:hover {
-    box-shadow: 0 0 14px rgba(255,170,0,0.8);
-  }
-
-  .slider-range-row {
-    display: flex; gap: 8px; align-items: center;
-  }
-
-  .range-input {
-    width: 64px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono); font-size: 10px;
-    padding: 4px 6px;
-    outline: none;
-  }
-
-  .range-label {
-    font-family: var(--mono); font-size: 9px;
-    color: var(--text-dim);
-  }
-
-  /* Buttons */
-  .btn {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    padding: 8px 16px;
-    cursor: pointer;
-    border: 1px solid;
-    background: transparent;
-    transition: all 0.15s;
-  }
-
-  .btn-green {
-    color: var(--green);
-    border-color: var(--green-dim);
-  }
-  .btn-green:hover {
-    background: var(--green-dark);
-    box-shadow: 0 0 12px rgba(0,255,136,0.2);
-  }
-
-  .btn-amber {
-    color: var(--amber);
-    border-color: var(--amber-dim);
-  }
-  .btn-amber:hover { background: rgba(255,170,0,0.1); }
-
-  .btn-red {
-    color: var(--red);
-    border-color: rgba(255,68,85,0.4);
-  }
-  .btn-red:hover { background: rgba(255,68,85,0.1); }
-
-  .btn-row {
-    display: flex; gap: 8px; flex-wrap: wrap;
-    margin-top: 10px;
-  }
-
-  /* Checkbox toggle */
-  .toggle-row {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 8px;
-  }
-
-  .toggle-label {
-    font-family: var(--mono); font-size: 10px;
-    color: var(--text); letter-spacing: 1px;
-    cursor: pointer;
-  }
-
-  input[type=checkbox] {
-    -webkit-appearance: none;
-    width: 28px; height: 14px;
-    background: var(--border);
-    border: 1px solid var(--border-bright);
-    cursor: pointer;
-    position: relative;
-    transition: background 0.2s;
-  }
-
-  input[type=checkbox]:checked { background: var(--green-dark); border-color: var(--green-dim); }
-
-  input[type=checkbox]::after {
-    content: '';
-    position: absolute; top: 2px; left: 2px;
-    width: 8px; height: 8px;
-    background: var(--text-dim);
-    transition: left 0.2s, background 0.2s;
-  }
-
-  input[type=checkbox]:checked::after {
-    left: 16px;
-    background: var(--green);
-  }
-
-  /* Error display */
-  .error-msg {
-    font-family: var(--mono); font-size: 10px;
-    color: var(--red);
-    margin-top: 5px;
-    min-height: 14px;
-  }
-
-  /* Canvas area */
-  .plots {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    background: var(--bg);
-    overflow: hidden;
-  }
-
-  .plot-pane {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--border);
-    margin: 8px;
-    background: var(--surface);
-    position: relative;
-  }
-
-  .plot-title-bar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-  }
-
-  .plot-title {
-    font-family: var(--mono); font-size: 10px;
-    letter-spacing: 2px; text-transform: uppercase;
-    color: var(--blue);
-  }
-
-  .plot-subtitle {
-    font-family: var(--mono); font-size: 9px;
-    color: var(--text-dim);
-  }
-
-  .plot-canvas-wrap {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-  }
-
-  canvas {
-    display: block;
-    width: 100% !important;
-    height: 100% !important;
-  }
-
-  /* Metrics strip */
-  .metrics {
-    display: flex; gap: 0;
-    border-top: 1px solid var(--border);
-    background: var(--surface2);
-  }
-
-  .metric {
-    flex: 1;
-    padding: 6px 10px;
-    border-right: 1px solid var(--border);
-    text-align: center;
-  }
-
-  .metric:last-child { border-right: none; }
-
-  .metric-label {
-    font-family: var(--mono); font-size: 9px;
-    color: var(--text-dim); letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  .metric-value {
-    font-family: var(--mono); font-size: 13px;
-    color: var(--amber);
-    margin-top: 2px;
-  }
-
-  .metric-value.good { color: var(--green); }
-  .metric-value.bad { color: var(--red); }
-
-  /* Tooltip */
-  .tooltip {
-    position: absolute;
-    background: var(--surface2);
-    border: 1px solid var(--border-bright);
-    font-family: var(--mono); font-size: 10px;
-    color: var(--text);
-    padding: 4px 8px;
-    pointer-events: none;
-    display: none;
-    z-index: 50;
-    white-space: nowrap;
-  }
-
-  /* Stability badge */
-  .stability {
-    font-family: var(--mono); font-size: 9px;
-    letter-spacing: 2px;
-    padding: 3px 8px;
-    border: 1px solid;
-    text-transform: uppercase;
-  }
-
-  .stable { color: var(--green); border-color: var(--green-dim); }
-  .unstable { color: var(--red); border-color: rgba(255,68,85,0.5); animation: blink 0.8s step-end infinite; }
-  .marginal { color: var(--amber); border-color: var(--amber-dim); }
-
-  @keyframes blink { 50%{ opacity:0; } }
-
-  /* Select */
-  select {
-    background: var(--bg);
-    border: 1px solid var(--border-bright);
-    color: var(--text);
-    font-family: var(--mono); font-size: 11px;
-    padding: 6px 8px;
-    outline: none;
-    cursor: pointer;
-    width: 100%;
-  }
-
-  select:focus { border-color: var(--green); }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border-bright); }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;overflow:hidden;}
+  body{background:var(--bg);color:var(--text);font-family:var(--display);font-size:14px;}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);pointer-events:none;z-index:9999;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;height:46px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+  .logo{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--green);}
+  .logo span{color:var(--text-dim);margin:0 5px;}
+  .hdr-title{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:4px;color:var(--text-bright);text-transform:uppercase;}
+  .hdr-right{display:flex;gap:14px;align-items:center;}
+  .status-bar{display:flex;gap:14px;align-items:center;font-family:var(--mono);font-size:10px;color:var(--text-dim);}
+  .sdot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);display:inline-block;margin-right:4px;animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  .info-btn{font-family:var(--mono);font-size:11px;letter-spacing:2px;padding:5px 12px;cursor:pointer;border:1px solid var(--blue-dim);background:transparent;color:var(--blue);transition:all 0.15s;text-transform:uppercase;}
+  .info-btn:hover{background:rgba(0,170,255,0.1);box-shadow:0 0 10px rgba(0,170,255,0.2);}
+  .app{display:flex;height:calc(100vh - 46px);overflow:hidden;}
+  .sidebar{width:298px;min-width:298px;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border-bright) transparent;flex-shrink:0;}
+  .panel{border-bottom:1px solid var(--border);}
+  .panel-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--surface2);cursor:pointer;user-select:none;}
+  .panel-header:hover{background:#161f28;}
+  .panel-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--green);text-transform:uppercase;}
+  .ptog{font-family:var(--mono);font-size:12px;color:var(--text-dim);transition:transform 0.2s;}
+  .ptog.col{transform:rotate(-90deg);}
+  .panel-body{padding:12px 14px;}
+  .field-group{margin-bottom:12px;}
+  .field-label{font-family:var(--mono);font-size:10px;color:var(--amber-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;}
+  .fhint{font-size:9px;color:var(--text-dim);font-family:var(--mono);letter-spacing:0;text-transform:none;}
+  .tf-input{width:100%;background:var(--bg);border:1px solid var(--border-bright);color:var(--green);font-family:var(--mono);font-size:13px;padding:7px 9px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+  .tf-input:focus{border-color:var(--green);box-shadow:0 0 8px rgba(0,255,136,0.15);}
+  .tf-input.err{border-color:var(--red);color:var(--red);}
+  .tf-line{height:1px;background:var(--border-bright);margin:2px 0;}
+  .tf-frac{display:flex;flex-direction:column;gap:2px;}
+  .tf-dlbl{text-align:center;font-family:var(--mono);font-size:9px;color:var(--text-dim);margin:2px 0;letter-spacing:1px;}
+  .errmsg{font-family:var(--mono);font-size:10px;color:var(--red);margin-top:4px;min-height:13px;}
+  .sg{margin-bottom:10px;}
+  .srow{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
+  .sname{font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:1px;min-width:22px;}
+  .sval{font-family:var(--mono);font-size:12px;color:var(--amber);min-width:60px;text-align:right;}
+  input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:var(--border-bright);outline:none;cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:0;background:var(--amber);box-shadow:0 0 8px rgba(255,170,0,0.5);transition:box-shadow 0.15s;}
+  input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 14px rgba(255,170,0,0.8);}
+  .rrow{display:flex;gap:6px;align-items:center;}
+  .rinput{width:56px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:4px 6px;outline:none;}
+  .rlbl{font-family:var(--mono);font-size:9px;color:var(--text-dim);}
+  .btn{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:7px 14px;cursor:pointer;border:1px solid;background:transparent;transition:all 0.15s;}
+  .btn-amber{color:var(--amber);border-color:var(--amber-dim);}
+  .btn-amber:hover{background:rgba(255,170,0,0.1);}
+  .brow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .togrow{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .toglbl{font-family:var(--mono);font-size:10px;color:var(--text);letter-spacing:1px;cursor:pointer;}
+  input[type=checkbox]{-webkit-appearance:none;width:28px;height:14px;background:var(--border);border:1px solid var(--border-bright);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+  input[type=checkbox]:checked{background:var(--green-dark);border-color:var(--green-dim);}
+  input[type=checkbox]::after{content:'';position:absolute;top:2px;left:2px;width:8px;height:8px;background:var(--text-dim);transition:left 0.2s,background 0.2s;}
+  input[type=checkbox]:checked::after{left:16px;background:var(--green);}
+  select{background:var(--bg);border:1px solid var(--border-bright);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 8px;outline:none;cursor:pointer;width:100%;}
+  select:focus{border-color:var(--green);}
+  .plots{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;min-width:0;}
+  .pp{display:flex;flex-direction:column;border:1px solid var(--border);margin:6px;background:var(--surface);min-width:0;min-height:0;overflow:hidden;}
+  .ptbar{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;}
+  .ptitle{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--blue);}
+  .psub{font-family:var(--mono);font-size:9px;color:var(--text-dim);}
+  .cwrap{flex:1;position:relative;overflow:hidden;min-height:0;}
+  canvas{position:absolute;top:0;left:0;}
+  .metrics{display:flex;border-top:1px solid var(--border);background:var(--surface2);flex-shrink:0;}
+  .metric{flex:1;padding:5px 8px;border-right:1px solid var(--border);text-align:center;}
+  .metric:last-child{border-right:none;}
+  .mlbl{font-family:var(--mono);font-size:8px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
+  .mval{font-family:var(--mono);font-size:12px;color:var(--amber);margin-top:1px;}
+  .mval.good{color:var(--green);} .mval.bad{color:var(--red);}
+  .tip{position:absolute;background:var(--surface2);border:1px solid var(--border-bright);font-family:var(--mono);font-size:10px;color:var(--text);padding:3px 7px;pointer-events:none;display:none;z-index:50;white-space:nowrap;}
+  .stab{font-family:var(--mono);font-size:9px;letter-spacing:2px;padding:2px 7px;border:1px solid;text-transform:uppercase;}
+  .stable{color:var(--green);border-color:var(--green-dim);}
+  .unstable{color:var(--red);border-color:rgba(255,68,85,0.5);animation:blink 0.8s step-end infinite;}
+  .marginal{color:var(--amber);border-color:var(--amber-dim);}
+  @keyframes blink{50%{opacity:0;}}
+  ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border-bright);}
+
+  /* INFO */
+  .ioverlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+  .ioverlay.open{display:flex;}
+  .ipanel{background:var(--surface);border:1px solid var(--border-bright);width:100%;max-width:920px;position:relative;box-shadow:0 0 60px rgba(0,0,0,0.9);}
+  .ihead{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--surface2);border-bottom:1px solid var(--border);}
+  .ititle{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--blue);text-transform:uppercase;}
+  .iclose{font-family:var(--mono);font-size:14px;color:var(--text-dim);cursor:pointer;background:none;border:none;padding:4px 8px;}
+  .iclose:hover{color:var(--red);}
+  .ibody{padding:20px;}
+  .isec{margin-bottom:28px;}
+  .istitle{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--amber);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+  .itxt{font-family:var(--display);font-size:14px;color:var(--text);line-height:1.6;margin-bottom:8px;}
+  .igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px;margin-top:10px;}
+  .ccard{background:var(--bg);border:1px solid var(--border);padding:12px 14px;}
+  .cname{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:1px;margin-bottom:4px;}
+  .ceq{font-family:var(--mono);font-size:12px;color:var(--amber);margin-bottom:6px;background:var(--surface2);padding:5px 8px;letter-spacing:1px;}
+  .cdesc{font-family:var(--display);font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .cuse{font-family:var(--mono);font-size:10px;color:var(--blue-dim);margin-top:5px;}
+  .i2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:600px){.i2col{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">SYS<span>//</span>CTRL<span>//</span>LAB</div>
-  <div class="header-title">Control Systems Analyzer</div>
-  <div class="status-bar">
-    <span><span class="status-dot"></span>LIVE</span>
-    <span id="hdr-poles">POLES: —</span>
-    <span id="hdr-zeros">ZEROS: —</span>
+  <div class="hdr-title">Control Systems Analyzer</div>
+  <div class="hdr-right">
+    <div class="status-bar">
+      <span><span class="sdot"></span>LIVE</span>
+      <span id="hdr-poles">POLES: —</span>
+      <span id="hdr-zeros">ZEROS: —</span>
+    </div>
+    <button class="info-btn" onclick="toggleInfo()">? INFO</button>
   </div>
 </header>
 
 <div class="app">
-
-  <!-- SIDEBAR -->
   <div class="sidebar">
 
-    <!-- Plant TF -->
+    <!-- Plant -->
     <div class="panel">
       <div class="panel-header" onclick="togglePanel('plant')">
-        <span class="panel-label">G(s) — Plant</span>
-        <span class="panel-toggle" id="toggle-plant">▼</span>
+        <span class="panel-label">G(s) — Plant</span><span class="ptog" id="tg-plant">▼</span>
       </div>
-      <div class="panel-body" id="body-plant">
+      <div class="panel-body" id="pb-plant">
         <div class="field-group">
-          <div class="field-label">Numerator <span class="field-hint">coefficients high→low</span></div>
-          <div class="tf-fraction">
-            <input type="text" class="tf-input" id="plant-num" value="1" placeholder="e.g. 1 2">
+          <div class="field-label">Transfer Function <span class="fhint">hi→lo powers</span></div>
+          <div class="tf-frac">
+            <input class="tf-input" id="pn" value="1" placeholder="numerator">
             <div class="tf-line"></div>
-            <input type="text" class="tf-input" id="plant-den" value="1 2 1 0" placeholder="e.g. 1 3 2">
+            <input class="tf-input" id="pd" value="1 2 1 0" placeholder="denominator">
           </div>
-          <div class="tf-divider">NUMERATOR / DENOMINATOR</div>
-          <div class="error-msg" id="plant-err"></div>
+          <div class="tf-dlbl">NUM / DEN</div>
+          <div class="errmsg" id="pe"></div>
         </div>
         <div class="field-group">
           <div class="field-label">Presets</div>
-          <select id="plant-preset" onchange="applyPlantPreset()">
+          <select id="pp" onchange="applyPlantPreset()">
             <option value="">— select preset —</option>
             <option value="integrator">Integrator: 1/s</option>
             <option value="double_int">Double Integrator: 1/s²</option>
             <option value="first_order">1st Order: 1/(s+1)</option>
             <option value="second_order">2nd Order Underdamped</option>
             <option value="third_order">3rd Order: 1/(s(s+1)(s+2))</option>
-            <option value="unstable_pole">Unstable Pole: 1/(s-1)</option>
+            <option value="unstable">Unstable Pole: 1/(s−1)</option>
             <option value="reson">Resonant: 1/(s²+0.2s+4)</option>
           </select>
         </div>
       </div>
     </div>
 
-    <!-- Cascade Compensator -->
+    <!-- Cascade -->
     <div class="panel">
-      <div class="panel-header" onclick="togglePanel('cascade')">
-        <span class="panel-label">C(s) — Cascade Compensator</span>
-        <span class="panel-toggle" id="toggle-cascade">▼</span>
+      <div class="panel-header" onclick="togglePanel('casc')">
+        <span class="panel-label">C(s) — Cascade Compensator</span><span class="ptog" id="tg-casc">▼</span>
       </div>
-      <div class="panel-body" id="body-cascade">
-        <div class="toggle-row">
-          <input type="checkbox" id="cascade-enable" onchange="recompute()">
-          <label class="toggle-label" for="cascade-enable">ENABLE CASCADE</label>
+      <div class="panel-body" id="pb-casc">
+        <div class="togrow">
+          <input type="checkbox" id="ce" onchange="recompute()" checked>
+          <label class="toglbl" for="ce">ENABLE CASCADE</label>
         </div>
-        <div id="cascade-fields">
-          <div class="field-group">
-            <div class="field-label">Numerator</div>
-            <div class="tf-fraction">
-              <input type="text" class="tf-input" id="cascade-num" value="1 1" placeholder="e.g. 1 1">
-              <div class="tf-line"></div>
-              <input type="text" class="tf-input" id="cascade-den" value="1 0.1" placeholder="e.g. 1 10">
-            </div>
-            <div class="error-msg" id="cascade-err"></div>
+        <div class="field-group">
+          <div class="field-label">Transfer Function</div>
+          <div class="tf-frac">
+            <input class="tf-input" id="cn" value="1 2 1" placeholder="numerator">
+            <div class="tf-line"></div>
+            <input class="tf-input" id="cd" value="1 0" placeholder="denominator">
           </div>
-          <div class="field-group">
-            <div class="field-label">Presets</div>
-            <select id="cascade-preset" onchange="applyCascadePreset()">
-              <option value="">— select preset —</option>
-              <option value="pid">PID: (s²+2s+1)/s</option>
-              <option value="lead">Lead Compensator</option>
-              <option value="lag">Lag Compensator</option>
-              <option value="notch">Notch Filter</option>
-              <option value="pd">PD: (s+2)</option>
-              <option value="pi">PI: (s+1)/s</option>
-            </select>
-          </div>
+          <div class="tf-dlbl">NUM / DEN</div>
+          <div class="errmsg" id="cerr"></div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Presets</div>
+          <select id="cp" onchange="applyCascadePreset()">
+            <option value="">— select preset —</option>
+            <option value="pid">PID: (s²+2s+1)/s</option>
+            <option value="p">P: Proportional (gain=1)</option>
+            <option value="pi">PI: (s+1)/s</option>
+            <option value="pd">PD: (s+2)</option>
+            <option value="lead">Lead: (s+5)/(s+20)</option>
+            <option value="lag">Lag: (s+1)/(s+0.1)</option>
+            <option value="notch">Notch: (s²+4)/(s²+s+4)</option>
+          </select>
         </div>
       </div>
     </div>
 
-    <!-- Feedback Compensator -->
+    <!-- Feedback -->
     <div class="panel">
-      <div class="panel-header" onclick="togglePanel('feedback')">
-        <span class="panel-label">H(s) — Feedback Compensator</span>
-        <span class="panel-toggle" id="toggle-feedback">▼</span>
+      <div class="panel-header" onclick="togglePanel('fb')">
+        <span class="panel-label">H(s) — Feedback Compensator</span><span class="ptog" id="tg-fb">▼</span>
       </div>
-      <div class="panel-body" id="body-feedback">
-        <div class="toggle-row">
-          <input type="checkbox" id="feedback-enable" onchange="recompute()">
-          <label class="toggle-label" for="feedback-enable">ENABLE FEEDBACK COMP.</label>
+      <div class="panel-body" id="pb-fb">
+        <div class="togrow">
+          <input type="checkbox" id="fe" onchange="recompute()" checked>
+          <label class="toglbl" for="fe">ENABLE FEEDBACK COMP.</label>
         </div>
-        <div id="feedback-fields">
-          <div class="field-group">
-            <div class="field-label">Numerator</div>
-            <div class="tf-fraction">
-              <input type="text" class="tf-input" id="feedback-num" value="1" placeholder="e.g. 1">
-              <div class="tf-line"></div>
-              <input type="text" class="tf-input" id="feedback-den" value="1 5" placeholder="e.g. 1 1">
-            </div>
-            <div class="error-msg" id="feedback-err"></div>
+        <div class="field-group">
+          <div class="field-label">Transfer Function</div>
+          <div class="tf-frac">
+            <input class="tf-input" id="fn" value="1" placeholder="numerator">
+            <div class="tf-line"></div>
+            <input class="tf-input" id="fd" value="1" placeholder="denominator">
           </div>
-          <div class="field-group">
-            <div class="field-label">Presets</div>
-            <select id="feedback-preset" onchange="applyFeedbackPreset()">
-              <option value="">— select preset —</option>
-              <option value="unity">Unity: 1</option>
-              <option value="tach">Tachometer: s/(s+10)</option>
-              <option value="filter">Low-pass: 1/(s+5)</option>
-            </select>
-          </div>
+          <div class="tf-dlbl">NUM / DEN</div>
+          <div class="errmsg" id="ferr"></div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Presets</div>
+          <select id="fp" onchange="applyFeedbackPreset()">
+            <option value="">— select preset —</option>
+            <option value="unity">Unity: 1</option>
+            <option value="tach">Tachometer: s/(s+10)</option>
+            <option value="lpf">Low-pass: 1/(s+5)</option>
+          </select>
         </div>
       </div>
     </div>
 
-    <!-- Gain Controls -->
+    <!-- Gains & Sim -->
     <div class="panel">
-      <div class="panel-header" onclick="togglePanel('gains')">
-        <span class="panel-label">Gain Controls</span>
-        <span class="panel-toggle" id="toggle-gains">▼</span>
+      <div class="panel-header" onclick="togglePanel('gn')">
+        <span class="panel-label">Gain &amp; Simulation</span><span class="ptog" id="tg-gn">▼</span>
       </div>
-      <div class="panel-body" id="body-gains">
-        <div class="slider-group">
-          <div class="slider-row">
-            <span class="slider-name">K</span>
-            <input type="range" id="gain-k" min="-3" max="3" step="0.01" value="0" oninput="updateGainK(this.value)">
-            <span class="slider-val" id="val-k">1.000</span>
+      <div class="panel-body" id="pb-gn">
+        <div class="sg">
+          <div class="field-label" style="margin-bottom:6px">Gain K <span class="fhint">log₁₀ scale</span></div>
+          <div class="srow">
+            <span class="sname">K</span>
+            <input type="range" id="gk" min="-3" max="3" step="0.01" value="0" oninput="updateK(this.value)">
+            <span class="sval" id="vk">1.000</span>
           </div>
-          <div class="slider-range-row">
-            <span class="range-label">RANGE 10^</span>
-            <input type="number" class="range-input" id="k-min" value="-3" step="0.5" onchange="updateSliderRange('k')">
-            <span class="range-label">TO</span>
-            <input type="number" class="range-input" id="k-max" value="3" step="0.5" onchange="updateSliderRange('k')">
+          <div class="rrow" style="margin-top:4px">
+            <span class="rlbl">DECADE:</span>
+            <input type="number" class="rinput" id="kmin" value="-3" step="0.5" onchange="updateKRange()">
+            <span class="rlbl">to</span>
+            <input type="number" class="rinput" id="kmax" value="3" step="0.5" onchange="updateKRange()">
           </div>
         </div>
-
-        <div class="slider-group">
-          <div class="field-label" style="margin-bottom:6px">Input Signal</div>
-          <select id="input-type" onchange="recompute()">
+        <div class="sg">
+          <div class="field-label" style="margin-bottom:5px">Input Signal</div>
+          <select id="itype" onchange="onInputChange()">
             <option value="step">Step Input</option>
             <option value="ramp">Ramp Input</option>
             <option value="impulse">Impulse Input</option>
             <option value="sinusoid">Sinusoid</option>
           </select>
         </div>
-
-        <div class="slider-group" id="sin-freq-group" style="display:none">
-          <div class="slider-row">
-            <span class="slider-name">ω</span>
-            <input type="range" id="sin-freq" min="0.1" max="20" step="0.1" value="1" oninput="updateSinFreq(this.value)">
-            <span class="slider-val" id="val-sinfreq">1.0 rad/s</span>
+        <div class="sg" id="sfg" style="display:none">
+          <div class="srow">
+            <span class="sname">ω</span>
+            <input type="range" id="sf" min="0.1" max="20" step="0.1" value="1" oninput="updateSF(this.value)">
+            <span class="sval" id="vsf">1.0 rad/s</span>
           </div>
         </div>
-
-        <div class="slider-group">
-          <div class="field-label" style="margin-bottom:6px">Sim Time (s)</div>
-          <div class="slider-row">
-            <input type="range" id="sim-time" min="1" max="100" step="1" value="20" oninput="updateSimTime(this.value)">
-            <span class="slider-val" id="val-simtime">20s</span>
+        <div class="sg">
+          <div class="field-label" style="margin-bottom:5px">Sim Duration</div>
+          <div class="srow">
+            <input type="range" id="st" min="1" max="200" step="1" value="20" oninput="updateST(this.value)">
+            <span class="sval" id="vst">20s</span>
           </div>
         </div>
-
-        <div class="btn-row">
-          <button class="btn btn-green" onclick="recompute()">▶ COMPUTE</button>
-          <button class="btn btn-amber" onclick="resetAll()">↺ RESET</button>
+        <div class="brow">
+          <button class="btn btn-amber" onclick="resetAll()">↺ RESET ALL</button>
         </div>
       </div>
     </div>
+  </div>
 
-  </div><!-- /sidebar -->
-
-  <!-- PLOTS -->
   <div class="plots">
-
-    <!-- Root Locus -->
-    <div class="plot-pane">
-      <div class="plot-title-bar">
-        <span class="plot-title">Root Locus — K·L(s)</span>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span class="plot-subtitle" id="rl-k-label">K = 1.000</span>
-          <span class="stability" id="stability-badge">—</span>
+    <div class="pp">
+      <div class="ptbar">
+        <span class="ptitle">Root Locus — K·L(s)</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="psub" id="rkl">K = 1.000</span>
+          <span class="stab" id="sbadge">—</span>
         </div>
       </div>
-      <div class="plot-canvas-wrap" id="rl-wrap">
-        <canvas id="rl-canvas"></canvas>
-        <div class="tooltip" id="rl-tooltip"></div>
-      </div>
+      <div class="cwrap" id="rlw"><canvas id="rlc"></canvas><div class="tip" id="rlt"></div></div>
       <div class="metrics">
-        <div class="metric">
-          <div class="metric-label">Open-Loop Poles</div>
-          <div class="metric-value" id="m-olp">—</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Open-Loop Zeros</div>
-          <div class="metric-value" id="m-olz">—</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Asymptotes</div>
-          <div class="metric-value" id="m-asym">—</div>
-        </div>
+        <div class="metric"><div class="mlbl">OL Poles</div><div class="mval" id="molp">—</div></div>
+        <div class="metric"><div class="mlbl">OL Zeros</div><div class="mval" id="molz">—</div></div>
+        <div class="metric"><div class="mlbl">Asymptotes</div><div class="mval" id="masy">—</div></div>
+        <div class="metric"><div class="mlbl">CL Poles</div><div class="mval" id="mclp">—</div></div>
       </div>
     </div>
-
-    <!-- Time Response -->
-    <div class="plot-pane">
-      <div class="plot-title-bar">
-        <span class="plot-title">Time Response — Closed Loop</span>
-        <span class="plot-subtitle" id="tr-input-label">STEP INPUT</span>
+    <div class="pp">
+      <div class="ptbar">
+        <span class="ptitle">Time Response — Closed Loop</span>
+        <span class="psub" id="trlbl">STEP INPUT</span>
       </div>
-      <div class="plot-canvas-wrap" id="tr-wrap">
-        <canvas id="tr-canvas"></canvas>
-        <div class="tooltip" id="tr-tooltip"></div>
-      </div>
+      <div class="cwrap" id="trw"><canvas id="trc"></canvas><div class="tip" id="trt"></div></div>
       <div class="metrics">
-        <div class="metric">
-          <div class="metric-label">Rise Time</div>
-          <div class="metric-value" id="m-tr">—</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Settling Time</div>
-          <div class="metric-value" id="m-ts">—</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Overshoot</div>
-          <div class="metric-value" id="m-os">—</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">SS Error</div>
-          <div class="metric-value" id="m-sse">—</div>
-        </div>
+        <div class="metric"><div class="mlbl">Rise Time</div><div class="mval" id="mrt">—</div></div>
+        <div class="metric"><div class="mlbl">Settling Time</div><div class="mval" id="mst">—</div></div>
+        <div class="metric"><div class="mlbl">Overshoot</div><div class="mval" id="mos">—</div></div>
+        <div class="metric"><div class="mlbl">SS Error</div><div class="mval" id="msse">—</div></div>
       </div>
     </div>
+  </div>
+</div>
 
-  </div><!-- /plots -->
+<!-- INFO OVERLAY -->
+<div class="ioverlay" id="iov" onclick="ovClick(event)">
+  <div class="ipanel">
+    <div class="ihead">
+      <span class="ititle">Control Systems Reference Guide</span>
+      <button class="iclose" onclick="toggleInfo()">✕ CLOSE</button>
+    </div>
+    <div class="ibody">
 
-</div><!-- /app -->
+      <div class="isec">
+        <div class="istitle">System Block Diagram</div>
+        <p class="itxt">This tool models a standard feedback loop. A cascade compensator <b style="color:var(--amber)">C(s)</b> sits in the forward path with the plant <b style="color:var(--green)">G(s)</b>. A feedback compensator <b style="color:var(--blue)">H(s)</b> modifies the feedback signal. Gain K scales the entire forward path.</p>
+        <div style="margin:12px 0">
+          <svg viewBox="0 0 820 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto" font-family="Share Tech Mono,monospace">
+            <rect width="820" height="130" fill="#060a0c"/>
+            <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#5a7a8a"/></marker></defs>
+            <!-- R(s) -->
+            <text x="8" y="54" fill="#c8dde8" font-size="13">R(s)</text>
+            <line x1="46" y1="50" x2="84" y2="50" stroke="#5a7a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- Summing junction -->
+            <circle cx="96" cy="50" r="12" fill="none" stroke="#2a4a60" stroke-width="1.5"/>
+            <text x="91" y="54" fill="#c8dde8" font-size="12">Σ</text>
+            <text x="83" y="44" fill="#00aa55" font-size="10">+</text>
+            <text x="83" y="66" fill="#ff4455" font-size="10">−</text>
+            <!-- E(s) -->
+            <line x1="108" y1="50" x2="144" y2="50" stroke="#5a7a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+            <text x="118" y="44" fill="#5a7a8a" font-size="10">E(s)</text>
+            <!-- K -->
+            <rect x="146" y="36" width="48" height="28" fill="#0d1418" stroke="#bb7700" stroke-width="1.5"/>
+            <text x="162" y="55" fill="#ffaa00" font-size="14">K</text>
+            <line x1="194" y1="50" x2="228" y2="50" stroke="#5a7a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- C(s) -->
+            <rect x="230" y="36" width="68" height="28" fill="#0d1418" stroke="#bb7700" stroke-width="1.5"/>
+            <text x="242" y="55" fill="#ffaa00" font-size="13">C(s)</text>
+            <line x1="298" y1="50" x2="332" y2="50" stroke="#5a7a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- G(s) -->
+            <rect x="334" y="36" width="68" height="28" fill="#0d1418" stroke="#00aa55" stroke-width="1.5"/>
+            <text x="346" y="55" fill="#00ff88" font-size="13">G(s)</text>
+            <!-- Out -->
+            <line x1="402" y1="50" x2="510" y2="50" stroke="#5a7a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+            <text x="515" y="54" fill="#c8dde8" font-size="13">Y(s)</text>
+            <!-- Feedback line -->
+            <line x1="490" y1="50" x2="490" y2="95" stroke="#5a7a8a" stroke-width="1.5"/>
+            <line x1="490" y1="95" x2="380" y2="95" stroke="#5a7a8a" stroke-width="1.5"/>
+            <line x1="380" y1="95" x2="348" y2="95" stroke="#5a7a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- H(s) -->
+            <rect x="252" y="81" width="68" height="28" fill="#0d1418" stroke="#005588" stroke-width="1.5"/>
+            <text x="264" y="100" fill="#00aaff" font-size="13">H(s)</text>
+            <line x1="252" y1="95" x2="96" y2="95" stroke="#5a7a8a" stroke-width="1.5"/>
+            <line x1="96" y1="95" x2="96" y2="62" stroke="#5a7a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- Formulas -->
+            <text x="10" y="122" fill="#5a7a8a" font-size="10">OL: L(s)=K·C(s)·G(s)      CL: T(s) = K·C(s)·G(s) / [1 + K·C(s)·G(s)·H(s)]</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="isec">
+        <div class="istitle">Root Locus Fundamentals</div>
+        <p class="itxt">The root locus plots how the <b style="color:var(--green)">closed-loop poles</b> move as K varies 0→∞. Poles in the <b style="color:var(--red)">right half-plane</b> (Re &gt; 0) cause instability. The locus starts at open-loop poles and migrates toward open-loop zeros or infinity.</p>
+        <div class="i2col">
+          <div>
+            <p class="itxt" style="font-size:13px"><b style="color:var(--amber)">Construction rules:</b><br>
+            • Number of branches = OL pole count<br>
+            • Branches start (K=0) at OL poles ×<br>
+            • Branches end (K→∞) at OL zeros ○ or ∞<br>
+            • Always symmetric about real axis<br>
+            • Real segments: odd number of OL poles+zeros to the right</p>
+          </div>
+          <div>
+            <p class="itxt" style="font-size:13px"><b style="color:var(--amber)">Stability legend:</b><br>
+            × = open-loop poles<br>
+            ○ = open-loop zeros<br>
+            ◆ = closed-loop poles at current K<br><br>
+            <span style="color:var(--green)">STABLE</span>: all CL poles in LHP<br>
+            <span style="color:var(--amber)">MARGINAL</span>: poles on jω-axis<br>
+            <span style="color:var(--red)">UNSTABLE</span>: pole(s) in RHP</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="isec">
+        <div class="istitle">Compensator Types — Equations &amp; Usage</div>
+        <div class="igrid">
+          <div class="ccard">
+            <div class="cname">P — Proportional</div>
+            <div class="ceq">C(s) = Kp</div>
+            <div class="cdesc">Multiplies error by a constant. Simple but cannot eliminate steady-state error in type-0 plants. High gain improves speed but reduces stability margins.</div>
+            <div class="cuse">▶ WHEN: plant already stable, need fast action</div>
+          </div>
+          <div class="ccard">
+            <div class="cname">I — Integral</div>
+            <div class="ceq">C(s) = Ki / s</div>
+            <div class="cdesc">Adds a pole at origin. Guarantees zero steady-state error for step inputs by accumulating error over time. Reduces phase margin significantly.</div>
+            <div class="cuse">▶ WHEN: must eliminate SS error; plant needs type upgrade</div>
+          </div>
+          <div class="ccard">
+            <div class="cname">PI — Proportional-Integral</div>
+            <div class="ceq">C(s) = Kp(s + z) / s</div>
+            <div class="cdesc">Integrator with a zero at s=−z to recover some phase lost by the pole. Eliminates SS error while softening the stability penalty of pure I action.</div>
+            <div class="cuse">▶ WHEN: need zero SS error with acceptable damping</div>
+          </div>
+          <div class="ccard">
+            <div class="cname">PD — Proportional-Derivative</div>
+            <div class="ceq">C(s) = Kp(s + z)</div>
+            <div class="cdesc">Adds a zero, increasing phase margin and transient speed. Amplifies high-frequency noise — in practice always paired with a roll-off pole: (s+z)/(s+p), p≫z.</div>
+            <div class="cuse">▶ WHEN: sluggish plant, need faster settling, low noise environment</div>
+          </div>
+          <div class="ccard">
+            <div class="cname">PID — Full PID</div>
+            <div class="ceq">C(s) = K(s² + as + b) / s</div>
+            <div class="cdesc">Two zeros plus integrator. Most common industrial controller. Zeros cancel or offset plant poles. Eliminates SS error, improves transient, but requires tuning.</div>
+            <div class="cuse">▶ WHEN: general-purpose; unknown plant dynamics</div>
+          </div>
+          <div class="ccard">
+            <div class="cname">Lead Compensator</div>
+            <div class="ceq">C(s) = K(s + z)/(s + p),  z &lt; p</div>
+            <div class="cdesc">Zero is left of (closer to origin than) the pole. Contributes positive phase near crossover, increasing phase margin and bandwidth. Speeds up the response.</div>
+            <div class="cuse">▶ WHEN: need more phase margin and faster response</div>
+          </div>
+          <div class="ccard">
+            <div class="cname">Lag Compensator</div>
+            <div class="ceq">C(s) = K(s + z)/(s + p),  z &gt; p</div>
+            <div class="cdesc">Pole is left of zero. Provides high DC gain (improving SS error) while barely affecting high-frequency response. Slightly reduces bandwidth and phase margin.</div>
+            <div class="cuse">▶ WHEN: need better SS accuracy without changing transient much</div>
+          </div>
+          <div class="ccard">
+            <div class="cname">Notch Filter</div>
+            <div class="ceq">C(s) = (s²+ω₀²) / (s²+2ζω₀s+ω₀²)</div>
+            <div class="cdesc">Places complex zeros at a mechanical resonance frequency to cancel it. Used to suppress lightly-damped structural modes that would cause instability at high gain.</div>
+            <div class="cuse">▶ WHEN: plant has a resonance peak causing instability</div>
+          </div>
+          <div class="ccard">
+            <div class="cname">Tachometer (Feedback)</div>
+            <div class="ceq">H(s) = Kt · s / (s + p)</div>
+            <div class="cdesc">Feeds back velocity (derivative of position). Equivalent to inner derivative feedback: adds damping without amplifying input noise. Used in motor/servo drives.</div>
+            <div class="cuse">▶ WHEN: motor control; need derivative damping without forward-path D</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="isec">
+        <div class="istitle">How to Enter Transfer Functions</div>
+        <div class="i2col">
+          <div>
+            <p class="itxt" style="font-size:13px"><b style="color:var(--amber)">Coefficient format:</b><br>
+            Enter space-separated coefficients, highest power first.<br><br>
+            <span style="font-family:var(--mono);color:var(--green)">s³ + 3s² + 2s + 1</span><br>→ <span style="font-family:var(--mono);color:var(--amber)">1 3 2 1</span><br><br>
+            <span style="font-family:var(--mono);color:var(--green)">s(s+1)(s+2)</span><br>→ <span style="font-family:var(--mono);color:var(--amber)">1 3 2 0</span><br><br>
+            <span style="font-family:var(--mono);color:var(--green)">1/(s²+0.5s+4)</span><br>Num: <span style="font-family:var(--mono);color:var(--amber)">1</span>  Den: <span style="font-family:var(--mono);color:var(--amber)">1 0.5 4</span></p>
+          </div>
+          <div>
+            <p class="itxt" style="font-size:13px"><b style="color:var(--amber)">Design workflow:</b><br>
+            1. Choose a plant G(s) (try a preset)<br>
+            2. Enable C(s), select PID or Lead<br>
+            3. Sweep K slider — watch locus<br>
+            4. Pick K where ◆ diamonds sit in LHP with ~45° angle from negative real axis (good damping)<br>
+            5. Switch to step response, check overshoot &lt;20%, SS error near zero<br>
+            6. Tune compensator zeros to reshape locus</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 <script>
 // ============================================================
-// POLYNOMIAL MATH UTILITIES
+//  POLYNOMIAL UTILITIES
 // ============================================================
-function parseCoeffs(str) {
-  const parts = str.trim().split(/[\s,]+/).filter(Boolean);
-  const c = parts.map(Number);
-  if (c.some(isNaN) || c.length === 0) return null;
-  return c;
+function parseCoeffs(str){
+  const parts=str.trim().split(/[\s,]+/).filter(Boolean);
+  if(!parts.length)return null;
+  const c=parts.map(Number);
+  if(c.some(isNaN))return null;
+  let s=0; while(s<c.length-1&&Math.abs(c[s])<1e-14)s++;
+  return c.slice(s);
 }
-
-function polyMul(a, b) {
-  const res = new Array(a.length + b.length - 1).fill(0);
-  for (let i = 0; i < a.length; i++)
-    for (let j = 0; j < b.length; j++)
-      res[i+j] += a[i]*b[j];
-  return res;
+function polyMul(a,b){
+  if(!a.length||!b.length)return[0];
+  const r=new Array(a.length+b.length-1).fill(0);
+  for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++)r[i+j]+=a[i]*b[j];
+  return r;
 }
+function padLeft(a,n){const o=new Array(n).fill(0);for(let i=0;i<a.length;i++)o[n-a.length+i]=a[i];return o;}
+function polyAdd(a,b){const n=Math.max(a.length,b.length);return padLeft(a,n).map((v,i)=>v+padLeft(b,n)[i]);}
 
-function polyAdd(a, b) {
-  const len = Math.max(a.length, b.length);
-  const pa = padLeft(a, len), pb = padLeft(b, len);
-  return pa.map((v,i) => v + pb[i]);
-}
-
-function padLeft(a, n) {
-  const out = new Array(n).fill(0);
-  for (let i = 0; i < a.length; i++) out[n-a.length+i] = a[i];
-  return out;
-}
-
-function polyEval(coeffs, x) {
-  // Evaluate polynomial at complex x = {re, im}
-  let re = 0, im = 0;
-  const n = coeffs.length - 1;
-  for (let i = 0; i <= n; i++) {
-    const pow = n - i;
-    const [pr, pi] = complexPow(x.re, x.im, pow);
-    re += coeffs[i] * pr;
-    im += coeffs[i] * pi;
+// ============================================================
+//  POLY ROOTS — companion matrix QR, robust
+// ============================================================
+function polyRoots(rawC){
+  // Strip tiny leading coefficients
+  let c=[...rawC];
+  while(c.length>1&&Math.abs(c[0])<1e-12)c.shift();
+  const n=c.length-1;
+  if(n<=0)return[];
+  if(n===1)return[{re:-c[1]/c[0],im:0}];
+  if(n===2){
+    const a=c[0],b=c[1],cv=c[2],d=b*b-4*a*cv;
+    return d>=0
+      ?[{re:(-b+Math.sqrt(d))/(2*a),im:0},{re:(-b-Math.sqrt(d))/(2*a),im:0}]
+      :[{re:-b/(2*a),im:Math.sqrt(-d)/(2*a)},{re:-b/(2*a),im:-Math.sqrt(-d)/(2*a)}];
   }
-  return {re, im};
-}
+  // Monic
+  const lead=c[0], p=c.map(v=>v/lead);
+  // Build companion (first-row / sub-diagonal form)
+  const N=n;
+  const H=Array.from({length:N},(_,i)=>{
+    const row=new Array(N).fill(0);
+    if(i>0)row[i-1]=1;
+    return row;
+  });
+  for(let j=0;j<N;j++)H[0][j]=-p[j+1];
 
-function complexPow(re, im, n) {
-  if (n === 0) return [1, 0];
-  let rr = 1, ri = 0;
-  for (let i = 0; i < n; i++) {
-    [rr, ri] = [rr*re - ri*im, rr*im + ri*re];
+  // QR iteration with shifts
+  for(let iter=0;iter<400;iter++){
+    if(!H[N-1]||H[N-1][N-1]===undefined)break;
+    const shift=H[N-1][N-1];
+    for(let i=0;i<N;i++)H[i][i]-=shift;
+    const{Q,R}=qrHH(H);
+    const RQ=matMul(R,Q);
+    for(let i=0;i<N;i++)for(let j=0;j<N;j++)H[i][j]=RQ[i][j];
+    for(let i=0;i<N;i++)H[i][i]+=shift;
   }
-  return [rr, ri];
+  return extractEigs(H);
 }
 
-function complexMag(re, im) { return Math.sqrt(re*re + im*im); }
-
-// Companion matrix eigenvalues via QR algorithm
-function polyRoots(coeffs) {
-  const n = coeffs.length - 1;
-  if (n === 0) return [];
-  if (n === 1) return [{re: -coeffs[1]/coeffs[0], im: 0}];
-  if (n === 2) {
-    const a = coeffs[0], b = coeffs[1], c = coeffs[2];
-    const disc = b*b - 4*a*c;
-    if (disc >= 0) {
-      return [{re: (-b+Math.sqrt(disc))/(2*a), im:0}, {re: (-b-Math.sqrt(disc))/(2*a), im:0}];
-    } else {
-      const r = -b/(2*a), i = Math.sqrt(-disc)/(2*a);
-      return [{re:r,im:i},{re:r,im:-i}];
-    }
-  }
-  // Normalize
-  const lead = coeffs[0];
-  const p = coeffs.map(c => c/lead);
-  // Companion matrix QR iteration
-  const N = n;
-  let H = buildCompanion(p.slice(1)); // NxN
-  for (let iter = 0; iter < 200; iter++) {
-    const shift = H[N-1][N-1];
-    // Shift
-    for (let i = 0; i < N; i++) H[i][i] -= shift;
-    const {Q, R} = qrDecomp(H);
-    H = matMul(R, Q);
-    for (let i = 0; i < N; i++) H[i][i] += shift;
-  }
-  // Extract eigenvalues from quasi-upper-triangular
-  return extractEigenvalues(H);
-}
-
-function buildCompanion(p) {
-  const n = p.length - 1;
-  const H = Array.from({length:n}, (_,i) => new Array(n).fill(0));
-  for (let i = 1; i < n; i++) H[i][i-1] = 1;
-  for (let j = 0; j < n; j++) H[0][j] = -p[j+1];
-  return H;
-}
-
-function qrDecomp(A) {
-  const n = A.length;
-  let Q = eye(n);
-  let R = A.map(r => [...r]);
-  for (let k = 0; k < n-1; k++) {
-    for (let i = k+1; i < n; i++) {
-      const a = R[k][k], b = R[i][k];
-      const r = Math.hypot(a, b);
-      if (r < 1e-14) continue;
-      const c = a/r, s = b/r;
-      for (let j = 0; j < n; j++) {
-        const rk = R[k][j], ri = R[i][j];
-        R[k][j] = c*rk + s*ri;
-        R[i][j] = -s*rk + c*ri;
+function qrHH(A){
+  const n=A.length;
+  const Q=eye(n);
+  const R=A.map(r=>[...r]);
+  for(let k=0;k<n-1;k++){
+    for(let i=k+1;i<n;i++){
+      const a=R[k][k],b=R[i][k],r=Math.hypot(a,b);
+      if(r<1e-14)continue;
+      const cs=a/r,sn=b/r;
+      for(let j=0;j<n;j++){
+        const rk=R[k][j],ri=R[i][j];
+        R[k][j]=cs*rk+sn*ri; R[i][j]=-sn*rk+cs*ri;
       }
-      for (let j = 0; j < n; j++) {
-        const qk = Q[j][k], qi = Q[j][i];
-        Q[j][k] = c*qk + s*qi;
-        Q[j][i] = -s*qk + c*qi;
+      for(let j=0;j<n;j++){
+        const qk=Q[j][k],qi=Q[j][i];
+        Q[j][k]=cs*qk+sn*qi; Q[j][i]=-sn*qk+cs*qi;
       }
     }
   }
-  return {Q, R};
+  return{Q,R};
 }
 
-function eye(n) {
-  return Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => i===j?1:0));
-}
+function eye(n){return Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:0));}
 
-function matMul(A, B) {
-  const n = A.length, m = B[0].length, k = B.length;
-  const C = Array.from({length:n}, () => new Array(m).fill(0));
-  for (let i = 0; i < n; i++)
-    for (let j = 0; j < m; j++)
-      for (let l = 0; l < k; l++) C[i][j] += A[i][l]*B[l][j];
+function matMul(A,B){
+  const n=A.length,m=B[0].length,k=B.length;
+  const C=Array.from({length:n},()=>new Array(m).fill(0));
+  for(let i=0;i<n;i++)for(let j=0;j<m;j++)for(let l=0;l<k;l++)C[i][j]+=A[i][l]*B[l][j];
   return C;
 }
 
-function extractEigenvalues(H) {
-  const n = H.length;
-  const eigs = [];
-  let i = 0;
-  while (i < n) {
-    if (i < n-1 && Math.abs(H[i+1][i]) > 1e-8) {
-      const a = H[i][i], b = H[i][i+1], c = H[i+1][i], d = H[i+1][i+1];
-      const tr = a+d, det = a*d - b*c;
-      const disc = tr*tr - 4*det;
-      if (disc >= 0) {
-        eigs.push({re:(tr+Math.sqrt(disc))/2, im:0});
-        eigs.push({re:(tr-Math.sqrt(disc))/2, im:0});
-      } else {
-        eigs.push({re:tr/2, im:Math.sqrt(-disc)/2});
-        eigs.push({re:tr/2, im:-Math.sqrt(-disc)/2});
-      }
-      i += 2;
-    } else {
-      eigs.push({re: H[i][i], im: 0});
-      i++;
+function extractEigs(H){
+  const n=H.length,eigs=[];
+  let i=0;
+  while(i<n){
+    const subdiag=(i<n-1&&H[i+1]&&H[i+1][i]!==undefined)?Math.abs(H[i+1][i]):0;
+    const scale=Math.abs(H[i][i])+(i<n-1&&H[i+1]?Math.abs(H[i+1][i+1]):0)+1;
+    if(i<n-1&&subdiag>1e-7*scale){
+      const a=H[i][i],b=H[i][i+1],cc=H[i+1][i],d=H[i+1][i+1];
+      const tr=a+d,det=a*d-b*cc,disc=tr*tr-4*det;
+      if(disc>=0){eigs.push({re:(tr+Math.sqrt(disc))/2,im:0});eigs.push({re:(tr-Math.sqrt(disc))/2,im:0});}
+      else{eigs.push({re:tr/2,im:Math.sqrt(-disc)/2});eigs.push({re:tr/2,im:-Math.sqrt(-disc)/2});}
+      i+=2;
+    }else{
+      eigs.push({re:H[i][i],im:0});i++;
     }
   }
   return eigs;
 }
 
 // ============================================================
-// CLOSED-LOOP STEP RESPONSE via bilinear transform (Tustin)
+//  TIME RESPONSE — RK4 state-space
 // ============================================================
-function stepResponse(clNum, clDen, tEnd, nPts) {
-  // Use bilinear discretization
-  const dt = tEnd / nPts;
-  const ts = [], ys = [];
-  // We'll use direct ODE integration with RK4 on state-space
-  const n = clDen.length - 1;
-  if (n < 1) {
-    // Pure gain
-    const g = clNum[0] / clDen[0];
-    for (let i = 0; i <= nPts; i++) { ts.push(i*dt); ys.push(g); }
-    return {ts, ys};
-  }
-  // Normalize
-  const d0 = clDen[0];
-  const den = clDen.map(v => v/d0);
-  const rawNum = clNum.map(v => v/d0);
-  // Pad num to length n+1
-  const num = padLeft(rawNum, n+1);
-
-  // Controllable canonical state-space
-  // x' = Ac*x + Bc*u, y = Cc*x + Dc*u
-  const Ac = Array.from({length:n}, (_,i) => new Array(n).fill(0));
-  for (let i = 0; i < n-1; i++) Ac[i][i+1] = 1;
-  for (let j = 0; j < n; j++) Ac[n-1][j] = -den[n-j];
-  const Bc = new Array(n).fill(0); Bc[n-1] = 1;
-  const Cc = new Array(n).fill(0);
-  for (let j = 0; j < n; j++) Cc[j] = num[n-j] - num[0]*den[n-j];
-  const Dc = num[0];
-
-  const x = new Array(n).fill(0);
-  ts.push(0); ys.push(Dc * 1); // step u=1
-
-  const dxdt = (xx, u) => {
-    const dx = new Array(n).fill(0);
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) dx[i] += Ac[i][j]*xx[j];
-      dx[i] += Bc[i]*u;
-    }
-    return dx;
-  };
-
-  const output = (xx, u) => {
-    let y = Dc*u;
-    for (let j = 0; j < n; j++) y += Cc[j]*xx[j];
-    return y;
-  };
-
-  for (let i = 1; i <= nPts; i++) {
-    const u = 1; // step
-    // RK4
-    const k1 = dxdt(x, u);
-    const xk2 = x.map((v,j) => v + dt/2*k1[j]);
-    const k2 = dxdt(xk2, u);
-    const xk3 = x.map((v,j) => v + dt/2*k2[j]);
-    const k3 = dxdt(xk3, u);
-    const xk4 = x.map((v,j) => v + dt*k3[j]);
-    const k4 = dxdt(xk4, u);
-    for (let j = 0; j < n; j++) x[j] += dt/6*(k1[j]+2*k2[j]+2*k3[j]+k4[j]);
-    ts.push(i*dt);
-    ys.push(output(x, u));
-    if (Math.abs(ys[ys.length-1]) > 1e6) break; // diverged
-  }
-  return {ts, ys};
-}
-
-function rampResponse(clNum, clDen, tEnd, nPts) {
-  const dt = tEnd / nPts;
-  const n = clDen.length - 1;
-  if (n < 1) {
-    const g = clNum[0]/clDen[0];
-    const ts=[], ys=[];
-    for (let i=0;i<=nPts;i++){ts.push(i*dt);ys.push(g*i*dt);}
-    return {ts,ys};
-  }
-  const d0 = clDen[0];
-  const den = clDen.map(v=>v/d0);
-  const rawNum = clNum.map(v=>v/d0);
-  const num = padLeft(rawNum, n+1);
-  const Ac = Array.from({length:n}, (_,i)=>new Array(n).fill(0));
-  for(let i=0;i<n-1;i++) Ac[i][i+1]=1;
-  for(let j=0;j<n;j++) Ac[n-1][j]=-den[n-j];
-  const Bc=new Array(n).fill(0); Bc[n-1]=1;
-  const Cc=new Array(n).fill(0);
-  for(let j=0;j<n;j++) Cc[j]=num[n-j]-num[0]*den[n-j];
-  const Dc=num[0];
-  const x=new Array(n).fill(0);
-  const ts=[0], ys=[0];
-  const dxdt=(xx,u)=>{const dx=new Array(n).fill(0);for(let i=0;i<n;i++){for(let j=0;j<n;j++)dx[i]+=Ac[i][j]*xx[j];dx[i]+=Bc[i]*u;}return dx;};
-  const output=(xx,u)=>{let y=Dc*u;for(let j=0;j<n;j++)y+=Cc[j]*xx[j];return y;};
-  for(let i=1;i<=nPts;i++){
-    const t=i*dt, u=t;
-    const k1=dxdt(x,u);
-    const xk2=x.map((v,j)=>v+dt/2*k1[j]);
-    const k2=dxdt(xk2,u);
-    const xk3=x.map((v,j)=>v+dt/2*k2[j]);
-    const k3=dxdt(xk3,u);
-    const xk4=x.map((v,j)=>v+dt*k3[j]);
-    const k4=dxdt(xk4,u);
-    for(let j=0;j<n;j++) x[j]+=dt/6*(k1[j]+2*k2[j]+2*k3[j]+k4[j]);
-    ts.push(t); ys.push(output(x,u));
-    if(Math.abs(ys[ys.length-1])>1e6) break;
-  }
-  return {ts,ys};
-}
-
-function impulseResponse(clNum, clDen, tEnd, nPts) {
-  // Impulse = derivative of step response
-  const {ts, ys} = stepResponse(clNum, clDen, tEnd, nPts);
-  const impYs = [0];
-  const dt = ts[1]-ts[0];
-  for(let i=1;i<ys.length;i++) impYs.push((ys[i]-ys[i-1])/dt);
-  return {ts, ys: impYs};
-}
-
-function sinResponse(clNum, clDen, tEnd, nPts, omega) {
-  const dt = tEnd/nPts;
-  const n = clDen.length-1;
-  if(n<1){
+function simulate(clNum,clDen,tEnd,nPts,inputFn){
+  const ts=[],ys=[];
+  if(clDen.length<=1){
     const g=clNum[0]/clDen[0];
-    const ts=[],ys=[];
-    for(let i=0;i<=nPts;i++){ts.push(i*dt);ys.push(g*Math.sin(omega*i*dt));}
-    return {ts,ys};
+    for(let i=0;i<=nPts;i++){const t=i*tEnd/nPts;ts.push(t);ys.push(g*inputFn(t));}
+    return{ts,ys};
   }
   const d0=clDen[0];
-  const den=clDen.map(v=>v/d0);
-  const rawNum=clNum.map(v=>v/d0);
-  const num=padLeft(rawNum,n+1);
-  const Ac=Array.from({length:n},(_,i)=>new Array(n).fill(0));
-  for(let i=0;i<n-1;i++) Ac[i][i+1]=1;
-  for(let j=0;j<n;j++) Ac[n-1][j]=-den[n-j];
-  const Bc=new Array(n).fill(0); Bc[n-1]=1;
+  const den=clDen.map(v=>v/d0),rn=clNum.map(v=>v/d0);
+  const n=den.length-1;
+  const num=padLeft(rn,n+1);
+  const Ac=Array.from({length:n},()=>new Array(n).fill(0));
+  for(let i=0;i<n-1;i++)Ac[i][i+1]=1;
+  for(let j=0;j<n;j++)Ac[n-1][j]=-den[n-j];
+  const Bc=new Array(n).fill(0);Bc[n-1]=1;
   const Cc=new Array(n).fill(0);
-  for(let j=0;j<n;j++) Cc[j]=num[n-j]-num[0]*den[n-j];
+  for(let j=0;j<n;j++)Cc[j]=num[n-j]-num[0]*den[n-j];
   const Dc=num[0];
   const x=new Array(n).fill(0);
-  const ts=[0],ys=[Dc*Math.sin(0)];
+  const dt=tEnd/nPts;
   const dxdt=(xx,u)=>{const dx=new Array(n).fill(0);for(let i=0;i<n;i++){for(let j=0;j<n;j++)dx[i]+=Ac[i][j]*xx[j];dx[i]+=Bc[i]*u;}return dx;};
-  const output=(xx,u)=>{let y=Dc*u;for(let j=0;j<n;j++)y+=Cc[j]*xx[j];return y;};
+  const out=(xx,u)=>{let y=Dc*u;for(let j=0;j<n;j++)y+=Cc[j]*xx[j];return y;};
+  ts.push(0);ys.push(out(x,inputFn(0)));
   for(let i=1;i<=nPts;i++){
-    const t=i*dt,u=Math.sin(omega*t);
-    const k1=dxdt(x,u);
+    const t=i*dt,u=inputFn(t),u0=inputFn(t-dt);
+    const k1=dxdt(x,u0);
     const xk2=x.map((v,j)=>v+dt/2*k1[j]);
-    const k2=dxdt(xk2,u);
+    const k2=dxdt(xk2,inputFn(t-dt/2));
     const xk3=x.map((v,j)=>v+dt/2*k2[j]);
-    const k3=dxdt(xk3,u);
+    const k3=dxdt(xk3,inputFn(t-dt/2));
     const xk4=x.map((v,j)=>v+dt*k3[j]);
     const k4=dxdt(xk4,u);
-    for(let j=0;j<n;j++) x[j]+=dt/6*(k1[j]+2*k2[j]+2*k3[j]+k4[j]);
-    ts.push(t); ys.push(output(x,u));
-    if(Math.abs(ys[ys.length-1])>1e6) break;
+    for(let j=0;j<n;j++)x[j]+=dt/6*(k1[j]+2*k2[j]+2*k3[j]+k4[j]);
+    const yv=out(x,u);
+    ts.push(t);ys.push(isFinite(yv)&&Math.abs(yv)<1e7?yv:NaN);
   }
-  return {ts,ys};
+  return{ts,ys};
 }
 
 // ============================================================
-// ROOT LOCUS: compute closed-loop poles for range of K values
+//  ROOT LOCUS COMPUTATION
 // ============================================================
-function computeRootLocus(olNum, olDen, kValues) {
-  const trajectories = [];
-  const n = olDen.length - 1;
-  for (let i = 0; i < n; i++) trajectories.push([]);
+function logspace(a,b,n){
+  const la=Math.log10(a),lb=Math.log10(b);
+  return Array.from({length:n},(_,i)=>Math.pow(10,la+i/(n-1)*(lb-la)));
+}
 
-  for (const K of kValues) {
-    // CL den = olDen + K*olNum (padded)
-    const scaledNum = olNum.map(v => v * K);
-    const clDenCoeffs = polyAdd(olDen, padLeft(scaledNum, olDen.length));
-    const roots = polyRoots(clDenCoeffs);
-    // Sort roots to maintain continuity
-    if (trajectories[0].length === 0) {
-      for (let i = 0; i < roots.length && i < n; i++) {
-        trajectories[i].push(roots[i]);
-      }
-    } else {
-      // Greedy assignment by nearest previous root
-      const used = new Array(roots.length).fill(false);
-      for (let i = 0; i < n && i < roots.length; i++) {
-        const prev = trajectories[i][trajectories[i].length-1];
-        let best = -1, bestDist = Infinity;
-        for (let j = 0; j < roots.length; j++) {
-          if (used[j]) continue;
-          const d = Math.hypot(roots[j].re-prev.re, roots[j].im-prev.im);
-          if (d < bestDist) { bestDist = d; best = j; }
+function computeRL(olNum,olDen,kVals){
+  const n=olDen.length-1;
+  const trajs=Array.from({length:n},()=>[]);
+  for(const K of kVals){
+    const sn=olNum.map(v=>v*K);
+    const cld=polyAdd(olDen,padLeft(sn,olDen.length));
+    let roots;
+    try{roots=polyRoots(cld);}catch(e){continue;}
+    if(!roots||!roots.length)continue;
+    if(trajs[0].length===0){
+      for(let i=0;i<Math.min(n,roots.length);i++)trajs[i].push(roots[i]);
+    }else{
+      const used=new Array(roots.length).fill(false);
+      for(let i=0;i<n;i++){
+        const prev=trajs[i][trajs[i].length-1];
+        if(!prev)continue;
+        let best=-1,bd=Infinity;
+        for(let j=0;j<roots.length;j++){
+          if(used[j])continue;
+          const d=Math.hypot(roots[j].re-prev.re,roots[j].im-prev.im);
+          if(d<bd){bd=d;best=j;}
         }
-        if (best >= 0) { used[best] = true; trajectories[i].push(roots[best]); }
+        if(best>=0){used[best]=true;trajs[i].push(roots[best]);}
       }
     }
   }
-  return trajectories;
+  return trajs;
 }
 
 // ============================================================
-// DRAWING ENGINE
+//  CANVAS — pixel-perfect, no stretching
 // ============================================================
-const RES = 2; // canvas resolution multiplier
+const DPR=window.devicePixelRatio||2;
 
-function resizeCanvas(canvas, wrap) {
-  const w = wrap.clientWidth, h = wrap.clientHeight;
-  canvas.width = w * RES; canvas.height = h * RES;
-  canvas.style.width = w+'px'; canvas.style.height = h+'px';
+function fitCanvas(canvas){
+  const wrap=canvas.parentElement;
+  const w=wrap.offsetWidth,h=wrap.offsetHeight;
+  const cw=Math.round(w*DPR),ch=Math.round(h*DPR);
+  if(canvas.width!==cw||canvas.height!==ch){
+    canvas.width=cw;canvas.height=ch;
+    canvas.style.width=w+'px';canvas.style.height=h+'px';
+  }
+  return{W:canvas.width,H:canvas.height};
 }
 
-function drawGrid(ctx, W, H, margin, xRange, yRange, gridColor, axisColor, textColor) {
-  const mx=margin.l, my=margin.t, pw=W-margin.l-margin.r, ph=H-margin.t-margin.b;
-  const toX = v => mx + (v-xRange[0])/(xRange[1]-xRange[0])*pw;
-  const toY = v => my + (1-(v-yRange[0])/(yRange[1]-yRange[0]))*ph;
-
-  ctx.save();
-  // Background
-  ctx.fillStyle = '#080c0e';
-  ctx.fillRect(mx,my,pw,ph);
-
-  // Grid
-  ctx.strokeStyle = gridColor; ctx.lineWidth = 0.5*RES;
-  const nGridX=8, nGridY=6;
-  for(let i=0;i<=nGridX;i++){
-    const x=mx+i/nGridX*pw;
-    ctx.beginPath(); ctx.moveTo(x,my); ctx.lineTo(x,my+ph); ctx.stroke();
-  }
-  for(let i=0;i<=nGridY;i++){
-    const y=my+i/nGridY*ph;
-    ctx.beginPath(); ctx.moveTo(mx,y); ctx.lineTo(mx+pw,y); ctx.stroke();
-  }
-
-  // Axes
-  ctx.strokeStyle = axisColor; ctx.lineWidth = 1*RES;
-  const x0=toX(0), y0=toY(0);
-  if(x0>=mx && x0<=mx+pw){ ctx.beginPath(); ctx.moveTo(x0,my); ctx.lineTo(x0,my+ph); ctx.stroke(); }
-  if(y0>=my && y0<=my+ph){ ctx.beginPath(); ctx.moveTo(mx,y0); ctx.lineTo(mx+pw,y0); ctx.stroke(); }
-
-  // Labels
-  ctx.fillStyle = textColor; ctx.font = `${9*RES}px 'Share Tech Mono'`;
+function drawGrid(ctx,W,H,mg,xR,yR){
+  const{l:ml,t:mt,r:mr,b:mb}=mg;
+  const pw=W-ml-mr,ph=H-mt-mb;
+  const tx=v=>ml+(v-xR[0])/(xR[1]-xR[0])*pw;
+  const ty=v=>mt+(1-(v-yR[0])/(yR[1]-yR[0]))*ph;
+  ctx.fillStyle='#060a0c';ctx.fillRect(ml,mt,pw,ph);
+  ctx.strokeStyle='#0f1e28';ctx.lineWidth=1;
+  for(let i=0;i<=10;i++){const x=ml+i/10*pw;ctx.beginPath();ctx.moveTo(x,mt);ctx.lineTo(x,mt+ph);ctx.stroke();}
+  for(let i=0;i<=8;i++){const y=mt+i/8*ph;ctx.beginPath();ctx.moveTo(ml,y);ctx.lineTo(ml+pw,y);ctx.stroke();}
+  ctx.strokeStyle='#2a4a5a';ctx.lineWidth=1.5;
+  const x0=tx(0),y0=ty(0);
+  if(x0>=ml&&x0<=ml+pw){ctx.beginPath();ctx.moveTo(x0,mt);ctx.lineTo(x0,mt+ph);ctx.stroke();}
+  if(y0>=mt&&y0<=mt+ph){ctx.beginPath();ctx.moveTo(ml,y0);ctx.lineTo(ml+pw,y0);ctx.stroke();}
+  ctx.fillStyle='#2a4a5a';ctx.font=`${9*DPR}px 'Share Tech Mono'`;
   ctx.textAlign='center';
-  for(let i=0;i<=nGridX;i++){
-    const v = xRange[0]+i/nGridX*(xRange[1]-xRange[0]);
-    const x=mx+i/nGridX*pw;
-    ctx.fillText(v.toFixed(1), x, my+ph+12*RES);
-  }
+  for(let i=0;i<=5;i++){const v=xR[0]+i/5*(xR[1]-xR[0]);ctx.fillText(fmtN(v),ml+i/5*pw,mt+ph+13*DPR);}
   ctx.textAlign='right';
-  for(let i=0;i<=nGridY;i++){
-    const v = yRange[0]+(1-i/nGridY)*(yRange[1]-yRange[0]);
-    const y=my+i/nGridY*ph;
-    ctx.fillText(v.toFixed(1), mx-4*RES, y+3*RES);
-  }
-  ctx.restore();
-  return {toX, toY, pw, ph, mx, my};
+  for(let i=0;i<=4;i++){const v=yR[0]+(1-i/4)*(yR[1]-yR[0]);ctx.fillText(fmtN(v),ml-4*DPR,mt+i/4*ph+3*DPR);}
+  return{tx,ty,pw,ph,ml,mt};
 }
+function fmtN(v){if(Math.abs(v)>=1000||(Math.abs(v)<0.01&&v!==0))return v.toExponential(1);return parseFloat(v.toPrecision(3)).toString();}
 
 // ============================================================
-// STATE
+//  APP STATE
 // ============================================================
-let state = {
-  K: 1,
-  simTime: 20,
-  sinFreq: 1,
-};
-
-let lastOlNum = null, lastOlDen = null;
-let lastClNum = null, lastClDen = null;
-let lastRlTrajectories = null, lastRlKValues = null;
+const S={K:1,simTime:20,sinFreq:1};
+let _rlTraj=null,_rlRange=null,_resp=null;
 
 // ============================================================
-// PANEL COLLAPSE
+//  UI HELPERS
 // ============================================================
-function togglePanel(id) {
-  const body = document.getElementById('body-'+id);
-  const tog = document.getElementById('toggle-'+id);
-  const hidden = body.style.display === 'none';
-  body.style.display = hidden ? '' : 'none';
-  tog.classList.toggle('collapsed', !hidden);
+function togglePanel(id){
+  const b=document.getElementById('pb-'+id),t=document.getElementById('tg-'+id);
+  const h=b.style.display==='none';
+  b.style.display=h?'':'none';
+  t.classList.toggle('col',!h);
 }
+function toggleInfo(){document.getElementById('iov').classList.toggle('open');}
+function ovClick(e){if(e.target===document.getElementById('iov'))toggleInfo();}
 
-// ============================================================
-// GAIN UPDATE
-// ============================================================
-function updateGainK(val) {
-  const exp = parseFloat(val);
-  state.K = Math.pow(10, exp);
-  document.getElementById('val-k').textContent = state.K < 0.001 ? state.K.toExponential(2) : state.K.toPrecision(4);
-  document.getElementById('rl-k-label').textContent = 'K = ' + (state.K < 0.001 ? state.K.toExponential(2) : state.K.toPrecision(4));
+function updateK(v){
+  S.K=Math.pow(10,parseFloat(v));
+  const d=S.K>=0.001?S.K.toPrecision(4):S.K.toExponential(2);
+  document.getElementById('vk').textContent=d;
+  document.getElementById('rkl').textContent='K = '+d;
   recompute();
 }
-
-function updateSliderRange(id) {
-  const min = parseFloat(document.getElementById(id+'-min').value);
-  const max = parseFloat(document.getElementById(id+'-max').value);
-  const slider = document.getElementById('gain-'+id);
-  slider.min = min; slider.max = max;
-  slider.value = Math.log10(state.K);
+function updateKRange(){
+  const mn=parseFloat(document.getElementById('kmin').value);
+  const mx=parseFloat(document.getElementById('kmax').value);
+  const sl=document.getElementById('gk');
+  sl.min=mn;sl.max=mx;
+  sl.value=Math.max(mn,Math.min(mx,Math.log10(S.K)));
 }
-
-function updateSimTime(val) {
-  state.simTime = parseInt(val);
-  document.getElementById('val-simtime').textContent = val+'s';
-  recompute();
-}
-
-function updateSinFreq(val) {
-  state.sinFreq = parseFloat(val);
-  document.getElementById('val-sinfreq').textContent = parseFloat(val).toFixed(1)+' rad/s';
+function updateST(v){S.simTime=parseInt(v);document.getElementById('vst').textContent=v+'s';recompute();}
+function updateSF(v){S.sinFreq=parseFloat(v);document.getElementById('vsf').textContent=parseFloat(v).toFixed(1)+' rad/s';recompute();}
+function onInputChange(){
+  const v=document.getElementById('itype').value;
+  document.getElementById('sfg').style.display=v==='sinusoid'?'':'none';
+  document.getElementById('trlbl').textContent=v.toUpperCase()+' INPUT';
   recompute();
 }
 
 // ============================================================
-// PRESETS
+//  PRESETS
 // ============================================================
-function applyPlantPreset() {
-  const v = document.getElementById('plant-preset').value;
-  const map = {
-    integrator:    {num:'1', den:'1 0'},
-    double_int:    {num:'1', den:'1 0 0'},
-    first_order:   {num:'1', den:'1 1'},
-    second_order:  {num:'1', den:'1 0.4 4'},
-    third_order:   {num:'1', den:'1 3 2 0'},
-    unstable_pole: {num:'1', den:'1 -1'},
-    reson:         {num:'1', den:'1 0.2 4'},
+function applyPlantPreset(){
+  const v=document.getElementById('pp').value;
+  const m={integrator:{n:'1',d:'1 0'},double_int:{n:'1',d:'1 0 0'},first_order:{n:'1',d:'1 1'},
+    second_order:{n:'1',d:'1 0.4 4'},third_order:{n:'1',d:'1 3 2 0'},unstable:{n:'1',d:'1 -1'},reson:{n:'1',d:'1 0.2 4'}};
+  if(m[v]){sv('pn',m[v].n);sv('pd',m[v].d);recompute();}
+}
+function applyCascadePreset(){
+  const v=document.getElementById('cp').value;
+  const m={pid:{n:'1 2 1',d:'1 0'},p:{n:'1',d:'1'},pi:{n:'1 1',d:'1 0'},pd:{n:'1 2',d:'1'},
+    lead:{n:'1 5',d:'1 20'},lag:{n:'1 1',d:'1 0.1'},notch:{n:'1 0 4',d:'1 1 4'}};
+  if(m[v]){sv('cn',m[v].n);sv('cd',m[v].d);document.getElementById('ce').checked=true;recompute();}
+}
+function applyFeedbackPreset(){
+  const v=document.getElementById('fp').value;
+  const m={unity:{n:'1',d:'1'},tach:{n:'1 0',d:'1 10'},lpf:{n:'1',d:'1 5'}};
+  if(m[v]){sv('fn',m[v].n);sv('fd',m[v].d);document.getElementById('fe').checked=true;recompute();}
+}
+function sv(id,val){document.getElementById(id).value=val;}
+
+// ============================================================
+//  PARSE TFs
+// ============================================================
+function parseTFs(){
+  const pn=parseCoeffs(document.getElementById('pn').value);
+  const pd=parseCoeffs(document.getElementById('pd').value);
+  const pe=document.getElementById('pe');
+  pe.textContent=(!pn||!pd)?'⚠ Invalid coefficients':'';
+  document.getElementById('pn').classList.toggle('err',!pn);
+  document.getElementById('pd').classList.toggle('err',!pd);
+  if(!pn||!pd)return null;
+
+  let cn=[1],cd=[1];
+  if(document.getElementById('ce').checked){
+    const n=parseCoeffs(document.getElementById('cn').value);
+    const d=parseCoeffs(document.getElementById('cd').value);
+    document.getElementById('cerr').textContent=(!n||!d)?'⚠ Invalid':'';
+    if(!n||!d)return null;
+    cn=n;cd=d;
+  }else{document.getElementById('cerr').textContent='';}
+
+  let hn=[1],hd=[1];
+  if(document.getElementById('fe').checked){
+    const n=parseCoeffs(document.getElementById('fn').value);
+    const d=parseCoeffs(document.getElementById('fd').value);
+    document.getElementById('ferr').textContent=(!n||!d)?'⚠ Invalid':'';
+    if(!n||!d)return null;
+    hn=n;hd=d;
+  }else{document.getElementById('ferr').textContent='';}
+
+  const cgN=polyMul(cn,pn),cgD=polyMul(cd,pd);
+  return{
+    olN:cgN,olD:cgD,
+    clNb:polyMul(cgN,hd),
+    clD0:polyMul(cgD,hd),
+    clDK:polyMul(cgN,hn)
   };
-  if (map[v]) {
-    document.getElementById('plant-num').value = map[v].num;
-    document.getElementById('plant-den').value = map[v].den;
-    recompute();
-  }
-}
-
-function applyCascadePreset() {
-  const v = document.getElementById('cascade-preset').value;
-  const map = {
-    pid:   {num:'1 2 1', den:'1 0'},
-    lead:  {num:'1 5', den:'1 20'},
-    lag:   {num:'1 1', den:'1 0.1'},
-    notch: {num:'1 0 4', den:'1 1 4'},
-    pd:    {num:'1 2', den:'1'},
-    pi:    {num:'1 1', den:'1 0'},
-  };
-  if (map[v]) {
-    document.getElementById('cascade-num').value = map[v].num;
-    document.getElementById('cascade-den').value = map[v].den;
-    document.getElementById('cascade-enable').checked = true;
-    recompute();
-  }
-}
-
-function applyFeedbackPreset() {
-  const v = document.getElementById('feedback-preset').value;
-  const map = {
-    unity:  {num:'1',   den:'1'},
-    tach:   {num:'1 0', den:'1 10'},
-    filter: {num:'1',   den:'1 5'},
-  };
-  if (map[v]) {
-    document.getElementById('feedback-num').value = map[v].num;
-    document.getElementById('feedback-den').value = map[v].den;
-    document.getElementById('feedback-enable').checked = true;
-    recompute();
-  }
 }
 
 // ============================================================
-// INPUT TYPE
+//  MAIN RECOMPUTE
 // ============================================================
-document.getElementById('input-type').addEventListener('change', function(){
-  document.getElementById('sin-freq-group').style.display = this.value === 'sinusoid' ? '' : 'none';
-  document.getElementById('tr-input-label').textContent = this.value.toUpperCase()+' INPUT';
-  recompute();
-});
-
-// ============================================================
-// PARSE TRANSFER FUNCTIONS
-// ============================================================
-function parseTFs() {
-  const pn = parseCoeffs(document.getElementById('plant-num').value);
-  const pd = parseCoeffs(document.getElementById('plant-den').value);
-  document.getElementById('plant-err').textContent = (!pn||!pd) ? '⚠ Invalid coefficients' : '';
-  document.getElementById('plant-num').classList.toggle('error', !pn);
-  document.getElementById('plant-den').classList.toggle('error', !pd);
-  if (!pn||!pd) return null;
-
-  let cn = [1], cd = [1];
-  const cascadeOn = document.getElementById('cascade-enable').checked;
-  if (cascadeOn) {
-    const n = parseCoeffs(document.getElementById('cascade-num').value);
-    const d = parseCoeffs(document.getElementById('cascade-den').value);
-    document.getElementById('cascade-err').textContent = (!n||!d) ? '⚠ Invalid' : '';
-    if (!n||!d) return null;
-    cn = n; cd = d;
-  }
-
-  let hn = [1], hd = [1];
-  const feedbackOn = document.getElementById('feedback-enable').checked;
-  if (feedbackOn) {
-    const n = parseCoeffs(document.getElementById('feedback-num').value);
-    const d = parseCoeffs(document.getElementById('feedback-den').value);
-    document.getElementById('feedback-err').textContent = (!n||!d) ? '⚠ Invalid' : '';
-    if (!n||!d) return null;
-    hn = n; hd = d;
-  }
-
-  // Open-loop: L(s) = C(s)*G(s)
-  // Closed-loop: T(s) = K*C*G / (1 + K*C*G*H)
-  const cgNum = polyMul(cn, pn);
-  const cgDen = polyMul(cd, pd);
-
-  // OL numerator/denominator for root locus (L = C*G)
-  const olNum = cgNum;
-  const olDen = cgDen;
-
-  // CL: T = K*CG / (CG_den*H_den + K*CG_num*H_num)
-  // Actually: T = K*cgNum*hd / (cgDen*hd + K*cgNum*hn)
-  const clNum_base = polyMul(cgNum, hd);  // * K applied at compute time
-  const clDen_noK  = polyMul(cgDen, hd);
-  const clDen_K    = polyMul(cgNum, hn);  // * K
-
-  return {olNum, olDen, clNum_base, clDen_noK, clDen_K};
-}
-
-// ============================================================
-// MAIN COMPUTE
-// ============================================================
-function recompute() {
-  const tfs = parseTFs();
-  if (!tfs) return;
-
-  const {olNum, olDen, clNum_base, clDen_noK, clDen_K} = tfs;
-  const K = state.K;
-
-  // CL at current K
-  const clNum = clNum_base.map(v => v*K);
-  const clDenCoeffs = polyAdd(clDen_noK, clDen_K.map(v=>v*K));
-
-  lastOlNum = olNum; lastOlDen = olDen;
-  lastClNum = clNum; lastClDen = clDenCoeffs;
+function recompute(){
+  const tfs=parseTFs();if(!tfs)return;
+  const{olN,olD,clNb,clD0,clDK}=tfs;
+  const K=S.K;
+  const clN=clNb.map(v=>v*K);
+  const clD=polyAdd(clD0,clDK.map(v=>v*K));
 
   // Root locus
-  const kMin = 0.0001, kMax = Math.pow(10, parseFloat(document.getElementById('k-max').value));
-  const kVals = logspace(kMin, kMax, 200);
-  lastRlKValues = kVals;
-  lastRlTrajectories = computeRootLocus(olNum, olDen, kVals);
+  const kExpMin=parseFloat(document.getElementById('kmin').value);
+  const kExpMax=parseFloat(document.getElementById('kmax').value);
+  const kMin=Math.pow(10,Math.min(kExpMin,-5));
+  const kMax=Math.pow(10,Math.max(kExpMax,1));
+  const kVals=logspace(Math.max(kMin,1e-7),kMax,200);
+  try{_rlTraj=computeRL(olN,olD,kVals);}catch(e){_rlTraj=[];}
 
   // OL poles/zeros
-  const olPoles = polyRoots(olDen);
-  const olZeros = olNum.length <= 1 ? [] : polyRoots(olNum);
+  let olP=[],olZ=[];
+  try{olP=polyRoots(olD);}catch(e){}
+  try{olZ=olN.length>1?polyRoots(olN):[];}catch(e){}
 
-  // Stability: check CL poles
-  const clPoles = polyRoots(clDenCoeffs);
-  const maxRe = Math.max(...clPoles.map(p=>p.re));
-  let stability = 'STABLE';
-  if (maxRe > 0.01) stability = 'UNSTABLE';
-  else if (maxRe > -0.01) stability = 'MARGINAL';
+  // CL poles at K
+  let clP=[];
+  try{clP=polyRoots(clD);}catch(e){}
 
-  const badge = document.getElementById('stability-badge');
-  badge.textContent = stability;
-  badge.className = 'stability ' + stability.toLowerCase();
+  // Stability
+  const maxRe=clP.length?Math.max(...clP.map(p=>p.re)):-Infinity;
+  const stab=maxRe>0.02?'UNSTABLE':maxRe>-0.02?'MARGINAL':'STABLE';
+  const sb=document.getElementById('sbadge');
+  sb.textContent=stab;sb.className='stab '+stab.toLowerCase();
 
-  document.getElementById('hdr-poles').textContent = 'POLES: ' + olPoles.length;
-  document.getElementById('hdr-zeros').textContent = 'ZEROS: ' + olZeros.length;
-  document.getElementById('m-olp').textContent = olPoles.length;
-  document.getElementById('m-olz').textContent = olZeros.length;
-  const nAsym = olPoles.length - olZeros.length;
-  document.getElementById('m-asym').textContent = nAsym > 0 ? nAsym : '—';
+  document.getElementById('hdr-poles').textContent='POLES: '+olP.length;
+  document.getElementById('hdr-zeros').textContent='ZEROS: '+olZ.length;
+  document.getElementById('molp').textContent=olP.length;
+  document.getElementById('molz').textContent=olZ.length;
+  const nA=olP.length-olZ.length;
+  document.getElementById('masy').textContent=nA>0?nA:'—';
+  document.getElementById('mclp').textContent=clP.length;
 
-  drawRootLocus(olPoles, olZeros, clPoles);
+  drawRL(olP,olZ,clP);
 
   // Time response
-  const inputType = document.getElementById('input-type').value;
+  const it=document.getElementById('itype').value;
   let resp;
-  const nPts = 500;
-  if (inputType === 'step')     resp = stepResponse(clNum, clDenCoeffs, state.simTime, nPts);
-  else if (inputType === 'ramp') resp = rampResponse(clNum, clDenCoeffs, state.simTime, nPts);
-  else if (inputType === 'impulse') resp = impulseResponse(clNum, clDenCoeffs, state.simTime, nPts);
-  else resp = sinResponse(clNum, clDenCoeffs, state.simTime, nPts, state.sinFreq);
-
-  drawTimeResponse(resp, inputType);
-  computeMetrics(resp, inputType);
-}
-
-function logspace(a, b, n) {
-  const arr = [];
-  for (let i = 0; i < n; i++) arr.push(Math.pow(10, Math.log10(a) + i/(n-1)*(Math.log10(b)-Math.log10(a))));
-  return arr;
+  if(it==='impulse'){
+    const sr=simulate(clN,clD,S.simTime,600,()=>1);
+    const dt2=sr.ts[1]-sr.ts[0];
+    const iys=[0];
+    for(let i=1;i<sr.ys.length;i++){
+      iys.push((isFinite(sr.ys[i])&&isFinite(sr.ys[i-1]))?(sr.ys[i]-sr.ys[i-1])/dt2:NaN);
+    }
+    resp={ts:sr.ts,ys:iys};
+  }else{
+    const fns={step:()=>1,ramp:t=>t,sinusoid:t=>Math.sin(S.sinFreq*t)};
+    resp=simulate(clN,clD,S.simTime,600,fns[it]);
+  }
+  _resp=resp;
+  drawTR(resp,it);
+  computeMetrics(resp,it);
 }
 
 // ============================================================
-// DRAW ROOT LOCUS
+//  DRAW ROOT LOCUS
 // ============================================================
-function drawRootLocus(olPoles, olZeros, clPoles) {
-  const canvas = document.getElementById('rl-canvas');
-  const wrap = document.getElementById('rl-wrap');
-  resizeCanvas(canvas, wrap);
-  const W = canvas.width, H = canvas.height;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,W,H);
+function drawRL(olP,olZ,clP){
+  const canvas=document.getElementById('rlc');
+  const{W,H}=fitCanvas(canvas);
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);ctx.save();
 
-  // Compute axis range
-  const allRe = [...olPoles.map(p=>p.re), ...olZeros.map(p=>p.re),
-                 ...lastRlTrajectories.flat().map(p=>p.re)];
-  const allIm = [...olPoles.map(p=>p.im), ...olZeros.map(p=>p.im),
-                 ...lastRlTrajectories.flat().map(p=>p.im)];
-  const reMin = Math.min(...allRe), reMax = Math.max(...allRe);
-  const imMin = Math.min(...allIm), imMax = Math.max(...allIm);
-  const rePad = Math.max((reMax-reMin)*0.2, 2);
-  const imPad = Math.max((imMax-imMin)*0.2, 2);
+  const safe=p=>isFinite(p.re)&&isFinite(p.im)&&Math.abs(p.re)<1e4&&Math.abs(p.im)<1e4;
+  const allPts=[...olP,...olZ,...(_rlTraj?_rlTraj.flat():[]),...clP].filter(safe);
 
-  const xRange = [reMin-rePad, reMax+rePad];
-  const yRange = [imMin-imPad, imMax+imPad];
+  let rMin=-2,rMax=2,iMin=-3,iMax=3;
+  if(allPts.length){
+    rMin=Math.min(...allPts.map(p=>p.re));rMax=Math.max(...allPts.map(p=>p.re));
+    iMin=Math.min(...allPts.map(p=>p.im));iMax=Math.max(...allPts.map(p=>p.im));
+  }
+  const rP=Math.max((rMax-rMin)*0.25,1.5),iP=Math.max((iMax-iMin)*0.25,1.5);
+  const xR=[rMin-rP,rMax+rP],yR=[iMin-iP,iMax+iP];
+  _rlRange={xR,yR};
 
-  const margin = {l:44*RES, r:12*RES, t:12*RES, b:30*RES};
-  const {toX, toY} = drawGrid(ctx, W, H, margin, xRange, yRange, '#1a2e3a', '#2a4a5a', '#3a6070');
+  const mg={l:46*DPR,t:14*DPR,r:14*DPR,b:32*DPR};
+  const{tx,ty}=drawGrid(ctx,W,H,mg,xR,yR);
 
-  // Labels
-  ctx.fillStyle = '#5a7a8a'; ctx.font = `${8*RES}px 'Share Tech Mono'`;
-  ctx.textAlign='center';
-  ctx.fillText('Real Axis', W/2, H-4*RES);
-  ctx.save(); ctx.translate(10*RES, H/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText('Imag Axis', 0, 0); ctx.restore();
+  // axis labels
+  ctx.fillStyle='#2a4a5a';ctx.font=`${8*DPR}px 'Share Tech Mono'`;
+  ctx.textAlign='center';ctx.fillText('Real (σ)',W/2,H-4*DPR);
+  ctx.save();ctx.translate(10*DPR,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('Imag (jω)',0,0);ctx.restore();
 
   // Trajectories
-  for (const traj of lastRlTrajectories) {
-    if (traj.length < 2) continue;
-    ctx.beginPath();
-    ctx.strokeStyle = 'rgba(0,255,136,0.55)'; ctx.lineWidth = 1.5*RES;
-    ctx.moveTo(toX(traj[0].re), toY(traj[0].im));
-    for (let i = 1; i < traj.length; i++) {
-      const dx = Math.abs(traj[i].re-traj[i-1].re), dy = Math.abs(traj[i].im-traj[i-1].im);
-      if (dx > 5 || dy > 5) { ctx.stroke(); ctx.beginPath(); ctx.moveTo(toX(traj[i].re), toY(traj[i].im)); continue; }
-      ctx.lineTo(toX(traj[i].re), toY(traj[i].im));
+  if(_rlTraj){
+    for(const traj of _rlTraj){
+      if(traj.length<2)continue;
+      ctx.beginPath();ctx.strokeStyle='rgba(0,210,120,0.5)';ctx.lineWidth=1.5*DPR;
+      let pen=false;
+      for(let i=0;i<traj.length;i++){
+        const p=traj[i];
+        if(!safe(p)){pen=false;continue;}
+        if(i>0){const q=traj[i-1];if(safe(q)&&(Math.abs(p.re-q.re)>10||Math.abs(p.im-q.im)>10)){pen=false;}}
+        if(!pen){ctx.moveTo(tx(p.re),ty(p.im));pen=true;}else ctx.lineTo(tx(p.re),ty(p.im));
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
   }
 
-  // OL Poles (X)
-  ctx.strokeStyle = '#ff4455'; ctx.lineWidth = 2*RES;
-  for (const p of olPoles) {
-    const x=toX(p.re), y=toY(p.im), s=6*RES;
-    ctx.beginPath(); ctx.moveTo(x-s,y-s); ctx.lineTo(x+s,y+s); ctx.moveTo(x+s,y-s); ctx.lineTo(x-s,y+s);
-    ctx.stroke();
-  }
-
-  // OL Zeros (O)
-  ctx.strokeStyle = '#00aaff'; ctx.lineWidth = 2*RES;
-  for (const z of olZeros) {
-    const x=toX(z.re), y=toY(z.im), s=5*RES;
-    ctx.beginPath(); ctx.arc(x,y,s,0,2*Math.PI); ctx.stroke();
-  }
-
-  // Current CL poles (diamond)
-  ctx.fillStyle = '#ffaa00';
-  for (const p of clPoles) {
-    const x=toX(p.re), y=toY(p.im), s=5*RES;
-    ctx.beginPath(); ctx.moveTo(x,y-s); ctx.lineTo(x+s,y); ctx.lineTo(x,y+s); ctx.lineTo(x-s,y); ctx.closePath();
-    ctx.fill();
-    ctx.shadowColor='#ffaa00'; ctx.shadowBlur=8; ctx.fill(); ctx.shadowBlur=0;
+  const SZ=6*DPR;
+  ctx.strokeStyle='#ff4455';ctx.lineWidth=2.5*DPR;
+  for(const p of olP){if(!safe(p))continue;const x=tx(p.re),y=ty(p.im);ctx.beginPath();ctx.moveTo(x-SZ,y-SZ);ctx.lineTo(x+SZ,y+SZ);ctx.moveTo(x+SZ,y-SZ);ctx.lineTo(x-SZ,y+SZ);ctx.stroke();}
+  ctx.strokeStyle='#00aaff';ctx.lineWidth=2.5*DPR;
+  for(const z of olZ){if(!safe(z))continue;ctx.beginPath();ctx.arc(tx(z.re),ty(z.im),SZ*0.9,0,2*Math.PI);ctx.stroke();}
+  ctx.fillStyle='#ffaa00';
+  for(const p of clP){
+    if(!safe(p))continue;
+    const x=tx(p.re),y=ty(p.im);
+    ctx.shadowColor='#ffaa00';ctx.shadowBlur=10*DPR;
+    ctx.beginPath();ctx.moveTo(x,y-SZ);ctx.lineTo(x+SZ,y);ctx.lineTo(x,y+SZ);ctx.lineTo(x-SZ,y);ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;
   }
 
   // Legend
-  const lx = margin.l+8*RES, ly = margin.t+12*RES;
-  ctx.font=`${8*RES}px 'Share Tech Mono'`; ctx.textAlign='left';
-  ctx.strokeStyle='#ff4455'; ctx.lineWidth=2*RES;
-  ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx+8*RES,ly+8*RES); ctx.moveTo(lx+8*RES,ly); ctx.lineTo(lx,ly+8*RES); ctx.stroke();
-  ctx.fillStyle='#5a7a8a'; ctx.fillText('OL Poles', lx+12*RES, ly+8*RES);
-
-  ctx.strokeStyle='#00aaff'; ctx.beginPath(); ctx.arc(lx+4*RES,ly+22*RES,4*RES,0,2*Math.PI); ctx.stroke();
-  ctx.fillText('OL Zeros', lx+12*RES, ly+26*RES);
-
-  ctx.fillStyle='#ffaa00';
-  ctx.beginPath(); ctx.moveTo(lx+4*RES,ly+34*RES); ctx.lineTo(lx+8*RES,ly+38*RES); ctx.lineTo(lx+4*RES,ly+42*RES); ctx.lineTo(lx,ly+38*RES); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#5a7a8a'; ctx.fillText('CL Poles @ K', lx+12*RES, ly+40*RES);
+  const lx=mg.l+8*DPR,ly=mg.t+10*DPR;
+  ctx.font=`${7.5*DPR}px 'Share Tech Mono'`;ctx.lineWidth=2*DPR;
+  ctx.strokeStyle='#ff4455';ctx.beginPath();ctx.moveTo(lx-4*DPR,ly-4*DPR);ctx.lineTo(lx+4*DPR,ly+4*DPR);ctx.moveTo(lx+4*DPR,ly-4*DPR);ctx.lineTo(lx-4*DPR,ly+4*DPR);ctx.stroke();
+  ctx.fillStyle='#2a4a5a';ctx.textAlign='left';ctx.fillText('OL Poles',lx+8*DPR,ly+4*DPR);
+  ctx.strokeStyle='#00aaff';ctx.beginPath();ctx.arc(lx,ly+16*DPR,4*DPR,0,2*Math.PI);ctx.stroke();
+  ctx.fillStyle='#2a4a5a';ctx.fillText('OL Zeros',lx+8*DPR,ly+20*DPR);
+  ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.moveTo(lx,ly+28*DPR);ctx.lineTo(lx+4*DPR,ly+34*DPR);ctx.lineTo(lx,ly+40*DPR);ctx.lineTo(lx-4*DPR,ly+34*DPR);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#2a4a5a';ctx.fillText('CL @ K',lx+8*DPR,ly+37*DPR);
+  ctx.restore();
 }
 
 // ============================================================
-// DRAW TIME RESPONSE
+//  DRAW TIME RESPONSE
 // ============================================================
-function drawTimeResponse(resp, inputType) {
-  const canvas = document.getElementById('tr-canvas');
-  const wrap = document.getElementById('tr-wrap');
-  resizeCanvas(canvas, wrap);
-  const W = canvas.width, H = canvas.height;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,W,H);
+function drawTR(resp,inputType){
+  const canvas=document.getElementById('trc');
+  const{W,H}=fitCanvas(canvas);
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);ctx.save();
 
-  const {ts, ys} = resp;
-  if (!ys || ys.length === 0) return;
+  const{ts,ys}=resp;
+  const fin=ys.filter(v=>isFinite(v)&&!isNaN(v));
+  if(!fin.length){ctx.restore();return;}
+  let yMin=Math.min(...fin),yMax=Math.max(...fin);
+  const yP=Math.max((yMax-yMin)*0.18,0.2);
+  yMin-=yP;yMax+=yP;
+  const tMax=ts[ts.length-1];
+  const mg={l:50*DPR,t:14*DPR,r:14*DPR,b:32*DPR};
+  const{tx,ty}=drawGrid(ctx,W,H,mg,[0,tMax],[yMin,yMax]);
 
-  const finite = ys.filter(v=>isFinite(v)&&!isNaN(v));
-  if (!finite.length) return;
-
-  const tMax = ts[ts.length-1];
-  let yMin = Math.min(...finite), yMax = Math.max(...finite);
-  const yPad = Math.max((yMax-yMin)*0.15, 0.2);
-  yMin -= yPad; yMax += yPad;
-
-  const margin = {l:48*RES, r:12*RES, t:12*RES, b:30*RES};
-  const {toX, toY} = drawGrid(ctx, W, H, margin, [0, tMax], [yMin, yMax], '#1a2e3a', '#2a4a5a', '#3a6070');
-
-  // Reference line for step
-  if (inputType === 'step') {
-    ctx.strokeStyle = 'rgba(255,170,0,0.3)'; ctx.lineWidth = 1*RES;
-    ctx.setLineDash([4*RES, 4*RES]);
-    const y1 = toY(1);
-    ctx.beginPath(); ctx.moveTo(margin.l, y1); ctx.lineTo(W-margin.r, y1); ctx.stroke();
-    ctx.setLineDash([]);
+  if(inputType==='step'){
+    ctx.strokeStyle='rgba(255,170,0,0.22)';ctx.lineWidth=1.5*DPR;ctx.setLineDash([5*DPR,5*DPR]);
+    const yr=ty(1);ctx.beginPath();ctx.moveTo(mg.l,yr);ctx.lineTo(W-mg.r,yr);ctx.stroke();ctx.setLineDash([]);
   }
-
-  // Response curve
-  ctx.beginPath();
-  ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2*RES;
-  ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 6;
-  let first = true;
-  for (let i = 0; i < ts.length; i++) {
-    if (!isFinite(ys[i]) || isNaN(ys[i])) { first = true; continue; }
-    const x = toX(ts[i]), y = toY(ys[i]);
-    if (first) { ctx.moveTo(x, y); first = false; }
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  // Sinusoid reference
-  if (inputType === 'sinusoid') {
-    ctx.strokeStyle = 'rgba(0,170,255,0.3)'; ctx.lineWidth = 1*RES;
-    ctx.setLineDash([3*RES,3*RES]);
-    ctx.beginPath(); let f2=true;
+  if(inputType==='sinusoid'){
+    ctx.strokeStyle='rgba(0,170,255,0.2)';ctx.lineWidth=1*DPR;ctx.setLineDash([3*DPR,3*DPR]);
+    ctx.beginPath();let pen=false;
     for(let i=0;i<ts.length;i++){
-      const y=Math.sin(state.sinFreq*ts[i]);
-      const xx=toX(ts[i]),yy=toY(y);
-      if(f2){ctx.moveTo(xx,yy);f2=false;}else ctx.lineTo(xx,yy);
+      const yv=Math.sin(S.sinFreq*ts[i]);
+      if(yv<yMin||yv>yMax){pen=false;continue;}
+      const x=tx(ts[i]),y=ty(yv);if(!pen){ctx.moveTo(x,y);pen=true;}else ctx.lineTo(x,y);
     }
-    ctx.stroke(); ctx.setLineDash([]);
+    ctx.stroke();ctx.setLineDash([]);
   }
 
-  // Axis labels
-  ctx.fillStyle = '#5a7a8a'; ctx.font = `${8*RES}px 'Share Tech Mono'`;
-  ctx.textAlign='center'; ctx.fillText('Time (s)', W/2, H-4*RES);
-  ctx.save(); ctx.translate(10*RES,H/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText('Amplitude', 0, 0); ctx.restore();
+  ctx.strokeStyle='#00ff88';ctx.lineWidth=2*DPR;
+  ctx.shadowColor='rgba(0,255,136,0.3)';ctx.shadowBlur=6*DPR;
+  ctx.beginPath();let pen=false;
+  for(let i=0;i<ts.length;i++){
+    if(!isFinite(ys[i])||isNaN(ys[i])){pen=false;continue;}
+    const x=tx(ts[i]),y=ty(Math.max(yMin-1,Math.min(yMax+1,ys[i])));
+    if(!pen){ctx.moveTo(x,y);pen=true;}else ctx.lineTo(x,y);
+  }
+  ctx.stroke();ctx.shadowBlur=0;
+
+  ctx.fillStyle='#2a4a5a';ctx.font=`${8*DPR}px 'Share Tech Mono'`;
+  ctx.textAlign='center';ctx.fillText('Time (s)',W/2,H-4*DPR);
+  ctx.save();ctx.translate(10*DPR,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('Amplitude',0,0);ctx.restore();
+  ctx.restore();
 }
 
 // ============================================================
-// METRICS
+//  METRICS
 // ============================================================
-function computeMetrics(resp, inputType) {
-  const {ts, ys} = resp;
-  const finite = ys.filter(v=>isFinite(v)&&!isNaN(v));
-  if (!finite.length) return;
-
-  if (inputType === 'step') {
-    const ssVal = finite[finite.length-1];
-    const ref = 1;
-
-    // Rise time (10% to 90% of final)
-    let t10=-1, t90=-1;
-    for (let i=0;i<ys.length;i++){
-      if (isFinite(ys[i])){
-        if(t10<0 && ys[i]>=0.1*ssVal) t10=ts[i];
-        if(t90<0 && ys[i]>=0.9*ssVal) t90=ts[i];
-      }
-    }
-    const tr = (t10>=0&&t90>=0) ? (t90-t10) : NaN;
-
-    // Overshoot
-    const peak = Math.max(...finite);
-    const os = ssVal > 0.001 ? Math.max(0,(peak-ssVal)/ssVal*100) : 0;
-
-    // Settling time (within 2% of final)
-    let ts2 = NaN;
-    for (let i=ys.length-1;i>=0;i--){
-      if(isFinite(ys[i])&&Math.abs(ys[i]-ssVal)>0.02*Math.abs(ssVal)){
-        ts2 = ts[i]; break;
-      }
-    }
-
-    // SS error
-    const sse = Math.abs(ref - ssVal);
-
-    const fmtTime = v => isNaN(v) ? '—' : v.toFixed(2)+'s';
-    const fmtPct = v => isNaN(v) ? '—' : v.toFixed(1)+'%';
-
-    document.getElementById('m-tr').textContent = fmtTime(tr);
-    document.getElementById('m-ts').textContent = fmtTime(ts2);
-    const osEl = document.getElementById('m-os');
-    osEl.textContent = fmtPct(os);
-    osEl.className = 'metric-value ' + (os > 20 ? 'bad' : os < 5 ? 'good' : '');
-    const sseEl = document.getElementById('m-sse');
-    sseEl.textContent = isNaN(sse) ? '—' : sse.toFixed(3);
-    sseEl.className = 'metric-value ' + (sse < 0.01 ? 'good' : sse > 0.1 ? 'bad' : '');
-  } else {
-    document.getElementById('m-tr').textContent = '—';
-    document.getElementById('m-ts').textContent = '—';
-    document.getElementById('m-os').textContent = '—';
-    document.getElementById('m-os').className = 'metric-value';
-    document.getElementById('m-sse').textContent = '—';
-    document.getElementById('m-sse').className = 'metric-value';
-  }
+function computeMetrics(resp,inputType){
+  const{ts,ys}=resp;
+  const fin=ys.filter(v=>isFinite(v)&&!isNaN(v));
+  const noM=()=>['mrt','mst','mos','msse'].forEach(id=>{const el=document.getElementById(id);el.textContent='—';el.className='mval';});
+  if(!fin.length){noM();return;}
+  if(inputType==='step'){
+    const ssV=fin.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,fin.length);
+    let t10=-1,t90=-1;
+    for(let i=0;i<ys.length;i++){if(!isFinite(ys[i]))continue;if(t10<0&&ys[i]>=0.1*ssV)t10=ts[i];if(t90<0&&ys[i]>=0.9*ssV)t90=ts[i];}
+    const tr=t10>=0&&t90>=0?t90-t10:NaN;
+    const pk=Math.max(...fin);
+    const os=Math.abs(ssV)>0.01?Math.max(0,(pk-ssV)/Math.abs(ssV)*100):0;
+    let ts2=NaN;
+    for(let i=ys.length-1;i>=0;i--){if(isFinite(ys[i])&&Math.abs(ys[i]-ssV)>0.02*Math.abs(ssV)+0.001){ts2=ts[i];break;}}
+    const sse=Math.abs(1-ssV);
+    document.getElementById('mrt').textContent=isNaN(tr)?'—':tr.toFixed(2)+'s';
+    document.getElementById('mst').textContent=isNaN(ts2)?'—':ts2.toFixed(2)+'s';
+    const oe=document.getElementById('mos');oe.textContent=os.toFixed(1)+'%';oe.className='mval '+(os>25?'bad':os<5?'good':'');
+    const se=document.getElementById('msse');se.textContent=sse.toFixed(4);se.className='mval '+(sse<0.01?'good':sse>0.1?'bad':'');
+  }else{noM();}
 }
 
 // ============================================================
-// RESET
+//  RESET
 // ============================================================
-function resetAll() {
-  document.getElementById('plant-num').value = '1';
-  document.getElementById('plant-den').value = '1 2 1 0';
-  document.getElementById('cascade-enable').checked = false;
-  document.getElementById('feedback-enable').checked = false;
-  document.getElementById('gain-k').value = 0;
-  state.K = 1;
-  document.getElementById('val-k').textContent = '1.000';
-  document.getElementById('rl-k-label').textContent = 'K = 1.000';
-  document.getElementById('sim-time').value = 20;
-  state.simTime = 20;
-  document.getElementById('val-simtime').textContent = '20s';
-  document.getElementById('input-type').value = 'step';
-  document.getElementById('sin-freq-group').style.display = 'none';
-  document.getElementById('plant-preset').value = '';
-  document.getElementById('cascade-preset').value = '';
-  document.getElementById('feedback-preset').value = '';
+function resetAll(){
+  sv('pn','1');sv('pd','1 2 1 0');sv('cn','1 2 1');sv('cd','1 0');sv('fn','1');sv('fd','1');
+  document.getElementById('ce').checked=true;document.getElementById('fe').checked=true;
+  document.getElementById('gk').value=0;S.K=1;
+  document.getElementById('vk').textContent='1.000';document.getElementById('rkl').textContent='K = 1.000';
+  sv('st','20');S.simTime=20;document.getElementById('vst').textContent='20s';
+  document.getElementById('itype').value='step';document.getElementById('sfg').style.display='none';
+  document.getElementById('trlbl').textContent='STEP INPUT';
+  ['pp','cp','fp'].forEach(id=>document.getElementById(id).value='');
   recompute();
 }
 
 // ============================================================
-// LIVE UPDATE ON INPUTS
+//  LIVE INPUT EVENTS
 // ============================================================
-['plant-num','plant-den','cascade-num','cascade-den','feedback-num','feedback-den'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => recompute());
+['pn','pd','cn','cd','fn','fd'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',recompute);
 });
 
 // ============================================================
-// RESIZE HANDLER
+//  RESIZE — ResizeObserver, no window.resize
 // ============================================================
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(recompute, 100);
-});
+const RO=new ResizeObserver(()=>recompute());
+RO.observe(document.getElementById('rlw'));
+RO.observe(document.getElementById('trw'));
 
 // ============================================================
-// CANVAS HOVER TOOLTIPS
+//  HOVER TOOLTIPS
 // ============================================================
-document.getElementById('rl-canvas').addEventListener('mousemove', function(e) {
-  if (!lastRlTrajectories) return;
-  const rect = this.getBoundingClientRect();
-  const mx = e.clientX-rect.left, my = e.clientY-rect.top;
-  const tip = document.getElementById('rl-tooltip');
-  tip.style.display = 'block';
-  tip.style.left = (mx+10)+'px'; tip.style.top = (my-20)+'px';
-  // Approximate coordinate display
-  const W=rect.width, H=rect.height;
-  // re-derive range
-  if (!lastOlNum||!lastOlDen) return;
-  const olPoles = polyRoots(lastOlDen);
-  const allRe = [...olPoles.map(p=>p.re), ...lastRlTrajectories.flat().map(p=>p.re)];
-  const allIm = [...olPoles.map(p=>p.im), ...lastRlTrajectories.flat().map(p=>p.im)];
-  const reMin=Math.min(...allRe), reMax=Math.max(...allRe), imMin=Math.min(...allIm), imMax=Math.max(...allIm);
-  const rePad=Math.max((reMax-reMin)*0.2,2), imPad=Math.max((imMax-imMin)*0.2,2);
-  const xRange=[reMin-rePad,reMax+rePad], yRange=[imMin-imPad,imMax+imPad];
-  const ml=44, mr=12, mt=12, mb=30;
-  const pw=W-ml-mr, ph=H-mt-mb;
-  const re = xRange[0]+(mx-ml)/pw*(xRange[1]-xRange[0]);
-  const im = yRange[0]+(1-(my-mt)/ph)*(yRange[1]-yRange[0]);
-  tip.textContent = `σ=${re.toFixed(2)}  jω=${im.toFixed(2)}`;
-});
-
-document.getElementById('rl-canvas').addEventListener('mouseleave', function() {
-  document.getElementById('rl-tooltip').style.display='none';
-});
-
-document.getElementById('tr-canvas').addEventListener('mousemove', function(e) {
+document.getElementById('rlc').addEventListener('mousemove',function(e){
+  if(!_rlRange)return;
   const rect=this.getBoundingClientRect();
-  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-  const tip=document.getElementById('tr-tooltip');
-  tip.style.display='block';
-  tip.style.left=(mx+10)+'px'; tip.style.top=(my-20)+'px';
-  if(!lastClNum||!lastClDen) return;
-  // Approximate time label
-  const ml=48, mr=12, mt=12;
-  const W=rect.width;
-  const t=(mx-ml)/(W-ml-mr)*state.simTime;
-  tip.textContent = `t=${Math.max(0,t).toFixed(2)}s`;
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const{xR,yR}=_rlRange;
+  const ml=46,mr=14,mt=14,mb=32;
+  const pw=rect.width-ml-mr,ph=rect.height-mt-mb;
+  const re=xR[0]+(mx-ml)/pw*(xR[1]-xR[0]);
+  const im=yR[0]+(1-(my-mt)/ph)*(yR[1]-yR[0]);
+  const tip=document.getElementById('rlt');
+  tip.style.display='block';tip.style.left=(mx+12)+'px';tip.style.top=(my-16)+'px';
+  tip.textContent=`σ=${re.toFixed(3)}  jω=${im.toFixed(3)}`;
 });
-document.getElementById('tr-canvas').addEventListener('mouseleave', function(){
-  document.getElementById('tr-tooltip').style.display='none';
-});
+document.getElementById('rlc').addEventListener('mouseleave',()=>{document.getElementById('rlt').style.display='none';});
 
-// ============================================================
+document.getElementById('trc').addEventListener('mousemove',function(e){
+  const rect=this.getBoundingClientRect();
+  const mx=e.clientX-rect.left;
+  const ml=50,mr=14;
+  const t=Math.max(0,(mx-ml)/(rect.width-ml-mr)*S.simTime);
+  let yv='';
+  if(_resp){const idx=Math.round(t/S.simTime*(_resp.ts.length-1));const y=_resp.ys[Math.max(0,Math.min(idx,_resp.ys.length-1))];yv=isFinite(y)?`  y=${y.toFixed(3)}`:'';};
+  const tip=document.getElementById('trt');
+  tip.style.display='block';tip.style.left=(mx+12)+'px';tip.style.top=(e.clientY-rect.top-16)+'px';
+  tip.textContent=`t=${t.toFixed(2)}s${yv}`;
+});
+document.getElementById('trc').addEventListener('mouseleave',()=>{document.getElementById('trt').style.display='none';});
+
 // INIT
-// ============================================================
 recompute();
 </script>
 </body>
